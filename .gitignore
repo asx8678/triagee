@@ -1,0 +1,14 @@
+# OS junk
+.DS_Store
+
+# Dependencies (the staged snapshot symlinks to the legacy app — never publish it)
+node_modules/
+tmp/cve-collector/node_modules
+
+# Secrets and databases — defense in depth
+.env
+*.pat
+*.db
+*.db-wal
+*.db-shm
+reports/
