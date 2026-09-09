@@ -1,0 +1,513 @@
+{
+  "format": 1,
+  "entries": {
+    "topology/peer-seq": {
+      "key": "topology/peer-seq",
+      "value": {
+        "format": 1,
+        "next": 3
+      },
+      "version": 3,
+      "updatedAt": 1788970072114,
+      "updatedBy": {
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac"
+      }
+    },
+    "topology/hosts/3d238ac63a15c34c3134d8292c120c1c12e2b57f65909754b3e1cb3ba8bdd04b": {
+      "key": "topology/hosts/3d238ac63a15c34c3134d8292c120c1c12e2b57f65909754b3e1cb3ba8bdd04b",
+      "value": {
+        "format": 1,
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "identity": {
+          "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+          "name": "main",
+          "kind": "main",
+          "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+        },
+        "startedAt": 1788969104744,
+        "updatedAt": 1788970094918,
+        "expiresAt": 1788970109918
+      },
+      "version": 568,
+      "updatedAt": 1788970094918,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "sessions/01a086de-3512-7685-8581-5a82c3bb2319": {
+      "key": "sessions/01a086de-3512-7685-8581-5a82c3bb2319",
+      "value": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "TRI-2",
+        "label": "TRI-2",
+        "kind": "peer",
+        "status": "running",
+        "runner": "pi",
+        "transport": "host",
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319",
+        "model": "openai-codex/gpt-6-astra",
+        "thinking": "max",
+        "startedAt": 1788969104744,
+        "updatedAt": 1788970094918,
+        "pendingMessages": false,
+        "local": false
+      },
+      "version": 568,
+      "updatedAt": 1788970094919,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/3d238ac63a15c34c3134d8292c120c1c12e2b57f65909754b3e1cb3ba8bdd04b": {
+      "key": "topology/participants/3d238ac63a15c34c3134d8292c120c1c12e2b57f65909754b3e1cb3ba8bdd04b",
+      "value": {
+        "format": 1,
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "kind": "root",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "status": "running",
+        "runner": "pi",
+        "transport": "host",
+        "capabilities": [
+          "steer",
+          "followUp",
+          "fabric"
+        ],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319",
+        "model": "openai-codex/gpt-6-astra",
+        "thinking": "max",
+        "startedAt": 1788969104744,
+        "updatedAt": 1788970094918,
+        "pendingMessages": false,
+        "controlProtocol": "v1",
+        "label": "TRI-2"
+      },
+      "version": 568,
+      "updatedAt": 1788970094919,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/2b637808bb243a59e14cf7e3af275f01a38d858ff456a15516157aa7fcedf70a": {
+      "key": "topology/participants/2b637808bb243a59e14cf7e3af275f01a38d858ff456a15516157aa7fcedf70a",
+      "value": {
+        "format": 1,
+        "id": "bc9e2ceb4f20455686f2cfab406b2419",
+        "kind": "agent",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "parentId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "glm-architecture-sequencing",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "85820",
+        "model": "zro/glm-5.3",
+        "thinking": "high",
+        "startedAt": 1788969246955,
+        "updatedAt": 1788969322835,
+        "finishedAt": 1788969322835,
+        "turns": 10,
+        "toolCalls": 13,
+        "usage": {
+          "input": 28853,
+          "output": 7780,
+          "cacheRead": 168064,
+          "cacheWrite": 0,
+          "cost": 0.11832284
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 17,
+      "updatedAt": 1788969322891,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/1bd1dcc3e7b22e54dcd2f10deb1c8c2f941f15d58f0bd0fc1163b8b93206c153": {
+      "key": "topology/participants/1bd1dcc3e7b22e54dcd2f10deb1c8c2f941f15d58f0bd0fc1163b8b93206c153",
+      "value": {
+        "format": 1,
+        "id": "05afff4bdfa349de804c152113e999c2",
+        "kind": "agent",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "parentId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "glm-web-workflow-parity",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "85821",
+        "model": "zro/glm-5.3",
+        "thinking": "high",
+        "startedAt": 1788969246954,
+        "updatedAt": 1788969296854,
+        "finishedAt": 1788969296854,
+        "turns": 10,
+        "toolCalls": 11,
+        "usage": {
+          "input": 40814,
+          "output": 5375,
+          "cacheRead": 270784,
+          "cacheWrite": 0,
+          "cost": 0.15119343999999998
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 18,
+      "updatedAt": 1788969297021,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/9ed952b32c564ac2309c7b6970ea1637223dbfdd236d7c594b8cb26331a63211": {
+      "key": "topology/participants/9ed952b32c564ac2309c7b6970ea1637223dbfdd236d7c594b8cb26331a63211",
+      "value": {
+        "format": 1,
+        "id": "c5ac61312a524984976fb36e29e227fd",
+        "kind": "agent",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "parentId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "glm-data-collector-migration",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "85822",
+        "model": "zro/glm-5.3",
+        "thinking": "high",
+        "startedAt": 1788969246954,
+        "updatedAt": 1788969313035,
+        "finishedAt": 1788969313035,
+        "turns": 14,
+        "toolCalls": 13,
+        "usage": {
+          "input": 36510,
+          "output": 7297,
+          "cacheRead": 381440,
+          "cacheWrite": 0,
+          "cost": 0.1823952
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 20,
+      "updatedAt": 1788969313088,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/e396a58ad5acb601c6456ae6c1ab78b02510758a5a97adbe354f77e436fb7f18": {
+      "key": "topology/participants/e396a58ad5acb601c6456ae6c1ab78b02510758a5a97adbe354f77e436fb7f18",
+      "value": {
+        "format": 1,
+        "id": "89efdc57bb424269bc3c43e44e8aa779",
+        "kind": "agent",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "parentId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "glm-security-operations-review",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "85823",
+        "model": "zro/glm-5.3",
+        "thinking": "high",
+        "startedAt": 1788969246954,
+        "updatedAt": 1788969312872,
+        "finishedAt": 1788969312872,
+        "turns": 10,
+        "toolCalls": 11,
+        "usage": {
+          "input": 29246,
+          "output": 6928,
+          "cacheRead": 166336,
+          "cacheWrite": 0,
+          "cost": 0.11467496000000002
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 18,
+      "updatedAt": 1788969312879,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/901ed585e4e33fa052568be3f1965ed8f757581be9e58b253aa70731ab06e821": {
+      "key": "topology/participants/901ed585e4e33fa052568be3f1965ed8f757581be9e58b253aa70731ab06e821",
+      "value": {
+        "format": 1,
+        "id": "40b57613b5d142c4aeeb5ffe5582d337",
+        "kind": "agent",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "parentId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "Prewalk trajectory executor",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "91019",
+        "model": "zro/glm-5.3-flash",
+        "thinking": "high",
+        "startedAt": 1788969631584,
+        "updatedAt": 1788969724376,
+        "finishedAt": 1788969724376,
+        "turns": 3,
+        "toolCalls": 2,
+        "usage": {
+          "input": 89564,
+          "output": 1878,
+          "cacheRead": 176128,
+          "cacheWrite": 0,
+          "cost": 0.019657439999999998
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 11,
+      "updatedAt": 1788969724472,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/participants/3e9d8f2834e904d6d9621c9a5d86b417c0b09ff88ae3e86dee5f7173669677f1": {
+      "key": "topology/participants/3e9d8f2834e904d6d9621c9a5d86b417c0b09ff88ae3e86dee5f7173669677f1",
+      "value": {
+        "format": 1,
+        "id": "c69c06327b024bf69e75f318e8967c0a",
+        "kind": "agent",
+        "rootId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerHostId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "ownerIdentityId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "parentId": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "Prewalk trajectory executor",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "99920",
+        "model": "zro/glm-5.3-flash",
+        "thinking": "high",
+        "startedAt": 1788969945498,
+        "updatedAt": 1788970088671,
+        "finishedAt": 1788970088671,
+        "turns": 5,
+        "toolCalls": 4,
+        "usage": {
+          "input": 23376,
+          "output": 3476,
+          "cacheRead": 499456,
+          "cacheWrite": 0,
+          "cost": 0.020228079999999996
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 14,
+      "updatedAt": 1788970088873,
+      "updatedBy": {
+        "id": "session:01a086de-3512-7685-8581-5a82c3bb2319",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086de-3512-7685-8581-5a82c3bb2319"
+      }
+    },
+    "topology/hosts/58d94749d1ac56ed4a9dbc60a43ec4d8b0fed71e1f19b934e8ef25d5997bda3c": {
+      "key": "topology/hosts/58d94749d1ac56ed4a9dbc60a43ec4d8b0fed71e1f19b934e8ef25d5997bda3c",
+      "value": {
+        "format": 1,
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "rootId": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "identity": {
+          "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+          "name": "main",
+          "kind": "main",
+          "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac"
+        },
+        "startedAt": 1788970072102,
+        "updatedAt": 1788970095087,
+        "expiresAt": 1788970110087
+      },
+      "version": 9,
+      "updatedAt": 1788970095087,
+      "updatedBy": {
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac"
+      }
+    },
+    "sessions/01a086ec-f470-76b0-b139-af4afa56ecac": {
+      "key": "sessions/01a086ec-f470-76b0-b139-af4afa56ecac",
+      "value": {
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "name": "TRI-3",
+        "label": "TRI-3",
+        "kind": "peer",
+        "status": "running",
+        "runner": "pi",
+        "transport": "host",
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac",
+        "model": "zro/glm-5.3-flash",
+        "thinking": "low",
+        "startedAt": 1788970072102,
+        "updatedAt": 1788970095087,
+        "pendingMessages": false,
+        "local": false
+      },
+      "version": 9,
+      "updatedAt": 1788970095088,
+      "updatedBy": {
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac"
+      }
+    },
+    "topology/participants/58d94749d1ac56ed4a9dbc60a43ec4d8b0fed71e1f19b934e8ef25d5997bda3c": {
+      "key": "topology/participants/58d94749d1ac56ed4a9dbc60a43ec4d8b0fed71e1f19b934e8ef25d5997bda3c",
+      "value": {
+        "format": 1,
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "kind": "root",
+        "rootId": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "ownerHostId": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "ownerIdentityId": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "name": "main",
+        "status": "running",
+        "runner": "pi",
+        "transport": "host",
+        "capabilities": [
+          "steer",
+          "followUp",
+          "fabric"
+        ],
+        "cwd": "/Users/adam2/projects/triage",
+        "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac",
+        "model": "zro/glm-5.3-flash",
+        "thinking": "low",
+        "startedAt": 1788970072102,
+        "updatedAt": 1788970095087,
+        "pendingMessages": false,
+        "controlProtocol": "v1",
+        "label": "TRI-3"
+      },
+      "version": 9,
+      "updatedAt": 1788970095088,
+      "updatedBy": {
+        "id": "session:01a086ec-f470-76b0-b139-af4afa56ecac",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a086ec-f470-76b0-b139-af4afa56ecac"
+      }
+    }
+  },
+  "versions": {
+    "topology/peer-seq": 3,
+    "topology/hosts/fa413504d61907b53bab6f61e374285dd10aca442e7225024a244d8b43525256": 114,
+    "sessions/01a086d8-7f8d-7685-8581-5a8068f51d9d": 113,
+    "topology/participants/fa413504d61907b53bab6f61e374285dd10aca442e7225024a244d8b43525256": 114,
+    "topology/hosts/3d238ac63a15c34c3134d8292c120c1c12e2b57f65909754b3e1cb3ba8bdd04b": 568,
+    "sessions/01a086de-3512-7685-8581-5a82c3bb2319": 568,
+    "topology/participants/3d238ac63a15c34c3134d8292c120c1c12e2b57f65909754b3e1cb3ba8bdd04b": 568,
+    "topology/participants/2b637808bb243a59e14cf7e3af275f01a38d858ff456a15516157aa7fcedf70a": 17,
+    "topology/participants/1bd1dcc3e7b22e54dcd2f10deb1c8c2f941f15d58f0bd0fc1163b8b93206c153": 18,
+    "topology/participants/9ed952b32c564ac2309c7b6970ea1637223dbfdd236d7c594b8cb26331a63211": 20,
+    "topology/participants/e396a58ad5acb601c6456ae6c1ab78b02510758a5a97adbe354f77e436fb7f18": 18,
+    "topology/hosts/f75dd3c60381cb206bee53dcf187d07f0d9a41712f07c5e4ea8ab195f3c84554": 74,
+    "topology/hosts/cf3af5ddf13b1046dca4fe647675818682ff17821997f38366f21e90c1f1732b": 78,
+    "topology/hosts/7c734d1359b59d7616222301458c1f7322925cc976b8cd3d971ed27688c1d671": 102,
+    "topology/hosts/a2cf19f1a87ad5d0e4501604373bfcdf6e34fb02136325b2b1b4c3982cfeec9c": 55,
+    "topology/participants/901ed585e4e33fa052568be3f1965ed8f757581be9e58b253aa70731ab06e821": 11,
+    "topology/hosts/920e8ac117db8282d9842be3abcb923b5b1fa1dfa6721b89f9d1d80056b57a95": 45,
+    "topology/participants/35d5fbac531803b6d6a5afc20c1cf8c0be51f56cf4339ad942447b517c958ace": 6,
+    "topology/hosts/f47dbf39c94074e64f4fc4bfe4c40adea1a48852332fe32648399afb20c2eb6f": 15,
+    "topology/participants/2e07d9abcea9be47fbcfc02a317e8e220bab9d582aea7df4d78c9fadb3b158f2": 5,
+    "topology/hosts/7872d47c6ccab91844c87b3b69b6df0c9bce97f86530feaaddb5c1eb571ea53d": 5,
+    "topology/participants/3e9d8f2834e904d6d9621c9a5d86b417c0b09ff88ae3e86dee5f7173669677f1": 14,
+    "topology/hosts/f19c87943cb08d2072b5e8490ebc13363b8d33fe510c83f0bafbbffca851eaeb": 78,
+    "topology/participants/582bee9d97c429a253baf424af6242822a1f26738ce2d54938dee06fed9b5b2f": 7,
+    "topology/hosts/87ff6002fc7ef23de1decffee6b2e52072127121cf34cd69d589d746cf35a325": 13,
+    "topology/participants/55aacec0161acbb156a39f3f1e91d64d414e9ae52f50a419c0ab8e2983c511ef": 7,
+    "topology/hosts/42c89ea21239b4a7f7af4c2deb7625e75012ccf1f49de5b15953923777fae343": 14,
+    "topology/participants/587e7de21fea153dd3fe0dce447bf1218aa1617f4ee06903cabebea2bd937e7d": 6,
+    "topology/hosts/ea90bd36b71c7c2211dedd954316138858f298631cde7a1e57e9aaf46579d3d4": 15,
+    "topology/hosts/58d94749d1ac56ed4a9dbc60a43ec4d8b0fed71e1f19b934e8ef25d5997bda3c": 9,
+    "sessions/01a086ec-f470-76b0-b139-af4afa56ecac": 9,
+    "topology/participants/58d94749d1ac56ed4a9dbc60a43ec4d8b0fed71e1f19b934e8ef25d5997bda3c": 9
+  },
+  "tombstoneOrder": [
+    "sessions/01a086d8-7f8d-7685-8581-5a8068f51d9d",
+    "topology/participants/fa413504d61907b53bab6f61e374285dd10aca442e7225024a244d8b43525256",
+    "topology/hosts/fa413504d61907b53bab6f61e374285dd10aca442e7225024a244d8b43525256",
+    "topology/hosts/cf3af5ddf13b1046dca4fe647675818682ff17821997f38366f21e90c1f1732b",
+    "topology/hosts/a2cf19f1a87ad5d0e4501604373bfcdf6e34fb02136325b2b1b4c3982cfeec9c",
+    "topology/hosts/7c734d1359b59d7616222301458c1f7322925cc976b8cd3d971ed27688c1d671",
+    "topology/hosts/f75dd3c60381cb206bee53dcf187d07f0d9a41712f07c5e4ea8ab195f3c84554",
+    "topology/hosts/f47dbf39c94074e64f4fc4bfe4c40adea1a48852332fe32648399afb20c2eb6f",
+    "topology/hosts/7872d47c6ccab91844c87b3b69b6df0c9bce97f86530feaaddb5c1eb571ea53d",
+    "topology/participants/2e07d9abcea9be47fbcfc02a317e8e220bab9d582aea7df4d78c9fadb3b158f2",
+    "topology/participants/35d5fbac531803b6d6a5afc20c1cf8c0be51f56cf4339ad942447b517c958ace",
+    "topology/hosts/920e8ac117db8282d9842be3abcb923b5b1fa1dfa6721b89f9d1d80056b57a95",
+    "topology/hosts/87ff6002fc7ef23de1decffee6b2e52072127121cf34cd69d589d746cf35a325",
+    "topology/hosts/42c89ea21239b4a7f7af4c2deb7625e75012ccf1f49de5b15953923777fae343",
+    "topology/hosts/ea90bd36b71c7c2211dedd954316138858f298631cde7a1e57e9aaf46579d3d4",
+    "topology/participants/55aacec0161acbb156a39f3f1e91d64d414e9ae52f50a419c0ab8e2983c511ef",
+    "topology/participants/582bee9d97c429a253baf424af6242822a1f26738ce2d54938dee06fed9b5b2f",
+    "topology/participants/587e7de21fea153dd3fe0dce447bf1218aa1617f4ee06903cabebea2bd937e7d",
+    "topology/hosts/f19c87943cb08d2072b5e8490ebc13363b8d33fe510c83f0bafbbffca851eaeb"
+  ]
+}

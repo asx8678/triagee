@@ -1,0 +1,17 @@
+{
+  "configVersion": 4,
+  "prewalk": {
+    "model": "zro/glm-5.3-flash",
+    "thinking": "high",
+    "mode": "trajectory",
+    "alwaysRearm": true
+  },
+  "compaction": {
+    "thresholds": {
+      "openai-codex/gpt-6-astra": 0.65
+    },
+    "tokenThresholds": {
+      "openai-codex/gpt-6-astra": null
+    }
+  }
+}
