@@ -1,5 +1,15 @@
 # Triage current status
 
+**Code review findings implemented (2026-09-13: `mix ci` exit 0 — `credo --strict`
+reports no issues, 634 passed / 2 skipped, `dialyzer` 0 errors).** The findings
+list now pages by keyset position like the review queue; `credo` and `dialyzer`
+are part of the gate and the CI workflow; the case detail view's 1415-line module
+is now a LiveView plus section components and a formatter, with per-section tests.
+Open, deliberately and in writing: the `Triage.Import` split, spec coverage (9 of
+346 public functions), and two advisory complexity metrics disabled with their
+counts and worst offenders recorded in `.credo.exs`. See
+[CODE_REVIEW_FIXES_EXECUTION.md](CODE_REVIEW_FIXES_EXECUTION.md).
+
 **A+B implemented (independent Astra verification PASS, 2026-09-12). UI redesign,
 overview intelligence and bounded findings paging implemented and verified
 (2026-09-13: `mix precommit` 612 passed / 2 skipped, exit 0).**
