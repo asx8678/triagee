@@ -253,9 +253,27 @@ defmodule TriageWeb.FindingFilters do
 
   defp field_value(:suppressed, _other), do: {:error, false}
 
-  defp field_value(_scope, nil), do: {:ok, nil}
+  # `owner`/`environment` — and any field without a specialized clause above —
+  # use the published scope value contract defined below.
+  defp field_value(_scope, value), do: scope_value(value)
 
-  defp field_value(_scope, value) when is_binary(value) do
+  @doc "
+  The scope value contract, published because more than one caller implements it.
+
+  Accepts a plain binary that is valid UTF-8 with no NUL or other control
+  character *before* trimming and at most #{@max_length} characters after
+  trimming. Blank or space-only is the intentional All choice.
+
+  Returns `{:ok, nil | trimmed}` for an accepted value, including the blank All
+  choice, and `{:error, nil}` for anything that must surface as a visible
+  invalid filter: wrong types, invalid UTF-8, control characters, or text that
+  is too long. `TriageWeb.CaseFilters` calls this instead of restating the
+  contract when it emits route params, so the parse and emit directions cannot
+  silently disagree about what a valid scope value is.
+  "
+  def scope_value(nil), do: {:ok, nil}
+
+  def scope_value(value) when is_binary(value) do
     # Raw validation first: control characters or invalid UTF-8 are rejected
     # even when trimming would remove them. Only then do ordinary blank or
     # space-only values keep the intentional All semantics.
@@ -277,7 +295,7 @@ defmodule TriageWeb.FindingFilters do
     end
   end
 
-  defp field_value(_scope, _other), do: {:error, nil}
+  def scope_value(_other), do: {:error, nil}
 
   defp mark_invalid(acc, field), do: %{acc | invalid: [field | acc.invalid]}
 end

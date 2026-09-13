@@ -8,6 +8,7 @@ defmodule TriageWeb.CaseFiltersTest do
   use ExUnit.Case, async: true
 
   alias TriageWeb.CaseFilters
+  alias TriageWeb.FindingFilters
 
   describe "parse/1 URL params" do
     test "absent or blank fields are the intentional All/newest state" do
@@ -352,6 +353,47 @@ defmodule TriageWeb.CaseFiltersTest do
     test "valid scope values pass the value contract and are emitted trimmed" do
       assert CaseFilters.query_params(%{owner: " alpha ", environment: "beta", before_id: nil}) ==
                %{owner: "alpha", environment: "beta"}
+    end
+
+    test "the emit direction and FindingFilters' parse direction agree on one contract" do
+      # Both directions call `FindingFilters.scope_value/1`, so a value the
+      # emitter drops must be one the parser rejects, and a value it emits must
+      # survive a round trip. This pins the agreement across the length
+      # boundary and across every value class the contract refuses; a second
+      # copy of the bound in either direction would fail one of these.
+      candidates = [
+        "alpha",
+        " alpha ",
+        "owner-with-dash_and.dot",
+        "",
+        "  ",
+        String.duplicate("a", 120),
+        String.duplicate("a", 121),
+        String.duplicate("a", 500),
+        "alpha" <> <<0xFF>>,
+        <<255>>,
+        "\tbeta",
+        "beta\n"
+      ]
+
+      for value <- candidates do
+        parsed = FindingFilters.parse(%{"owner" => value})
+        emitted = CaseFilters.query_params(%{owner: value, environment: nil, before_id: nil})
+
+        cond do
+          :owner in parsed.invalid ->
+            assert emitted == %{},
+                   "expected #{inspect(value)} to be dropped, emitted #{inspect(emitted)}"
+
+          parsed.owner == nil ->
+            assert emitted == %{},
+                   "expected blank #{inspect(value)} to emit nothing, emitted #{inspect(emitted)}"
+
+          true ->
+            assert emitted == %{owner: parsed.owner}
+            assert FindingFilters.parse(%{"owner" => emitted.owner}) == parsed
+        end
+      end
     end
   end
 end

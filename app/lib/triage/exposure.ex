@@ -64,22 +64,23 @@ defmodule Triage.Exposure do
   """
   def current_by_placement(placement_ids, now \\ DateTime.utc_now())
       when is_list(placement_ids) do
+    # `DISTINCT ON` keeps the latest-per-placement reduction in PostgreSQL, the
+    # same shape `Triage.Intel.latest_receipts/0` uses: one row per placement
+    # rather than the full evidence history shipped to Elixir to be grouped and
+    # reduced there.
     from(e in Evidence,
       where: e.placement_id in ^placement_ids,
+      distinct: e.placement_id,
       order_by: [asc: e.placement_id, desc: e.observed_at, desc: e.id],
       select: {e.placement_id, e.exposure, e.expires_at}
     )
     |> Repo.all()
-    |> Enum.group_by(&elem(&1, 0))
-    |> Map.new(fn {placement_id, rows} ->
-      {_pid, exposure, expires_at} = hd(rows)
-
-      exposure =
-        if not is_nil(expires_at) and DateTime.compare(expires_at, now) == :lt,
-          do: "unknown",
-          else: exposure
-
-      {placement_id, exposure}
+    |> Map.new(fn {placement_id, exposure, expires_at} ->
+      {placement_id, if(expired?(expires_at, now), do: "unknown", else: exposure)}
     end)
   end
+
+  defp expired?(nil, _now), do: false
+
+  defp expired?(expires_at, now), do: DateTime.compare(expires_at, now) == :lt
 end

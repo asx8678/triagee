@@ -24,8 +24,6 @@ defmodule TriageWeb.CaseFilters do
   @recognized ~w(owner environment before)
   @unsafe_text ~r/[\x00-\x1F\x7F]/
   @cursor_digits ~r/\A[0-9]{1,19}\z/
-  # The same trimmed-length bound as FindingFilters' scope value contract.
-  @max_length 120
   # int8 max is exactly 2^63 - 1: the same positive bigint bound as the
   # domain layer's id guards.
   @cursor_max 9_223_372_036_854_775_807
@@ -136,21 +134,17 @@ defmodule TriageWeb.CaseFilters do
 
   def query_params(_other), do: %{}
 
-  # The same scope value contract as FindingFilters.field_value/2: raw
-  # validation first, then blank-as-All and the trimmed-length bound.
-  defp validated_scope(nil), do: nil
-
-  defp validated_scope(value) when is_binary(value) do
-    if String.valid?(value) and not Regex.match?(@unsafe_text, value) do
-      trimmed = String.trim(value)
-
-      if trimmed != "" and String.length(trimmed) <= @max_length, do: trimmed, else: nil
-    else
-      nil
+  # The scope value contract itself lives in `FindingFilters.scope_value/1`, so
+  # the parse direction (URL params and filter events) and this emit direction
+  # cannot disagree about what a valid scope value is. A value that fails the
+  # contract is dropped here: this map only ever emits validated route params,
+  # rather than emitting one and having it rejected on the way back in.
+  defp validated_scope(value) do
+    case FindingFilters.scope_value(value) do
+      {:ok, trimmed} -> trimmed
+      {:error, _reason} -> nil
     end
   end
-
-  defp validated_scope(_other), do: nil
 
   # The cursor is emitted only as a plain positive bigint within int8 bounds.
   defp validated_cursor(value) when is_integer(value) and value > 0 and value <= @cursor_max,

@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    services:
+      # Mirrors the documented local server (see the config/test.exs comment).
+      # `trust` is what the test config connects with: it sets a username and
+      # host but no password.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27.3.4.16"
+          elixir-version: "1.20.4"
+
+      - uses: actions/cache@v4
+        with:
+          path: app/deps
+          key: deps-${{ runner.os }}-${{ hashFiles('app/mix.lock') }}
+
+      - run: mix deps.get
+
+      # `mix ci` is the non-mutating counterpart of `mix precommit`: it checks
+      # formatting instead of rewriting it and checks for unused deps instead
+      # of editing mix.lock, so a failure here is the tree's state and not a
+      # silently fixed one.
+      - run: mix ci

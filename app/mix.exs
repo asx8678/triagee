@@ -27,7 +27,7 @@ defmodule Triage.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, ci: :test]
     ]
   end
 
@@ -79,6 +79,17 @@ defmodule Triage.MixProject do
         "compile --warnings-as-errors",
         "deps.unlock --unused",
         "format",
+        "assets.setup",
+        "test"
+      ],
+      # The non-mutating counterpart of `precommit`, for CI and for checking a
+      # tree without rewriting it: `format` rewrites files and
+      # `deps.unlock --unused` edits mix.lock, so neither can be a gate that
+      # fails on a dirty tree instead of silently fixing it.
+      ci: [
+        "compile --warnings-as-errors",
+        "format --check-formatted",
+        "deps.unlock --check-unused",
         "assets.setup",
         "test"
       ]

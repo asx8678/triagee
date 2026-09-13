@@ -98,7 +98,7 @@ defmodule Triage.Risk do
       )
 
     %__MODULE__{
-      priority: Enum.at(@priorities |> Enum.reverse(), 4 - level) |> normalize_level(level),
+      priority: priority_for(level),
       severity: severity || "NOT_REPORTED",
       exposure: exposure,
       reasons: reasons
@@ -115,10 +115,11 @@ defmodule Triage.Risk do
   defp rank(%__MODULE__{priority: p}),
     do: Enum.find_index(@priorities |> Enum.reverse(), &(&1 == p)) || 0
 
-  defp normalize_level(_labels, 4), do: "critical"
-  defp normalize_level(_labels, 3), do: "high"
-  defp normalize_level(_labels, 2), do: "medium"
-  defp normalize_level(_labels, _), do: "low"
+  # Level 4 is the most urgent and `@priorities` is ordered most urgent first,
+  # so the label for a level is that list indexed from the top. Reading the
+  # label out of the same list `priorities/0` publishes keeps the public label
+  # order and this mapping from drifting apart.
+  defp priority_for(level), do: Enum.at(@priorities, 4 - level)
 
   defp normalize_severity(nil), do: nil
 

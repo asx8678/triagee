@@ -466,12 +466,14 @@ defmodule Triage.Inventory do
         preload: :image
       )
 
-    # Scope via images holding an active matching placement (EXISTS semantics).
+    # Scope via images holding an active matching placement (semijoin
+    # semantics). The scope stays a subquery: materializing every active scoped
+    # image id in memory would make this query's cost scale with the tenant
+    # rather than with the rows it returns.
     if is_nil(owner) and is_nil(environment) do
       query
     else
-      scoped_ids = scoped_image_ids(owner, environment)
-      where(query, [f], f.image_id in ^scoped_ids)
+      where(query, [f], f.image_id in subquery(active_placement_image_ids(owner, environment)))
     end
   end
 
@@ -536,17 +538,14 @@ defmodule Triage.Inventory do
                 order_by: [asc: e.occurred_at, asc: e.id]
             )
 
-          scope_image_ids =
-            if scoped?, do: scoped_image_ids(owner, environment), else: nil
-
           other_occurrences =
-            Repo.all(
-              from f in Finding,
-                where: f.cve == ^finding.cve and f.id != ^finding.id and is_nil(f.resolved_at),
-                order_by: f.package_name,
-                preload: :image
+            from(f in Finding,
+              where: f.cve == ^finding.cve and f.id != ^finding.id and is_nil(f.resolved_at),
+              order_by: f.package_name,
+              preload: :image
             )
-            |> filter_occurrences(scope_image_ids)
+            |> scope_by_active_placement(owner, environment)
+            |> Repo.all()
 
           {:ok,
            %{
@@ -570,11 +569,13 @@ defmodule Triage.Inventory do
   defp filter_placements(placements, owner, environment),
     do: Enum.filter(placements, &(&1.owner == owner and &1.environment == environment))
 
-  defp scoped_image_ids(owner, environment) do
+  # Active scoped images as a query, never as a materialized id list: the
+  # semijoin keeps the work in PostgreSQL and lets the planner drive it from the
+  # placement's image id index instead of returning one row per active placement
+  # to Elixir.
+  defp active_placement_image_ids(owner, environment) do
     from(p in ImagePlacement, where: p.active == true, select: p.image_id)
     |> apply_placement_scope(owner, environment)
-    |> Repo.all()
-    |> MapSet.new()
   end
 
   defp apply_placement_scope(query, nil, nil), do: query
@@ -587,10 +588,11 @@ defmodule Triage.Inventory do
   defp apply_placement_scope(query, owner, environment),
     do: where(query, [p], p.owner == ^owner and p.environment == ^environment)
 
-  defp filter_occurrences(occurrences, nil), do: occurrences
+  defp scope_by_active_placement(query, nil, nil), do: query
 
-  defp filter_occurrences(occurrences, image_ids),
-    do: Enum.filter(occurrences, &(&1.image_id in image_ids))
+  defp scope_by_active_placement(query, owner, environment) do
+    where(query, [f], f.image_id in subquery(active_placement_image_ids(owner, environment)))
+  end
 
   @doc "Inserts or updates an image keyed by immutable digest."
   def upsert_image(attrs, _now) do
