@@ -3,7 +3,7 @@ defmodule Triage.InventoryTest do
 
   import Ecto.Query
   alias Triage.{Inventory, Repo, Seeds}
-  alias Triage.Inventory.{Finding, FindingEvent}
+  alias Triage.Inventory.{Finding, FindingEvent, ImagePlacement}
 
   setup do
     :ok = Seeds.seed()
@@ -110,5 +110,41 @@ defmodule Triage.InventoryTest do
       )
 
     assert finding.reopen_count == 0
+  end
+
+  test "the distinct-CVE total is not the sum of the severity bands" do
+    counts = Inventory.cve_summary_counts()
+
+    expected_total =
+      Repo.one(
+        from f in Finding,
+          join: p in ImagePlacement,
+          on: p.image_id == f.image_id and p.active == true,
+          where: is_nil(f.resolved_at) and f.suppressed == false,
+          select: count(f.cve, :distinct)
+      )
+
+    band_membership =
+      from(f in Finding,
+        join: p in ImagePlacement,
+        on: p.image_id == f.image_id and p.active == true,
+        where: is_nil(f.resolved_at) and f.suppressed == false,
+        group_by: f.cve,
+        select: %{severity_bands: count(f.severity, :distinct)}
+      )
+
+    expected_bands =
+      Repo.one(from s in subquery(band_membership), select: sum(s.severity_bands))
+      |> Decimal.to_integer()
+
+    bands = counts.critical + counts.high + counts.medium + counts.low
+
+    assert counts.total == expected_total
+    assert bands == expected_bands
+
+    # The seeded estate records CVE-2024-4004 at HIGH and MEDIUM, so the bands
+    # are not a partition of the total. Adding them up is exactly what
+    # overstated the total before it became its own distinct count.
+    assert bands > counts.total
   end
 end

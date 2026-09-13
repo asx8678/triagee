@@ -3,7 +3,7 @@ defmodule TriageWeb.OverviewReadabilityTest do
 
   import Ecto.Query
 
-  alias Triage.{Cases, Repo, Seeds}
+  alias Triage.{Cases, Inventory, Repo, Seeds}
   alias Triage.Inventory.Finding
 
   setup do
@@ -43,7 +43,9 @@ defmodule TriageWeb.OverviewReadabilityTest do
              "No assessment recorded"
   end
 
-  test "local inventory leads the overview and the discovery list is renamed", %{conn: conn} do
+  test "local inventory leads the overview and the cases section names what it lists", %{
+    conn: conn
+  } do
     document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
 
     assert LazyHTML.query(document, "#home-inventory, #home-newest, #recent-cases-title")
@@ -53,7 +55,7 @@ defmodule TriageWeb.OverviewReadabilityTest do
              "Local inventory"
 
     assert LazyHTML.query(document, "#recent-cases-title") |> LazyHTML.text() ==
-             "Recently discovered new CVEs"
+             "Recently opened review cases"
 
     assert LazyHTML.query(document, "#overview-inventory-title") |> LazyHTML.text() ==
              "Occurrence counts"
@@ -141,6 +143,27 @@ defmodule TriageWeb.OverviewReadabilityTest do
 
     assert mix_label =~ "distinct CVEs"
     assert mix_label =~ expected
+  end
+
+  test "the total tile counts a mixed-severity CVE once, not once per band", %{conn: conn} do
+    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    count = fn id ->
+      document
+      |> LazyHTML.query("##{id}")
+      |> LazyHTML.text()
+      |> String.trim()
+      |> String.to_integer()
+    end
+
+    bands =
+      count.("home-critical-count") + count.("home-high-count") + count.("home-medium-count") +
+        count.("home-low-count")
+
+    total = count.("home-total-count")
+
+    assert total == Inventory.cve_summary_counts().total
+    assert bands > total, "the seeded estate records CVE-2024-4004 at two severities"
   end
 
   test "the newest rail shows five and says how many it withheld", %{conn: conn} do

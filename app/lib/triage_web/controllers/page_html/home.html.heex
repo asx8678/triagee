@@ -13,7 +13,9 @@
           <%!-- Assistive technology only: a count of distinct CVEs is not a clean estate. --%>
           <p id="home-inventory-intro" class="sr-only">
             Each count is one distinct CVE, not an image occurrence. Suppressed and no-longer-observed
-            advisories are excluded; zero is not a clean estate.
+            advisories are excluded; zero is not a clean estate. A CVE recorded at more than one
+            severity appears in each of those severity counts, so the bands can add up to more than
+            the total, which counts distinct CVEs.
           </p>
 
           <div class="ov-band">
@@ -52,14 +54,17 @@
               <span
                 class="ov-sevbar"
                 role="img"
-                aria-label={"Severity mix of #{s.total} distinct CVEs: #{s.critical} critical, #{s.high} high, #{s.medium} medium, #{s.low} low"}
+                aria-label={"Severity mix of #{s.total} distinct CVEs: #{s.critical} critical, #{s.high} high, #{s.medium} medium, #{s.low} low. A CVE recorded at more than one severity appears in each band."}
               >
                 <span class="ov-sevbar-seg ov-sevbar-critical" style={"flex: #{s.critical} 1 0"}></span>
                 <span class="ov-sevbar-seg ov-sevbar-high" style={"flex: #{s.high} 1 0"}></span>
                 <span class="ov-sevbar-seg ov-sevbar-medium" style={"flex: #{s.medium} 1 0"}></span>
                 <span class="ov-sevbar-seg ov-sevbar-low" style={"flex: #{s.low} 1 0"}></span>
               </span>
-              <p class="supporting">Severity mix · {s.total} distinct CVEs</p>
+              <p class="supporting">
+                Severity mix · {s.total} distinct CVEs · a CVE recorded at more than one severity
+                appears in each band
+              </p>
             </div>
           </div>
         <% _ -> %>
@@ -220,7 +225,7 @@
     <!-- Saved local work, kept separate from inventory facts. -->
     <section class="stack" aria-labelledby="recent-cases-title">
       <div class="section-header">
-        <h2 id="recent-cases-title">Recently discovered new CVEs</h2>
+        <h2 id="recent-cases-title">Recently opened review cases</h2>
         <span class="supporting">Up to 5 saved review cases · newest case first · scope as saved</span>
       </div>
       <%= case @recent_cases do %>

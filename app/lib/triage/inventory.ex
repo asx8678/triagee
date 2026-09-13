@@ -405,24 +405,35 @@ defmodule Triage.Inventory do
     %{open: open || 0, suppressed: suppressed || 0}
   end
 
+  # One definition of the distinct-CVE relation, shared by the severity bands
+  # and the distinct total so the two cannot disagree about what is counted.
+  defp distinct_cve_scope do
+    from(f in Finding)
+    |> where([f], is_nil(f.resolved_at) and f.suppressed == false)
+    |> join(:inner, [f], p in ImagePlacement, on: p.image_id == f.image_id and p.active == true)
+  end
+
   @doc """
   Distinct-CVE counts by severity, consistent with `list_groups/1`:
   only active-placement, non-suppressed, unresolved findings.
+
+  A severity band counts every CVE with *any* occurrence at that severity, so a
+  CVE recorded at two severities is in both bands and the bands can sum to more
+  than `:total`. `:total` is therefore its own distinct count over the same
+  relation, never the sum of the bands.
   """
   def cve_summary_counts do
     rows =
-      from(f in Finding)
-      |> where([f], is_nil(f.resolved_at) and f.suppressed == false)
-      |> join(:inner, [f], p in ImagePlacement, on: p.image_id == f.image_id and p.active == true)
+      distinct_cve_scope()
       |> group_by([f], f.severity)
       |> select([f], %{severity: f.severity, distinct_cves: fragment("count(distinct ?)", f.cve)})
       |> Repo.all()
 
     counts = Map.new(rows, fn row -> {row.severity, row.distinct_cves} end)
-    total = Enum.reduce(counts, 0, fn {_sev, n}, acc -> acc + n end)
+    total = distinct_cve_scope() |> select([f, _p], count(f.cve, :distinct)) |> Repo.one()
 
     %{
-      total: total,
+      total: total || 0,
       critical: Map.get(counts, "CRITICAL", 0),
       high: Map.get(counts, "HIGH", 0),
       medium: Map.get(counts, "MEDIUM", 0),
