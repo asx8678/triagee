@@ -161,6 +161,33 @@ defmodule TriageWeb.TimelineReadabilityTest do
     assert empty =~ "No recorded observation on this day"
   end
 
+  test "the connected chart is decorative and every meaning is in text too", %{conn: conn} do
+    document = conn |> get(~p"/timeline") |> html_response(200) |> LazyHTML.from_document()
+
+    svg = LazyHTML.query(document, "#tl-chart svg.tl-chart")
+    assert Enum.count(svg) == 1
+    assert svg |> Enum.at(0) |> LazyHTML.attribute("aria-hidden") == ["true"]
+    assert svg |> Enum.at(0) |> LazyHTML.attribute("focusable") == ["false"]
+
+    text = LazyHTML.text(document)
+
+    # Every shape the chart draws is named in the legend, so neither colour nor
+    # geometry is ever the only carrier of meaning.
+    for required <- [
+          "recorded on two adjacent days",
+          "recorded at both ends; nothing recorded in between",
+          "also recorded before this window starts",
+          "a single recorded day, so no line is drawn",
+          "hidden from screen readers"
+        ] do
+      assert text =~ required, "expected the chart legend to state #{inspect(required)}"
+    end
+
+    assert text =~ "A line is not a claim that the CVE was present"
+
+    assert text =~ "and a missing line is not a claim that nothing existed."
+  end
+
   test "the lane table labels its scope and its counts", %{conn: conn} do
     document = conn |> get(~p"/timeline") |> html_response(200) |> LazyHTML.from_document()
 

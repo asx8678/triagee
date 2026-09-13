@@ -44,6 +44,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-bands")
       assert has_element?(view, "#tl-lanes-table")
       assert has_element?(view, "#tl-grid-table")
+      assert has_element?(view, "#tl-chart")
 
       # One band per day of the window: empty days are rendered explicitly.
       assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() == 56
@@ -226,6 +227,152 @@ defmodule TriageWeb.TimelineLiveTest do
     end
   end
 
+  describe "the connected chart" do
+    setup do
+      image = image!("live-chart")
+      placement!(image, "alpha", "prod-cluster-1")
+
+      # Recorded three days apart: the segment between them is a gap, and must
+      # be drawn and described as a gap.
+      gap = finding!(image, "CVE-2026-5200", package_name: "openssl")
+      event!(gap, "appeared", at(6))
+      event!(gap, "resolved", at(3))
+
+      # Recorded on adjacent days: a solid segment with an arrowhead.
+      solid = finding!(image, "CVE-2026-5201", package_name: "libc", severity: "CRITICAL")
+      event!(solid, "appeared", at(2))
+      event!(solid, "reopened", at(1))
+
+      # Recorded on one day only: a pin, never a line.
+      single = finding!(image, "CVE-2026-5202", package_name: "zlib")
+      event!(single, "appeared", at(1, ~T[09:00:00]))
+
+      %{gap: gap, solid: solid, single: single}
+    end
+
+    test "draws one track per lane on a labelled axis that marks today", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/timeline")
+      document = LazyHTML.from_document(html)
+
+      assert has_element?(view, "#tl-chart svg.tl-chart[aria-hidden='true'][focusable='false']")
+      assert has_element?(view, "#tl-chart-scroll.table-region[role='region'][tabindex='0']")
+
+      # One track per lane row, in the lane table's own severity order.
+      assert document |> LazyHTML.query("#tl-chart .tl-chart-track") |> Enum.count() == 3
+
+      assert document
+             |> LazyHTML.query("#tl-chart .tl-chart-track")
+             |> Enum.at(0)
+             |> LazyHTML.attribute("id") == ["tl-track-CVE-2026-5201"]
+
+      assert has_element?(view, "#tl-track-CVE-2026-5200")
+      assert has_element?(view, "#tl-track-CVE-2026-5202")
+
+      # The axis labels every day, every week start and today, at the window's size.
+      assert document |> LazyHTML.query("#tl-chart .tl-c-weekday") |> Enum.count() == 56
+
+      # Eight week starts plus the gutter's own CVE label.
+      assert document |> LazyHTML.query("#tl-chart .tl-c-week-label") |> Enum.count() == 9
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-today") |> Enum.count() == 1
+
+      # One marker and one description per recorded day, and one arrowhead
+      # definition per state, so a state never reuses another state's arrow.
+      # Scoped to the chart itself: the legend keys below it reuse these classes.
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-dot") |> Enum.count() == 5
+
+      assert document
+             |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-point title")
+             |> Enum.count() == 5
+
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart marker") |> Enum.count() == 4
+    end
+
+    test "joins adjacent recorded days solid, and a gap dashed", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/timeline")
+      document = LazyHTML.from_document(html)
+
+      solid =
+        document |> LazyHTML.query("#tl-track-CVE-2026-5201 .tl-c-seg-solid") |> Enum.to_list()
+
+      assert length(solid) == 1
+      assert LazyHTML.attribute(hd(solid), "marker-end") == ["url(#tl-c-arrow-reopened)"]
+
+      assert element(view, "#tl-track-CVE-2026-5201") |> render() =~
+               "adjacent days this CVE is recorded on"
+
+      dashed =
+        document |> LazyHTML.query("#tl-track-CVE-2026-5200 .tl-c-seg-dashed") |> Enum.to_list()
+
+      assert length(dashed) == 1
+      assert LazyHTML.attribute(hd(dashed), "marker-end") == ["url(#tl-c-arrow-ended)"]
+
+      # The gap segment is described as a gap, not as continuous presence.
+      assert element(view, "#tl-track-CVE-2026-5200") |> render() =~
+               "the days in between have none recorded"
+
+      # A single recorded day draws a pin and no segment in either direction.
+      assert document |> LazyHTML.query("#tl-track-CVE-2026-5202 .tl-c-seg") |> Enum.count() == 0
+      assert document |> LazyHTML.query("#tl-track-CVE-2026-5202 .tl-c-pin") |> Enum.count() == 1
+    end
+
+    test "the legend states what a line means and what it does not", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/timeline")
+      html = render(view)
+
+      assert html =~ "recorded on two adjacent days"
+      assert html =~ "recorded at both ends; nothing recorded in between"
+      assert html =~ "also recorded before this window starts"
+      assert html =~ "today, where the window ends"
+      assert html =~ "a single recorded day, so no line is drawn"
+      assert html =~ "suppression flag currently set (imported scanner data)"
+      assert html =~ "hidden from screen readers"
+      assert has_element?(view, "#tl-chart figcaption")
+    end
+
+    test "a lane recorded before the window starts with an entry tick", %{conn: conn} do
+      Triage.DataCase.reset_inventory!()
+
+      image = image!("live-chart-before")
+      placement!(image, "alpha", "prod-cluster-1")
+      finding = finding!(image, "CVE-2026-5300", first_seen: at(100))
+      event!(finding, "appeared", at(1))
+
+      {:ok, view, html} = live(conn, ~p"/timeline")
+      document = LazyHTML.from_document(html)
+
+      assert has_element?(view, "#tl-track-CVE-2026-5300 .tl-c-entry")
+      assert document |> LazyHTML.query("#tl-track-CVE-2026-5300 .tl-c-seg") |> Enum.count() == 0
+
+      assert element(view, "#tl-track-CVE-2026-5300") |> render() =~
+               "Also recorded before this window starts"
+    end
+
+    test "the chart is bounded and says what it left to the table", %{conn: conn} do
+      Triage.DataCase.reset_inventory!()
+
+      image = image!("live-chart-bound")
+      placement!(image, "alpha", "prod-cluster-1")
+
+      for index <- 1..13 do
+        cve = "CVE-2026-54" <> String.pad_leading(Integer.to_string(index), 2, "0")
+
+        image
+        |> finding!(cve)
+        |> event!("appeared", at(1))
+      end
+
+      {:ok, view, html} = live(conn, ~p"/timeline")
+      document = LazyHTML.from_document(html)
+
+      assert document |> LazyHTML.query("#tl-chart .tl-chart-track") |> Enum.count() == 12
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-dot") |> Enum.count() == 12
+      assert render(view) =~ "most severe lanes of 13"
+
+      # The bound hides nothing: the table still lists every lane.
+      assert has_element?(view, "#tl-lane-CVE-2026-5413")
+    end
+  end
+
   describe "recorded assessments and imported state" do
     setup do
       image = image!("live-judged")
@@ -299,6 +446,10 @@ defmodule TriageWeb.TimelineLiveTest do
 
     assert has_element?(view, "#tl-bands")
     assert has_element?(view, "#tl-lanes-empty")
+
+    # No lane means no track to draw, so the chart is absent rather than empty.
+    refute has_element?(view, "#tl-chart")
+
     assert render(view) =~ "No recorded observation on this day"
     assert render(view) =~ "not evidence of a clean estate"
   end

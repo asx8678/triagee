@@ -304,6 +304,19 @@ and reload.
 - A weekday-by-week grid (`#tl-grid-table`) counts the CVEs whose **first recorded observation** falls on
   each day, oldest week on the left. It is a real table with a caption and a text equivalent per cell, so
   the picture is never the only carrier of meaning.
+- A connected chart (`#tl-chart`, `live/timeline_live/chart.ex`) draws one SVG track per CVE across the
+  window's days: a labelled axis with week starts, weekday letters and a *today* line; a severity chip and
+  CVE label per track; one marker per recorded day; a solid arrowed segment for two adjacent recorded days;
+  a dashed arrowed segment for two recorded days with **no recorded observation in between**; a dashed entry
+  tick when the CVE was also recorded before the window; and a pin, never a line, for a lane with a single
+  recorded day. Every segment and marker carries a hover description in the same literal vocabulary as the
+  day bands.
+- The chart is plain inline SVG rendered server-side, with one arrowhead `<marker>` per state. This app has
+  no asset bundler, so a JavaScript charting library would mean vendoring a minified bundle and a LiveView
+  hook while giving up server-side rendering and ExUnit coverage of the markup. It is bounded to the 12 most
+  severe lanes with the bound stated on the page, and it is `aria-hidden` with a caption that says so: every
+  marker it draws is already listed as text in the day bands and counted per CVE in the lane table.
+
 - Wording is deliberately literal, and matches the What's New vocabulary: *no longer observed in local
   inventory* (never remediation), *Assessment recorded* (never approval), and a suppression flag shown as
   **imported scanner state with no recorded date or author**. Event rows carry the **current** local

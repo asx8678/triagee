@@ -190,3 +190,61 @@ the whole application and hit Elixir 1.20's type checker with the already-loaded
 the same one that worked earlier: stop the server, compile externally, restart. The durable lesson is not
 just "do not compile while the server runs" but "a crashed in-node compile leaves `_build/dev` needing an
 external recompile before live reloading is trustworthy again".
+
+---
+
+## Verification round 4 - the connected chart
+
+### What was added
+
+`TriageWeb.TimelineLive.Chart` (`app/lib/triage_web/live/timeline_live/chart.ex`), fed by a new `:chart`
+field on `Triage.Timeline.list_timeline/1` (`build_chart/3`), built from the same recorded events the day
+bands and lane table use, bounded to the 12 most severe lanes.
+
+The complaint was concrete and correct: the timeline showed no lines and nothing was connected. Per recorded
+observation the page drew one unicode glyph (`>`, `||`, `o`, `/`) in a 1.25rem column, and the only "line"
+was a 2px x 8-10px vertical stub (`.tl-connector`) between two adjacent day rows. No line spanned a day, so a
+CVE's history could not be read across the window at all.
+
+### Why SVG rather than a JavaScript charting library
+
+The request was to use a library. This app has no asset bundler: no `package.json`, no esbuild/tailwind build
+step, and `priv/static/assets` holds hand-vendored files (phoenix.js, phoenix_live_view.js). Adding
+vis-timeline, Chart.js or ApexCharts would mean vendoring a minified bundle plus a LiveView JS hook, and
+giving up server-side rendering and ExUnit coverage of the markup - the two things that make this view's
+honesty rules testable. Inline SVG is the browser's own vector graphics: real `line`/`circle`/`marker`
+elements, generated server-side, asserted directly in tests, and rendered without JavaScript.
+
+### Honesty rules the geometry obeys
+
+| Geometry | Meaning | Where it is stated |
+|---|---|---|
+| solid segment with arrowhead | two adjacent days with a recorded observation for this CVE | legend and the segment's own title |
+| dashed segment with arrowhead | two recorded days with no recorded observation in between | legend, the segment title, and the section copy |
+| dashed grey entry tick | also recorded before this window (the finding's own `first_seen`) | legend |
+| pin, no segment | a single recorded day in this window | legend |
+| no line at all | nothing implied | caption: a missing line is not a claim that nothing existed |
+
+### Verification (real browser, real development data)
+
+| Check | Result |
+|---|---|
+| Full gate | `mix ci` on the final tree: **696 passed, 2 skipped**, credo `--strict` clean, dialyzer **0 errors** |
+| Chart drawn from real records | 12 tracks, 1 solid segment, 2 dashed segments, 15 markers, 4 arrowhead definitions, 1 today line, 56 weekday labels, 9 week labels (8 week starts plus the CVE gutter label) |
+| Every segment arrowed | 3 segments, 3 marker-end references, three distinct state arrowheads (open/ended/reopened) |
+| Solid vs dashed is real | the reopened lane computes `stroke-dasharray: none`; the two gap lanes compute `4px, 4px` |
+| Hover descriptions | "Wed 05 Aug 2026 and Thu 06 Aug 2026 are adjacent days this CVE is recorded on." and "... the days in between have none recorded." |
+| Colour contrast | dots and strokes 6.46-9.84:1, CVE label 15.41:1, week labels 6.32:1, severity chip text on its chip 8.6:1 - all pass AA. The weekday letters measured **3.47:1** and were darkened to `var(--triage-muted)` (now 6.32:1) |
+| Reflow | `scrollWidth == clientWidth` at 1440/390/320; the 1616px chart scrolls inside its region (1624 -> 1406/364/294) and the page never scrolls sideways; the other five routes stay clean at 320 |
+| Accessibility tree | the chart's SVG subtree is `ignored: true, role: none` - zero nodes; the page still exposes 2 tables, 50 rows, 16 column headers, 48 row headers, 1 caption and 8 regions |
+| Screenshots | `evidence/timeline/timeline-chart-desktop-1440x900.png` (166,354 B), `timeline-chart-mobile-390x844.png` (251,698 B) |
+
+### Defects found while building the chart
+
+1. `segment_class/1` never emitted an explicit solid class (solid was implicit in CSS), so solid and dashed
+   segments were indistinguishable to a test - and the legend's own key had the same gap.
+2. Three of my own assertions used `length/1`, `hd/1` and `List.first/1` on `LazyHTML.query/2`, which returns
+   a struct rather than a list, and counted the legend's key shapes as chart marks. Both are now scoped.
+3. The chart's layout points initially dropped the `date` and `label` they needed for adjacency and hover text.
+4. The weekday letter colour failed AA (3.47:1) - only a browser could have found this one.
+

@@ -19,7 +19,7 @@ defmodule TriageWeb.TimelineLive do
   alias Triage.Timeline
   alias TriageWeb.CaseLive
   alias TriageWeb.TimelineFilters
-  alias TriageWeb.TimelineLive.{Bands, Drawer, Grid, Lanes}
+  alias TriageWeb.TimelineLive.{Bands, Chart, Drawer, Grid, Lanes}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -291,6 +291,12 @@ defmodule TriageWeb.TimelineLive do
           detail={@detail}
           selected_cve={@selected_cve}
           filters={@filters}
+        />
+
+        <Chart.lane_chart
+          :if={@timeline.chart.tracks != []}
+          chart={@timeline.chart}
+          lanes={@timeline.lanes}
         />
 
         <Bands.waterfall days={@timeline.days} filters={@filters} />

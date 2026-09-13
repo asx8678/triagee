@@ -5,6 +5,7 @@ defmodule Triage.Timeline do
   @day_row_limit 25
   @event_limit 2_000
   @lane_limit 50
+  @chart_lane_limit 12
   @case_limit 10
   @scope_max 120
   @unsafe_text ~r/[\x00-\x1F\x7F]/
@@ -30,6 +31,12 @@ defmodule Triage.Timeline do
     * A vertical connector between adjacent day bands means the same CVE has a
       recorded observation on both days. It renders recorded observations; it
       is never a claim of continuous presence.
+    * The connected chart draws one line per CVE across the window's days: a
+      solid segment for two adjacent recorded days and a dashed segment for two
+      recorded days with none recorded in between. It is decorative by
+      construction - every marker it draws is already listed as text in the day
+      bands and the lane table - and a line is never a claim of presence between
+      observations.
     * A judged marker means a saved assessment row exists. It never means
       approved, accepted, mitigated, fixed or resolved.
     * Event rows carry the CURRENT local finding and image metadata joined to
@@ -40,8 +47,8 @@ defmodule Triage.Timeline do
 
   Everything is bounded: a #{@min_weeks}-#{@max_weeks} week window (default
   #{@default_weeks}), at most #{@day_row_limit} rows per day band,
-  #{@event_limit} events, #{@lane_limit} lanes and #{@case_limit} cases per CVE,
-  each with an explicit truncation flag. Invalid input is rejected before any
+  #{@event_limit} events, #{@lane_limit} lanes, #{@case_limit} cases per CVE and
+  #{@chart_lane_limit} chart tracks, each with an explicit truncation flag. Invalid input is rejected before any
   query and nothing here writes.
   """
 
@@ -69,7 +76,7 @@ defmodule Triage.Timeline do
   under the same text contract, otherwise `{:error, :invalid_cve}`.
 
   Returns `{:ok, view}` with `:window`, `:days` (newest first), `:grid`,
-  `:lanes` and `:summary`.
+  `:lanes`, `:chart` and `:summary`.
   """
   @spec list_timeline(keyword()) :: {:ok, map()} | {:error, atom()}
   def list_timeline(opts \\ []) do
@@ -227,6 +234,7 @@ defmodule Triage.Timeline do
       days: days,
       grid: build_grid(req, events),
       lanes: lanes,
+      chart: build_chart(req, events, lanes),
       summary: summary(req, events, judged, days, lanes, truncated?)
     }
   end
@@ -451,6 +459,106 @@ defmodule Triage.Timeline do
           }
         end)
     }
+  end
+
+  ## Chart
+
+  # The connected-lane chart is built from the same recorded events the day
+  # bands and the lane table use, so the picture cannot disagree with the
+  # records it summarises. It is bounded to the most severe lanes; the lane
+  # table still lists every lane, and the canvas states the bound.
+  @chart_lane_limit 12
+
+  defp build_chart(req, events, lanes) do
+    by_cve = chart_days_by_cve(events)
+
+    %{
+      lane_limit: @chart_lane_limit,
+      shown: min(lanes.total, @chart_lane_limit),
+      total: lanes.total,
+      dates: Enum.map(Date.range(req.from, req.to), &chart_date(&1, req.to)),
+      tracks:
+        lanes.rows
+        |> Enum.take(@chart_lane_limit)
+        |> Enum.map(&chart_track(&1, by_cve, req))
+    }
+  end
+
+  defp chart_date(date, today) do
+    %{
+      date: date,
+      iso_date: Date.to_iso8601(date),
+      day: Calendar.strftime(date, "%d"),
+      month: Calendar.strftime(date, "%b"),
+      weekday: Calendar.strftime(date, "%a"),
+      week_start?: date == Date.beginning_of_week(date, :monday),
+      today?: date == today,
+      label: Calendar.strftime(date, "%a %d %b %Y")
+    }
+  end
+
+  defp chart_days_by_cve(events) do
+    events
+    |> Enum.group_by(fn {_e, f, _i} -> f.cve end)
+    |> Map.new(fn {cve, rows} ->
+      days =
+        rows
+        |> Enum.group_by(fn {e, _f, _i} -> DateTime.to_date(e.occurred_at) end)
+        |> Map.new(fn {date, day_rows} ->
+          {date,
+           %{
+             kinds:
+               day_rows
+               |> Enum.map(fn {e, _f, _i} -> e.event end)
+               |> Enum.uniq()
+               |> Enum.sort(),
+             count: length(day_rows),
+             suppressed?: Enum.any?(day_rows, fn {_e, f, _i} -> f.suppressed end)
+           }}
+        end)
+
+      {cve, days}
+    end)
+  end
+
+  defp chart_track(lane, by_cve, req) do
+    days = Map.get(by_cve, lane.cve, %{})
+
+    points =
+      days
+      |> Enum.filter(fn {date, _info} -> in_window?(date, req) end)
+      |> Enum.sort_by(fn {date, _info} -> date end, Date)
+      |> Enum.map(fn {date, info} ->
+        %{
+          date: date,
+          iso_date: Date.to_iso8601(date),
+          kinds: info.kinds,
+          count: info.count,
+          suppressed?: info.suppressed?,
+          label: Calendar.strftime(date, "%a %d %b %Y")
+        }
+      end)
+
+    %{
+      cve: lane.cve,
+      severity: lane.severity,
+      state: lane.state,
+      points: points,
+      recorded_before?: before_window?(lane.first_seen, req.from)
+    }
+  end
+
+  # A lane whose first recorded observation predates the window starts with an
+  # entry tick instead of an implied beginning.
+  defp before_window?(nil, _from), do: false
+
+  defp before_window?(first_seen, from) do
+    case first_seen do
+      %DateTime{} = value -> Date.compare(DateTime.to_date(value), from) == :lt
+      %NaiveDateTime{} = value -> Date.compare(NaiveDateTime.to_date(value), from) == :lt
+      %Date{} = value -> Date.compare(value, from) == :lt
+      _other -> false
+    end
   end
 
   ## Lanes
