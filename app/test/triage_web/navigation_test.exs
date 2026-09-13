@@ -6,6 +6,7 @@ defmodule TriageWeb.NavigationTest do
     {"findings", "/findings"},
     {"cases", "/cases"},
     {"whats-new", "/whats-new"},
+    {"timeline", "/timeline"},
     {"replay", "/replay"},
     {"replay-history", "/replay/history"},
     {"imports", "/imports"}
@@ -34,11 +35,14 @@ defmodule TriageWeb.NavigationTest do
     assert document |> LazyHTML.query("a[href='#main-content']") |> Enum.count() == 1
     assert document |> LazyHTML.query("main#main-content[tabindex='-1']") |> Enum.count() == 1
     assert document |> LazyHTML.query("nav[aria-label='Primary']") |> Enum.count() == 1
-    assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 7
+    assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 8
     assert LazyHTML.query(document, "#nav-home") |> LazyHTML.text() |> String.trim() == "Overview"
 
     assert LazyHTML.query(document, "#nav-whats-new") |> LazyHTML.text() |> String.trim() ==
              "Activity"
+
+    assert LazyHTML.query(document, "#nav-timeline") |> LazyHTML.text() |> String.trim() ==
+             "Timeline"
 
     assert document |> LazyHTML.query("#navigation-menu > summary") |> Enum.count() == 1
     assert document |> LazyHTML.query("#environment-notice") |> Enum.count() == 1

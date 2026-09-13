@@ -28,6 +28,7 @@ defmodule TriageWeb.Router do
     live "/cases/:id", CaseLive.Show
 
     live "/whats-new", WhatsNewLive
+    live "/timeline", TimelineLive
     live "/replay", ReplayLive
     live "/replay/history", ReplayHistoryLive
     live "/imports", ImportLive

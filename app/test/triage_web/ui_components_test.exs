@@ -140,15 +140,16 @@ defmodule TriageWeb.UIComponentsTest do
     assert count(doc, "#empty .page-actions a[href='/findings']") == 1
   end
 
-  test "shell has one persistent notice, native mobile disclosure and all seven stable URLs" do
+  test "shell has one persistent notice, native mobile disclosure and all eight stable URLs" do
     doc = component(&shell/1, %{})
     assert count(doc, "a[href='#main-content']") == 1
     assert count(doc, "main#main-content[tabindex='-1']") == 1
     assert count(doc, "#navigation-menu > summary[aria-controls='primary-navigation']") == 1
-    assert count(doc, "nav[aria-label='Primary'] a") == 7
+    assert count(doc, "nav[aria-label='Primary'] a") == 8
     assert count(doc, "#nav-home[aria-current='page']") == 1
     assert text(doc, "#nav-home") == "Overview"
     assert text(doc, "#nav-whats-new") == "Activity"
+    assert text(doc, "#nav-timeline") == "Timeline"
     assert count(doc, "#environment-notice") == 1
     assert count(doc, "#environment-notice .environment-summary") == 1
     assert count(doc, "#safety-details summary") == 1

@@ -109,7 +109,8 @@ defmodule TriageWeb.Layouts do
          {"home", "Overview", ~p"/"},
          {"findings", "Findings", ~p"/findings"},
          {"cases", "Review Queue", ~p"/cases"},
-         {"whats-new", "Activity", ~p"/whats-new"}
+         {"whats-new", "Activity", ~p"/whats-new"},
+         {"timeline", "Timeline", ~p"/timeline"}
        ]},
       {"Data tools",
        [

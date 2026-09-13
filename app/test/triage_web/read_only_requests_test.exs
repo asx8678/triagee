@@ -17,7 +17,15 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
   alias Triage.{Cases, Intel, Repo, Seeds}
   alias Triage.Inventory.Finding
 
-  @live_routes ["/findings", "/cases", "/whats-new", "/replay", "/replay/history", "/imports"]
+  @live_routes [
+    "/findings",
+    "/cases",
+    "/whats-new",
+    "/timeline",
+    "/replay",
+    "/replay/history",
+    "/imports"
+  ]
 
   setup do
     Triage.DataCase.reset_inventory!()
