@@ -122,8 +122,6 @@ defmodule Mix.Tasks.Triage.Import do
   end
 
   defp format_errors(errors) do
-    errors
-    |> Enum.map(fn %{path: path, message: message} -> "  #{path}: #{message}" end)
-    |> Enum.join("\n")
+    Enum.map_join(errors, "\n", fn %{path: path, message: message} -> "  #{path}: #{message}" end)
   end
 end

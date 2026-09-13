@@ -10,8 +10,9 @@ defmodule TriageWeb.FindingLive.PagingTest do
 
   import Phoenix.LiveViewTest
 
+  alias Triage.Inventory
   alias Triage.Inventory.GroupCursor
-  alias Triage.{Inventory, Seeds}
+  alias Triage.Seeds
 
   # Mirrors FindingLive.Index @per_page. Pinned deliberately: the page size is a
   # user-visible contract, so changing it must fail this suite.

@@ -2,8 +2,9 @@ defmodule TriageWeb.FindingLiveTest do
   use TriageWeb.ConnCase, async: true
 
   import Ecto.Query
-  alias Triage.{Repo, Seeds}
   alias Triage.Inventory.Finding
+  alias Triage.Repo
+  alias Triage.Seeds
 
   setup do
     :ok = Seeds.seed()

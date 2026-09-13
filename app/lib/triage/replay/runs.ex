@@ -14,8 +14,9 @@ defmodule Triage.Replay.Runs do
   automatic physical retention job and no asserted historical provenance.
   """
   import Ecto.Query
-  alias Triage.{Repo, Replay}
+  alias Triage.Replay
   alias Triage.Replay.Run
+  alias Triage.Repo
 
   @lock_key 7_433_921_021_338
   @ttl 30 * 24 * 60 * 60

@@ -59,7 +59,7 @@ defmodule TriageWeb.PageController do
   defp shape_total({:ok, total}) when is_integer(total), do: total
   defp shape_total(_other), do: nil
 
-  defp shape_team_list(%{team_names: names}) when is_list(names) and length(names) > 0,
+  defp shape_team_list(%{team_names: names}) when is_list(names) and names != [],
     do: names |> Enum.uniq() |> Enum.sort() |> Enum.join(", ")
 
   defp shape_team_list(_), do: nil

@@ -21,15 +21,13 @@ defmodule Triage.Replay do
   def json_limits, do: @limits
 
   def run(json) when is_binary(json) do
-    cond do
-      byte_size(json) > @limits.max_input_bytes ->
-        {:error, :input_too_large}
-
-      true ->
-        case preflight(json, [], :plain, 0) do
-          :ok -> decode_run(json)
-          error -> error
-        end
+    if byte_size(json) > @limits.max_input_bytes do
+      {:error, :input_too_large}
+    else
+      case preflight(json, [], :plain, 0) do
+        :ok -> decode_run(json)
+        error -> error
+      end
     end
   rescue
     _ -> {:error, :execution_error}

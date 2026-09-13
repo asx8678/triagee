@@ -330,15 +330,13 @@ defmodule Triage.Collection.Normalize do
     raw_total = open_n + excluded_n
 
     report =
-      cond do
-        is_integer(inv) and is_integer(det) and inv != det ->
-          fail(
-            report,
-            "#{entry.digest}: contradictory claimed counts (inventory #{inv}, detail #{det}); completeness not implied"
-          )
-
-        true ->
-          report
+      if is_integer(inv) and is_integer(det) and inv != det do
+        fail(
+          report,
+          "#{entry.digest}: contradictory claimed counts (inventory #{inv}, detail #{det}); completeness not implied"
+        )
+      else
+        report
       end
 
     report =

@@ -1,8 +1,8 @@
 defmodule TriageWeb.ImportLiveTest do
   use TriageWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
-  alias Triage.Repo
   alias Triage.Inventory.Image
+  alias Triage.Repo
 
   setup do
     Triage.DataCase.reset_inventory!()

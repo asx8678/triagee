@@ -9,8 +9,9 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   use TriageWeb.ConnCase, async: true
 
   import Ecto.Query
-  alias Triage.{Repo, Seeds}
   alias Triage.Inventory.{Finding, Image, ImagePlacement}
+  alias Triage.Repo
+  alias Triage.Seeds
 
   @staging "staging-cluster-1"
   @now ~U[2026-09-09 06:00:00Z]

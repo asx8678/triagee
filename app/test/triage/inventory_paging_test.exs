@@ -8,8 +8,9 @@ defmodule Triage.InventoryPagingTest do
 
   use Triage.DataCase, async: true
 
+  alias Triage.Inventory
   alias Triage.Inventory.GroupCursor
-  alias Triage.{Inventory, Seeds}
+  alias Triage.Seeds
 
   @now ~U[2026-09-10 12:00:00Z]
   @severities ~w(CRITICAL HIGH MEDIUM LOW)

@@ -10,46 +10,55 @@ defmodule Triage.Collection.Errors do
 
   defmodule AuthError do
     @moduledoc "401/403 response: terminal authentication failure."
+    @type t :: %__MODULE__{message: String.t() | nil, status: integer() | nil}
     defexception [:message, :status]
   end
 
   defmodule RedirectError do
     @moduledoc "3xx response. Redirects are never followed; Location is not echoed."
+    @type t :: %__MODULE__{message: String.t() | nil, status: integer() | nil}
     defexception [:message, :status]
   end
 
   defmodule GraphQLError do
     @moduledoc "GraphQL-level error object or missing data. Terminal."
+    @type t :: %__MODULE__{message: String.t() | nil}
     defexception [:message]
   end
 
   defmodule TransportError do
     @moduledoc "Transient transport failure that may be retried within bounds."
+    @type t :: %__MODULE__{message: String.t() | nil, reason: atom() | nil}
     defexception [:message, :reason]
   end
 
   defmodule ResponseBudgetError do
     @moduledoc "Response exceeded the byte/depth budget before acceptance."
+    @type t :: %__MODULE__{message: String.t() | nil}
     defexception [:message]
   end
 
   defmodule RequestBudgetError do
     @moduledoc "Request count/time budget exceeded."
+    @type t :: %__MODULE__{message: String.t() | nil}
     defexception [:message]
   end
 
   defmodule CancelledError do
     @moduledoc "Collection was cancelled."
+    @type t :: %__MODULE__{message: String.t() | nil}
     defexception [:message]
   end
 
   defmodule InvalidOptionsError do
     @moduledoc "Options failed validation before any network access."
+    @type t :: %__MODULE__{message: String.t() | nil}
     defexception [:message]
   end
 
   defmodule DisabledError do
     @moduledoc "Offline entry: no live transport is configured."
+    @type t :: %__MODULE__{message: String.t() | nil}
     defexception [:message]
   end
 

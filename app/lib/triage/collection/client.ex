@@ -41,11 +41,11 @@ defmodule Triage.Collection.Client do
   alias Triage.Collection.Errors, as: E
 
   alias Triage.Collection.Errors.{
-    TransportError,
-    GraphQLError,
-    RedirectError,
     AuthError,
-    InvalidOptionsError
+    GraphQLError,
+    InvalidOptionsError,
+    RedirectError,
+    TransportError
   }
 
   @signal_timeout_ms 100
@@ -144,13 +144,23 @@ defmodule Triage.Collection.Client do
 
   defp invalid_client, do: {:error, %InvalidOptionsError{message: "client state is invalid"}}
 
+  # `:atomics.get/2` takes an opaque reference, so dialyzer can prove that a
+  # plain reference — exactly the forged input these two probes exist to reject —
+  # always fails the call. That proof would make every branch after a valid
+  # client look unreachable, which is what it does today: the whole retry,
+  # budget and transport path reads as dead code to dialyzer. Dispatching
+  # through a value keeps the failure a runtime result, which is the case the
+  # rescue below handles, and the forged-client regressions in
+  # test/triage/collection/residual_test.exs still exercise it.
+  @atomics :atomics
+
+  defp atomics_get(ref, slot), do: apply(@atomics, :get, [ref, slot])
+
   defp valid_atomics?(ref) when is_reference(ref) do
-    try do
-      _ = :atomics.get(ref, 1)
-      true
-    rescue
-      _ -> false
-    end
+    _ = atomics_get(ref, 1)
+    true
+  rescue
+    _ -> false
   end
 
   defp valid_atomics?(_other), do: false
@@ -159,13 +169,11 @@ defmodule Triage.Collection.Client do
   # flag). A forged reference of the wrong size must be rejected here instead
   # of raising from a later slot read.
   defp valid_budget?(ref) when is_reference(ref) do
-    try do
-      _ = :atomics.get(ref, 1)
-      _ = :atomics.get(ref, 2)
-      true
-    rescue
-      _ -> false
-    end
+    _ = atomics_get(ref, 1)
+    _ = atomics_get(ref, 2)
+    true
+  rescue
+    _ -> false
   end
 
   defp valid_budget?(_other), do: false
@@ -531,6 +539,15 @@ defmodule Triage.Collection.Client do
       %TransportError{message: E.sanitize_message(Exception.message(error)), reason: :transport}
     end
   end
+
+  # A transport may fail with something that is not an exception at all: the
+  # injected transports in test/triage/collection/client_test.exs return raw
+  # tuples that can carry credentials, and that shape must be coerced to a
+  # sanitized TransportError rather than passed through. Dialyzer cannot see
+  # those callers — test files are `.exs` and are not part of its analysis — so
+  # it concludes this clause can never match and reports the coverage warning
+  # silenced below. The behaviour it implements is asserted in that test file.
+  @dialyzer {:nowarn_function, normalize_transport_error: 1}
 
   defp normalize_transport_error(_other) do
     %TransportError{message: "transport failed", reason: :transport}

@@ -20,8 +20,9 @@ defmodule Triage.Cases do
 
   import Ecto.Query
   alias Ecto.Changeset
-  alias Triage.{Inventory, Repo}
   alias Triage.Cases.{CaseEvent, EvidenceSnapshot, Review, ReviewCase}
+  alias Triage.Inventory
+  alias Triage.Repo
 
   @actor "local-operator"
   @payload_source "synthetic_local_inventory"

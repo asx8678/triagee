@@ -11,7 +11,12 @@ defmodule Triage.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      # Mix and ExUnit must be in the PLT: without them every `Mix.raise/1`,
+      # `Mix.shell/0` and `Mix.Task.run/1` call inside a task, and every
+      # `ExUnit.Callbacks`/`ExUnit.CaseTemplate` macro expansion in test/support,
+      # is reported as a call to a function that does not exist.
+      dialyzer: [plt_add_apps: [:mix, :ex_unit]]
     ]
   end
 
@@ -53,7 +58,13 @@ defmodule Triage.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+
+      # Static analysis, development and test only and never part of a release:
+      # credo for consistency, dialyxir for the type and pattern analysis that
+      # would have caught this codebase's dead-branch defect on its own.
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -85,13 +96,19 @@ defmodule Triage.MixProject do
       # The non-mutating counterpart of `precommit`, for CI and for checking a
       # tree without rewriting it: `format` rewrites files and
       # `deps.unlock --unused` edits mix.lock, so neither can be a gate that
-      # fails on a dirty tree instead of silently fixing it.
+      # fails on a dirty tree instead of silently fixing it. It also carries the
+      # static analysis — `credo --strict` for consistency and `dialyzer` for
+      # the type, pattern and dead-code analysis that found real defects here
+      # (a missing error type in a spec, an unreachable clause, and a probe that
+      # made a whole request path look dead).
       ci: [
         "compile --warnings-as-errors",
         "format --check-formatted",
         "deps.unlock --check-unused",
+        "credo --strict",
         "assets.setup",
-        "test"
+        "test",
+        "dialyzer"
       ]
     ]
   end

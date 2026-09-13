@@ -33,8 +33,8 @@ defmodule Triage.Activity do
 
   import Ecto.Query
 
-  alias Triage.Repo
   alias Triage.Inventory.{Finding, FindingEvent, Image, ImagePlacement}
+  alias Triage.Repo
 
   @page_size 25
   @fetch_limit @page_size + 1

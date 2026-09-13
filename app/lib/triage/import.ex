@@ -86,8 +86,8 @@ defmodule Triage.Import do
 
   import Ecto.Query
 
-  alias Triage.Repo
   alias Triage.Inventory.{Finding, FindingEvent, Image, ImagePlacement}
+  alias Triage.Repo
 
   @format "triage.snapshot"
   @version 1
@@ -1302,9 +1302,7 @@ defmodule Triage.Import do
   defp problem(path, message), do: %{path: path, message: message}
 
   defp format_errors(errors) do
-    errors
-    |> Enum.map(fn %{path: path, message: message} -> "  #{path}: #{message}" end)
-    |> Enum.join("\n")
+    Enum.map_join(errors, "\n", fn %{path: path, message: message} -> "  #{path}: #{message}" end)
   end
 
   ## Reconciliation

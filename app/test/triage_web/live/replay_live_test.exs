@@ -1,8 +1,8 @@
 defmodule TriageWeb.ReplayLiveTest do
   use TriageWeb.ConnCase, async: false
 
-  alias Triage.Repo
   alias Triage.Replay.Run
+  alias Triage.Repo
 
   @fixture Path.expand("../../fixtures/replay/complete.json", __DIR__)
 

@@ -3,8 +3,8 @@ defmodule TriageWeb.ActivityReadabilityTest do
 
   import Phoenix.LiveViewTest
 
-  alias Triage.Repo
   alias Triage.Inventory.{Finding, FindingEvent, Image, ImagePlacement}
+  alias Triage.Repo
 
   @now ~U[2026-09-09 06:00:00Z]
 

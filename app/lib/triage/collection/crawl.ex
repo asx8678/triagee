@@ -26,7 +26,7 @@ defmodule Triage.Collection.Crawl do
 
   alias Triage.Collection.{Client, Normalize, Query}
   alias Triage.Collection.Errors
-  alias Triage.Collection.Errors.{TransportError, GraphQLError, InvalidOptionsError}
+  alias Triage.Collection.Errors.{GraphQLError, InvalidOptionsError, TransportError}
 
   @doc "Runs the crawl and returns `{:ok, %Report{}}` or `{:error, exception}`."
   def run(config, transport, transport_state, opts) do
@@ -39,9 +39,8 @@ defmodule Triage.Collection.Crawl do
   # options cannot cost an upstream call or be silently ignored.
   defp validate_run_options(opts) do
     with :ok <- validate_owners_option(opts[:owners]),
-         :ok <- validate_max_images_option(opts[:max_images]),
-         :ok <- validate_signal_option(opts[:signal]) do
-      :ok
+         :ok <- validate_max_images_option(opts[:max_images]) do
+      validate_signal_option(opts[:signal])
     end
   end
 

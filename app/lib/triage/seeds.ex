@@ -95,7 +95,7 @@ defmodule Triage.Seeds do
         "HIGH",
         "1.38",
         "Use-after-free in a synthetic busybox applet. <script>alert('xss')</script> probe text must render as text, never as markup.",
-        now
+        now: now
       )
 
       finding!(
@@ -106,7 +106,7 @@ defmodule Triage.Seeds do
         "HIGH",
         nil,
         "Same advisory against the busybox-binsh subpackage.",
-        now
+        now: now
       )
 
       finding!(
@@ -117,7 +117,7 @@ defmodule Triage.Seeds do
         "CRITICAL",
         "3.2.1",
         "Synthetic OpenSSL vulnerability with a reported fixed version.",
-        now
+        now: now
       )
 
       finding!(
@@ -128,7 +128,7 @@ defmodule Triage.Seeds do
         "HIGH",
         "8.5.1",
         "Same advisory against curl on another team's image.",
-        now
+        now: now
       )
 
       finding!(
@@ -139,7 +139,7 @@ defmodule Triage.Seeds do
         "MEDIUM",
         nil,
         "Occurrence on an image whose deployment context is unknown.",
-        now
+        now: now
       )
 
       finding!(
@@ -150,8 +150,8 @@ defmodule Triage.Seeds do
         "LOW",
         nil,
         "Scanner-suppressed by operator policy. Suppression is not mitigation evidence.",
-        now,
-        true
+        now: now,
+        suppressed: true
       )
 
       reopened =
@@ -163,7 +163,7 @@ defmodule Triage.Seeds do
           "HIGH",
           nil,
           "Synthetic zlib finding that was cleared once and came back.",
-          now
+          now: now
         )
 
       resolved =
@@ -175,7 +175,7 @@ defmodule Triage.Seeds do
           "MEDIUM",
           nil,
           "Disappeared from a complete unfiltered collection; not proof of remediation.",
-          now
+          now: now
         )
 
       pin_history!(reopened, %{
@@ -231,9 +231,11 @@ defmodule Triage.Seeds do
          severity,
          fix,
          description,
-         now,
-         suppressed \\ false
+         opts
        ) do
+    now = Keyword.fetch!(opts, :now)
+    suppressed = Keyword.get(opts, :suppressed, false)
+
     {:ok, finding} =
       Inventory.upsert_finding(
         image,

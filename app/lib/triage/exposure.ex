@@ -9,8 +9,8 @@ defmodule Triage.Exposure do
   """
 
   import Ecto.Query
-  alias Triage.Repo
   alias Triage.Inventory.ImagePlacement
+  alias Triage.Repo
 
   @exposures ~w(internet_exposed internal unknown)
 

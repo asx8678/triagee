@@ -106,7 +106,7 @@ defmodule Triage.Risk do
   end
 
   @doc "Aggregates placement-level priorities to a CVE-level maximum."
-  def aggregate(results) when is_list(results) and length(results) > 0 do
+  def aggregate(results) when is_list(results) and results != [] do
     Enum.max_by(results, &rank/1)
   end
 

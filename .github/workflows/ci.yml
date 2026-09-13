@@ -42,8 +42,16 @@ jobs:
 
       - run: mix deps.get
 
+      # Dialyzer's PLT lives in _build and takes minutes to build from scratch,
+      # so it is cached with the compiled artifacts.
+      - uses: actions/cache@v4
+        with:
+          path: app/_build
+          key: build-${{ runner.os }}-${{ hashFiles('app/mix.lock') }}
+
       # `mix ci` is the non-mutating counterpart of `mix precommit`: it checks
       # formatting instead of rewriting it and checks for unused deps instead
       # of editing mix.lock, so a failure here is the tree's state and not a
-      # silently fixed one.
+      # silently fixed one. It runs the static analysis too: `credo --strict`
+      # against .credo.exs and `dialyzer` against the same configuration.
       - run: mix ci

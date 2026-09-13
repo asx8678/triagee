@@ -57,19 +57,27 @@ defmodule Triage.ImportConcurrencyTest do
     :ok
   end
 
+  # The module tag above is decided when this file is compiled, because a skip
+  # has to be. The assertions below read the same opt-in at run time instead:
+  # that is the value that matters when the connection is actually switched, and
+  # reading it here also stops the type checker from folding a compile-time
+  # literal into a conjunction it can prove is always false.
+  defp owned_db, do: System.get_env("TRIAGE_IMPORT_CONCURRENCY_DB")
+
   defp assert_owned_database! do
     configured = Repo.config()[:database]
+    owned = owned_db()
 
-    unless Mix.env() == :test and is_binary(@owned_db) and
-             String.starts_with?(@owned_db, "triage_test_") and
-             configured == @owned_db and
+    unless Mix.env() == :test and is_binary(owned) and
+             String.starts_with?(owned, "triage_test_") and
+             configured == owned and
              configured == "triage_test#{System.get_env("MIX_TEST_PARTITION")}" do
       raise "concurrency tests require an exact owned test database opt-in"
     end
   end
 
   defp assert_current_database! do
-    unless Repo.query!("SELECT current_database()").rows == [[@owned_db]] do
+    unless Repo.query!("SELECT current_database()").rows == [[owned_db()]] do
       raise "concurrency test connection database mismatch"
     end
   end
