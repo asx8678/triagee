@@ -52,9 +52,10 @@ Excluded, by class (see `evidence/checkpoint/excluded.paths`):
 
 - All `.pi/` harness configuration and state, including the three inherited tracked
   modifications, plus the untracked mesh journals.
-- `architecture(3).md` — the input architecture brief. It is a legitimate candidate
-  for the repository, so it is called out separately for explicit owner approval
-  rather than folded silently into this checkpoint.
+- `architecture(3).md` — the input architecture brief. It was already tracked by the
+  initial commit (`2612c56`), so this checkpoint neither adds nor modifies it and the
+  exclusion only keeps it out of the generated inventory. Changing it needs the
+  owner's explicit approval; keeping it needs no decision.
 - `tmp/` (103 scratch files: the headless-browser verification screenshots and the
   collector working tree).
 - `evidence/` artifacts other than the 16 markdown records (386 untracked files).
@@ -113,8 +114,8 @@ and loopback-only.
 ```
 
 Owner approval of this list was given ("do what's recommended").
-`architecture(3).md` remains excluded pending an explicit decision, and the
-staged-diff scan result is recorded above. Original historical-baseline proof
+`architecture(3).md` was already tracked by the initial commit and is untouched by
+these commits, and the staged-diff scan result is recorded above. Original historical-baseline proof
 remains unresolved.
 
 ## Inventory reviewed (2026-09-12, A+B era — historical)
