@@ -123,7 +123,7 @@ button, a, summary { touch-action: manipulation; }
 .filter-toolbar > .filter-summary { flex: 1 1 20rem; align-self: center; margin: 0; }
 
 /* Tables remain genuinely two-dimensional inside their named keyboard regions. */
-.table-region, .triage-table-wrap { max-width: 100%; min-width: 0; overflow-x: auto; background: #fff; border: 1px solid var(--triage-border); border-radius: var(--triage-radius); }
+.table-region, .triage-table-wrap { position: relative; max-width: 100%; min-width: 0; overflow-x: auto; background: #fff; border: 1px solid var(--triage-border); border-radius: var(--triage-radius); }
 .triage-content :is(.data-table, .table, .triage-preview-table) { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: .8125rem; line-height: 1.4; }
 .triage-content :is(.data-table, .table, .triage-preview-table) :is(th, td) { padding: .3125rem .5rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--triage-border); white-space: normal; overflow-wrap: anywhere; }
 .triage-content :is(.data-table, .table, .triage-preview-table) th { color: #34465d; background: #edf1f6; font-size: .75rem; font-weight: 600; text-transform: none; letter-spacing: normal; }
@@ -392,6 +392,8 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
   .tl-row { grid-template-columns: 1.25rem minmax(0, 1fr); }
   .tl-row-actions { grid-column: 2; }
 }
-@media (max-width: 640px) {
-  .tl-grid-table { display: block; overflow-x: auto; }
-}
+/* A keyboard-focusable horizontal scroll region, the house pattern: the wrapper
+   must also be the containing block for absolutely positioned descendants
+   (the sr-only text equivalents), otherwise those escape the clipping and
+   extend the document's scroll width. */
+.table-region:focus-visible { outline: 2px solid var(--triage-focus); outline-offset: 2px; }

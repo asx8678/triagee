@@ -48,6 +48,13 @@ defmodule TriageWeb.TimelineLiveTest do
       # One band per day of the window: empty days are rendered explicitly.
       assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() == 56
 
+      # Both wide tables live in their own scroll region, so the page itself
+      # never scrolls horizontally at a narrow viewport (WCAG 2.2 SC 1.4.10).
+      assert has_element?(view, "#tl-grid-scroll.table-region[role='region'][tabindex='0']")
+      assert has_element?(view, "#tl-lanes-scroll.table-region[role='region'][tabindex='0']")
+      assert has_element?(view, "#tl-grid-scroll > table#tl-grid-table")
+      assert has_element?(view, "#tl-lanes-scroll > table#tl-lanes-table")
+
       # The grid is a real table with a caption and one row per weekday.
       assert document |> LazyHTML.query("#tl-grid-table caption") |> Enum.count() == 1
 

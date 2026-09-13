@@ -30,46 +30,55 @@ defmodule TriageWeb.TimelineLive.Lanes do
         No recorded observation in this window. An empty window is not evidence of a clean estate.
       </p>
 
-      <table :if={@lanes.total > 0} id="tl-lanes-table" class="data-table">
-        <thead>
-          <tr>
-            <th scope="col">CVE</th>
-            <th scope="col">Current severity</th>
-            <th scope="col">Occurrences</th>
-            <th scope="col">Days observed</th>
-            <th scope="col">Current state</th>
-            <th scope="col">Assessments</th>
-            <th scope="col">Detail</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={lane <- @lanes.rows} id={"tl-lane-" <> lane.cve}>
-            <th scope="row">{lane.cve}</th>
-            <td><.status_badge label={display_value(lane.severity)} kind="severity" /></td>
-            <td>
-              {lane.occurrence_count}
-              <span class="supporting">({lane.open_count} open, {lane.resolved_count} no longer observed)</span>
-            </td>
-            <td>{length(lane.observed_dates)}</td>
-            <td>
-              {state_label(lane.state)}
-              <span :if={lane.suppressed_count > 0}>
-                · suppression flag set on {lane.suppressed_count} occurrence(s)
-              </span>
-            </td>
-            <td>{lane.judged_count}</td>
-            <td>
-              <.link
-                id={"tl-lane-open-" <> lane.cve}
-                patch={TimelineFilters.path(@filters, %{cve: lane.cve})}
-                class="button button-secondary"
-              >
-                Timeline detail
-              </.link>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div
+        :if={@lanes.total > 0}
+        id="tl-lanes-scroll"
+        class="table-region"
+        role="region"
+        aria-label="CVEs observed in this window"
+        tabindex="0"
+      >
+        <table id="tl-lanes-table" class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">CVE</th>
+              <th scope="col">Current severity</th>
+              <th scope="col">Occurrences</th>
+              <th scope="col">Days observed</th>
+              <th scope="col">Current state</th>
+              <th scope="col">Assessments</th>
+              <th scope="col">Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={lane <- @lanes.rows} id={"tl-lane-" <> lane.cve}>
+              <th scope="row">{lane.cve}</th>
+              <td><.status_badge label={display_value(lane.severity)} kind="severity" /></td>
+              <td>
+                {lane.occurrence_count}
+                <span class="supporting">({lane.open_count} open, {lane.resolved_count} no longer observed)</span>
+              </td>
+              <td>{length(lane.observed_dates)}</td>
+              <td>
+                {state_label(lane.state)}
+                <span :if={lane.suppressed_count > 0}>
+                  · suppression flag set on {lane.suppressed_count} occurrence(s)
+                </span>
+              </td>
+              <td>{lane.judged_count}</td>
+              <td>
+                <.link
+                  id={"tl-lane-open-" <> lane.cve}
+                  patch={TimelineFilters.path(@filters, %{cve: lane.cve})}
+                  class="button button-secondary"
+                >
+                  Timeline detail
+                </.link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <p :if={@lanes.truncated_count > 0} class="supporting">
         {@lanes.truncated_count} further CVE(s) in this window are not shown.

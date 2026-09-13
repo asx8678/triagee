@@ -294,6 +294,27 @@ and reload.
 - There is no timer, polling, notification or write in this slice; suppression is
   not mitigation and absence is not remediation.
 
+## The Timeline tab — recorded history over time
+
+- `live "/timeline"` (`TriageWeb.TimelineLive`): a read-only history view over the same append-only
+  `finding_events` records. Days stack newest first, a CVE reads as an arrow across the days it was
+  recorded on, and a connector joins an arrow wherever two adjacent days both have a recorded
+  observation. Selecting a CVE opens a drawer with its full lifecycle, its saved cases and their
+  assessment history.
+- A weekday-by-week grid (`#tl-grid-table`) counts the CVEs whose **first recorded observation** falls on
+  each day, oldest week on the left. It is a real table with a caption and a text equivalent per cell, so
+  the picture is never the only carrier of meaning.
+- Wording is deliberately literal, and matches the What's New vocabulary: *no longer observed in local
+  inventory* (never remediation), *Assessment recorded* (never approval), and a suppression flag shown as
+  **imported scanner state with no recorded date or author**. Event rows carry the **current** local
+  metadata joined to an existing event, and a day with no row says exactly that.
+- Judgment and case history are ordered by `TriageWeb.CaseLive.Format.timeline_entries/1`, the same
+  definition the case detail page uses, so the drawer and the case page cannot describe different
+  histories.
+- Querying is bounded (25 rows per day band, 2000 events, 50 lanes, 10 cases per CVE, each with visible
+  truncation text) and a 4/8/12-week window is required; invalid parameters render an error state with no
+  rows rather than a widened view. Nothing on a read path writes.
+
 ## Historical snapshot import (`mix triage.import`)
 
 Approved historical exports can be reconciled offline with the local inventory.

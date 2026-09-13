@@ -140,3 +140,53 @@ another process compiles the same build directory.
 The relative-date inventory helpers moved into `test/support/fixtures.ex`, so the read-model test and the
 LiveView test share one definition of an image, placement, finding, event and review payload instead of two
 copies.
+
+---
+
+## Verification round 2 — a real browser (headless Chrome 153 over CDP)
+
+Run after the first commit, because structural tests cannot see layout. It found one real defect.
+
+| Check | Result |
+|---|---|
+| Desktop 1440x900 | `scrollWidth == clientWidth == 1440`, no horizontal overflow; 56 bands, 21 empty, 41 lanes, 64 arrows, 64 text equivalents, 2 connectors with real geometry (2px x 10px, `rgb(116,130,150)`) |
+| Mobile 390x844 and 320x800 | **DEFECT FOUND AND FIXED**: the page scrolled horizontally (411px against a 320px viewport). Now `scrollWidth == clientWidth` at both widths |
+| Cross-route control | `/`, `/findings`, `/cases`, `/whats-new`, `/imports` were already overflow-free at 320px; `/timeline` now matches them |
+| Accessibility tree | 2 tables, 50 rows, 16 column headers, 48 row headers, 1 caption, 6 regions — table semantics intact |
+| Keyboard | The scroll region is focusable, and a lane's detail link is reachable with the label "Timeline detail" |
+| Interactivity | A real client-side click on the lane link patched to `/timeline?cve=CVE-2024-2002`, rendered `#tl-drawer`, and populated the lifecycle list |
+| Colour contrast | All 11 new colour pairs pass WCAG AA (lowest text ratio 5.79:1; non-text 3.91:1 against a 3:1 requirement) |
+| Screenshots | `evidence/timeline/timeline-desktop-1440x900.png`, `timeline-drawer-1440x900.png`, `timeline-mobile-390x844.png` |
+
+### The reflow defect and its fix
+
+Two wide tables were wrapped in a hand-written `.tl-table-scroll` region. That region clipped and scrolled
+correctly, but it was `position: static`, so the absolutely positioned `.sr-only` text equivalents inside its
+cells took the initial containing block instead of the region: they escaped the clipping and extended the
+document's scroll width to 411px. A DOM-ancestry scan for overflow can miss this, because the escaping
+elements still look like descendants of the scroll container.
+
+The fix was two changes:
+
+1. Give the wrapper `position: relative`, so it is the containing block for its absolutely positioned
+   descendants, and add a `:focus-visible` ring to the shared class.
+2. Stop inventing a parallel class: the two tables now use the existing app-wide `.table-region` wrapper
+   (`core_components.ex`'s `table` component and seven other call sites already use it), so the timeline
+   follows the house pattern instead of duplicating it.
+
+The stated pagination and honesty wording did not change; only layout and the wrapper class did.
+
+## Verification round 3 — gate re-run after the fix
+
+`mix ci` passes on the final tree (warnings-as-errors, format check, unused deps, `credo --strict`,
+tests, dialyzer 0 errors), and the live page has served 200 with zero `[error]` lines since.
+
+### Operational note on dev-server build corruption
+
+A second 500 appeared while the browser was driving the page, this time as a full in-process rebuild of 75
+modules ending in `** (RuntimeError) found error while checking types for Triage.Collection.Client.query/3` —
+pre-existing PR6 code that a clean external compile handles fine. The running node had decided to rebuild
+the whole application and hit Elixir 1.20's type checker with the already-loaded module graph. The repair is
+the same one that worked earlier: stop the server, compile externally, restart. The durable lesson is not
+just "do not compile while the server runs" but "a crashed in-node compile leaves `_build/dev` needing an
+external recompile before live reloading is trustworthy again".

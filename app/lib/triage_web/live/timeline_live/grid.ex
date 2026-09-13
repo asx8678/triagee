@@ -25,28 +25,36 @@ defmodule TriageWeb.TimelineLive.Grid do
         </p>
       </div>
 
-      <table id="tl-grid-table" class="tl-grid-table">
-        <caption class="sr-only">
-          CVEs with a first recorded observation, by week and day of week.
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Day</th>
-            <th :for={week <- @grid.weeks} scope="col">
-              <time datetime={Date.to_iso8601(week.start)}>{week.label}</time>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={row <- @grid.rows} id={"tl-grid-" <> row.weekday}>
-            <th scope="row">{row.weekday}</th>
-            <td :for={cell <- row.cells} class={["tl-cell", cell_class(cell, @grid.max_count)]}>
-              <span class="tl-cell-value" aria-hidden="true">{cell.count}</span>
-              <span class="sr-only">{cell_text(cell)}</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div
+        id="tl-grid-scroll"
+        class="table-region"
+        role="region"
+        aria-label="New CVEs by week and day of week"
+        tabindex="0"
+      >
+        <table id="tl-grid-table" class="tl-grid-table">
+          <caption class="sr-only">
+            CVEs with a first recorded observation, by week and day of week.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Day</th>
+              <th :for={week <- @grid.weeks} scope="col">
+                <time datetime={Date.to_iso8601(week.start)}>{week.label}</time>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={row <- @grid.rows} id={"tl-grid-" <> row.weekday}>
+              <th scope="row">{row.weekday}</th>
+              <td :for={cell <- row.cells} class={["tl-cell", cell_class(cell, @grid.max_count)]}>
+                <span class="tl-cell-value" aria-hidden="true">{cell.count}</span>
+                <span class="sr-only">{cell_text(cell)}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <p class="supporting">
         Cell shading shows relative volume only. A zero means no first observation was
