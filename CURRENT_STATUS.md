@@ -2,7 +2,7 @@
 
 **A+B implemented (independent Astra verification PASS, 2026-09-12). UI redesign,
 overview intelligence and bounded findings paging implemented and verified
-(2026-09-13: `mix precommit` 608 passed / 2 skipped, exit 0).**
+(2026-09-13: `mix precommit` 612 passed / 2 skipped, exit 0).**
 **Checkpoint committed locally** (`Checkpoint the triage application source and its
 verified local runtime`): 197 source-only paths, staged from the generated inventory
 with a bounded staged-content scan. The previously untracked `app/` is now tracked.
@@ -49,7 +49,7 @@ Details, failures/repairs, commands, ownership, hashes and limits:
   defects fixed (unreachable KEV lookup, KEV never reaching the policy, group-wide severity
   mixed with unrelated placement exposure) are recorded in
   [INTEL_WIRING_EXECUTION.md](INTEL_WIRING_EXECUTION.md).
-- **`mix precommit`: 605 passed, 2 skipped**, exit 0 (574 before this work). Live
+- **`mix precommit`: 612 passed, 2 skipped**, exit 0 (574 before this work). Live
   read-only browser checks at 1440x900 confirmed paging, ordering, clamped and
   invalid pages, and the overview captions.
 - Per-slice evidence, the defects found and fixed, file hashes and explicit limits:

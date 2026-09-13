@@ -25,4 +25,17 @@ defmodule Triage.Intel.Config do
     |> Keyword.get(:sources, [])
     |> Enum.filter(&(&1 in [:kev, :nvd]))
   end
+
+  @doc """
+  Whether one source may be refreshed: enabled AND named.
+
+  `enabled: true` is not authorization for every adapter. The operator names the
+  sources they approve and an unnamed source is refused, so the printed
+  `sources: [...]` list is a real restriction rather than a display of intent.
+  """
+  def source_allowed?(source) when source in [:kev, :nvd] do
+    enabled?() and source in enabled_sources()
+  end
+
+  def source_allowed?(_other), do: false
 end

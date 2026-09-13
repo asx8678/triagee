@@ -36,6 +36,11 @@ defmodule Mix.Tasks.Triage.Intel do
     Mix.Task.run("app.config")
 
     {:ok, _} = Application.ensure_all_started(:logger)
+    # The Repo needs its own applications started first: starting it alone fails with
+    # "no process ... DBConnection.Watcher", which made every invocation of this task
+    # crash. The Endpoint is still never started.
+    {:ok, _} = Application.ensure_all_started(:ecto_sql)
+    {:ok, _} = Application.ensure_all_started(:postgrex)
     {:ok, _} = Triage.Repo.start_link()
 
     Mix.shell().info("triage.intel — public intelligence refresh")
@@ -43,7 +48,8 @@ defmodule Mix.Tasks.Triage.Intel do
     Mix.shell().info("  sources: #{inspect(Intel.Config.enabled_sources())}")
 
     cond do
-      not Intel.Config.enabled?() ->
+      # Reading receipts makes no request, so it stays available while disabled.
+      not Intel.Config.enabled?() and not Keyword.get(opts, :receipts, false) ->
         Mix.shell().error(
           "  intel is disabled (set :triage, :intel, enabled: true, sources: [...])"
         )
@@ -84,6 +90,24 @@ defmodule Mix.Tasks.Triage.Intel do
   end
 
   defp run_source(:kev) do
+    if Intel.Config.source_allowed?(:kev) do
+      fetch_kev()
+    else
+      refuse(:kev)
+    end
+  end
+
+  # Refused before any request: an unapproved source never reaches the transport and
+  # records no receipt, because no refresh was attempted.
+  defp refuse(source) do
+    Mix.shell().error(
+      "  #{source}: not allowed — add it to :triage, :intel, sources: [...] to approve it"
+    )
+
+    1
+  end
+
+  defp fetch_kev do
     case Client.fetch(:kev) do
       {:ok, rows} ->
         {:ok, count} = Intel.replace_advisories("kev", rows)
@@ -100,9 +124,18 @@ defmodule Mix.Tasks.Triage.Intel do
   end
 
   defp run_nvd(cve_id) do
+    if Intel.Config.source_allowed?(:nvd) do
+      fetch_nvd(cve_id)
+    else
+      refuse(:nvd)
+    end
+  end
+
+  defp fetch_nvd(cve_id) do
+    source = Intel.nvd_source(cve_id)
+
     case Client.fetch({:nvd, cve_id}) do
       {:ok, rows} ->
-        source = "nvd:#{String.upcase(String.trim(cve_id))}"
         {:ok, count} = Intel.replace_advisories(source, rows)
         {:ok, _} = Intel.record_receipt(source, true, count)
         Mix.shell().info("  nvd(#{cve_id}): #{count} advisories cached")
@@ -110,7 +143,8 @@ defmodule Mix.Tasks.Triage.Intel do
 
       {:error, reason} ->
         message = safe_error(reason)
-        source = "nvd:#{cve_id}"
+        # Same canonical key as the success path: a failure is recorded against the
+        # source it protects, not a differently cased spelling of it.
         {:ok, _} = Intel.record_receipt(source, false, nil, message)
         Mix.shell().error("  nvd(#{cve_id}): FAILED — #{message}")
         1

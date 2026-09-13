@@ -100,6 +100,35 @@ escalation is verified by test only, not by live probe.
   bound that failed once under load (607/608) and passed 3/3 in isolation. It now
   asserts `<= 1`, keeping the guarantee that the budget blocks retries.
 
+## CLI call-site consistency (follow-up pass)
+
+Auditing the only caller of the cache writers found four defects, all fixed:
+
+1. **The task could not run at all.** It started `Triage.Repo` after ensuring only
+   `:logger`, so every invocation died with "no process ... DBConnection.Watcher". The
+   documented refresh entry point — the only one the plan allows — was dead. It now
+   ensures `:ecto_sql` and `:postgrex` first, still never starting the Endpoint.
+   Verified by running it: `--receipts` exits 0, `--kev` exits 1 with "intel is
+   disabled".
+2. **A failed NVD refresh was recorded under a different source than the row it
+   protects.** Success used `"nvd:" <> upcase(trim(cve))` while failure used the raw
+   argument, so `--nvd cve-2024-3094` produced receipts for `nvd:cve-2024-3094` and
+   later `nvd:CVE-2024-3094` — two sources for one adapter in `latest_receipts/0`. Both
+   paths now call `Intel.nvd_source/1`, which `cached_nvd/1` also uses.
+3. **The `sources:` allowlist was never enforced.** `enabled: true` was the only gate,
+   so `sources: [:kev]` still fetched NVD and the printed list was intent rather than
+   restriction. `Config.source_allowed?/1` now requires the source to be named, each
+   source is refused before any request, and a refusal records no receipt because no
+   refresh was attempted.
+4. **`--receipts` demanded `enabled: true`.** Reading the cache issues no request, so
+   the disabled guard now exempts it.
+
+Also: dev and prod builds emitted six dead-code warnings (`do_post/4`,
+`validate_state/2`, `finish/2`, `into_fun/1`, `normalize_headers/1`, `transport_error/1`
+and their aliases/attributes) because the live request path is compiled only for test
+builds. Those declarations now sit inside the same `Mix.env() == :test` guard, so
+`mix compile --warnings-as-errors` is clean in dev and in test.
+
 ## Limits
 
 - `known_exploited` is taken from the cached KEV entry; a stale cache still asserts

@@ -14,13 +14,9 @@ defmodule Triage.Collection.Transport do
   `error` is replaced by a constant sanitized error rather than forwarded.
   """
 
-  alias Triage.Collection.Errors
-
   alias Triage.Collection.Errors.{
     DisabledError,
-    InvalidOptionsError,
-    ResponseBudgetError,
-    TransportError
+    InvalidOptionsError
   }
 
   # Compile-time gate: false in dev/prod releases, true only for test builds.
@@ -63,10 +59,6 @@ defmodule Triage.Collection.Transport do
     @behaviour Triage.Collection.Transport
 
     defstruct [:endpoint, :headers, :request_timeout_ms, :max_response_bytes, :error]
-
-    @dropped_headers ~w(set-cookie cookie authorization proxy-authorization location)
-
-    @fixed_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
     @doc "Builds the transport state from a validated `Config`."
     def new(%Triage.Collection.Config{} = config) do
@@ -123,113 +115,126 @@ defmodule Triage.Collection.Transport do
       }
     end
 
-    defp validate_state(state, opts) do
-      timeout = Keyword.get(opts, :receive_timeout, state.request_timeout_ms)
-      max = Keyword.get(opts, :max_response_bytes, state.max_response_bytes)
+    # The live request path is compiled only for tests (dev and prod are offline by
+    # construction), so its helpers are defined only where they can be called.
+    if Mix.env() == :test do
+      alias Triage.Collection.Errors
 
-      cond do
-        not Triage.Collection.Config.endpoint_allowed?(state.endpoint) ->
-          {:error, %InvalidOptionsError{message: "endpoint is not an allowed loopback endpoint"}}
+      alias Triage.Collection.Errors.{ResponseBudgetError, TransportError}
 
-        state.headers != [] ->
-          {:error, %InvalidOptionsError{message: "transport headers must remain empty"}}
+      @dropped_headers ~w(set-cookie cookie authorization proxy-authorization location)
 
-        not (is_integer(timeout) and timeout >= 1 and timeout <= 120_000) ->
-          {:error, %InvalidOptionsError{message: "receive_timeout is out of range"}}
+      @fixed_headers [{"content-type", "application/json"}, {"accept", "application/json"}]
 
-        not (is_integer(max) and max >= 1 and max <= 50_000_000) ->
-          {:error, %InvalidOptionsError{message: "max_response_bytes is out of range"}}
+      defp validate_state(state, opts) do
+        timeout = Keyword.get(opts, :receive_timeout, state.request_timeout_ms)
+        max = Keyword.get(opts, :max_response_bytes, state.max_response_bytes)
 
-        true ->
-          {:ok, state.endpoint, timeout, max}
-      end
-    end
+        cond do
+          not Triage.Collection.Config.endpoint_allowed?(state.endpoint) ->
+            {:error,
+             %InvalidOptionsError{message: "endpoint is not an allowed loopback endpoint"}}
 
-    defp do_post(endpoint, body, timeout, max) do
-      request =
-        Elixir.Req.Request.new(url: endpoint)
-        |> Elixir.Req.Steps.attach()
-        |> Elixir.Req.merge(
-          headers: @fixed_headers,
-          body: body,
-          decode_body: false,
-          redirect: false,
-          retry: false,
-          max_retries: 0,
-          receive_timeout: timeout,
-          request_timeout: timeout,
-          finch: [name: Elixir.Req.Finch],
-          into: into_fun(max)
-        )
-        |> Map.put(:adapter, Elixir.Req.Finch)
+          state.headers != [] ->
+            {:error, %InvalidOptionsError{message: "transport headers must remain empty"}}
 
-      case Elixir.Req.post(request) do
-        {:ok, response} -> finish(response, max)
-        {:error, exception} -> {:error, transport_error(exception)}
-      end
-    end
+          not (is_integer(timeout) and timeout >= 1 and timeout <= 120_000) ->
+            {:error, %InvalidOptionsError{message: "receive_timeout is out of range"}}
 
-    defp transport_error(exception) do
-      message =
-        if match?(%{__exception__: true}, exception) do
-          Exception.message(exception)
-        else
-          "transport failed"
+          not (is_integer(max) and max >= 1 and max <= 50_000_000) ->
+            {:error, %InvalidOptionsError{message: "max_response_bytes is out of range"}}
+
+          true ->
+            {:ok, state.endpoint, timeout, max}
         end
+      end
 
-      %TransportError{message: Errors.sanitize_message(message), reason: :transport}
-    end
+      defp do_post(endpoint, body, timeout, max) do
+        request =
+          Elixir.Req.Request.new(url: endpoint)
+          |> Elixir.Req.Steps.attach()
+          |> Elixir.Req.merge(
+            headers: @fixed_headers,
+            body: body,
+            decode_body: false,
+            redirect: false,
+            retry: false,
+            max_retries: 0,
+            receive_timeout: timeout,
+            request_timeout: timeout,
+            finch: [name: Elixir.Req.Finch],
+            into: into_fun(max)
+          )
+          |> Map.put(:adapter, Elixir.Req.Finch)
 
-    defp into_fun(max) do
-      fn
-        {:data, data}, {req, resp} ->
-          acc = resp.body || ""
-          size = byte_size(acc) + byte_size(data)
+        case Elixir.Req.post(request) do
+          {:ok, response} -> finish(response, max)
+          {:error, exception} -> {:error, transport_error(exception)}
+        end
+      end
 
-          if size > max do
-            keep = max - byte_size(acc)
-            partial = acc <> binary_part(data, 0, max(keep, 0))
-            {:halt, {req, put_in(resp.body, {:overflow, partial})}}
+      defp transport_error(exception) do
+        message =
+          if match?(%{__exception__: true}, exception) do
+            Exception.message(exception)
           else
-            {:cont, {req, put_in(resp.body, acc <> data)}}
+            "transport failed"
           end
 
-        _other, {req, resp} ->
-          {:cont, {req, resp}}
+        %TransportError{message: Errors.sanitize_message(message), reason: :transport}
       end
-    end
 
-    defp finish(%{body: {:overflow, _partial}}, _max) do
-      {:error, %ResponseBudgetError{message: "response exceeded the byte budget before decode"}}
-    end
+      defp into_fun(max) do
+        fn
+          {:data, data}, {req, resp} ->
+            acc = resp.body || ""
+            size = byte_size(acc) + byte_size(data)
 
-    defp finish(%{body: body} = response, max) when is_binary(body) do
-      if byte_size(body) > max do
-        {:error, %ResponseBudgetError{message: "response exceeded the byte budget"}}
-      else
-        {:ok,
-         %{status: response.status, headers: normalize_headers(response.headers), body: body}}
-      end
-    end
+            if size > max do
+              keep = max - byte_size(acc)
+              partial = acc <> binary_part(data, 0, max(keep, 0))
+              {:halt, {req, put_in(resp.body, {:overflow, partial})}}
+            else
+              {:cont, {req, put_in(resp.body, acc <> data)}}
+            end
 
-    defp finish(%{body: nil} = response, _max) do
-      {:ok, %{status: response.status, headers: normalize_headers(response.headers), body: ""}}
-    end
-
-    defp finish(_other, _max) do
-      {:error, %ResponseBudgetError{message: "response body was not a bounded binary"}}
-    end
-
-    defp normalize_headers(headers) do
-      Enum.reduce(headers, %{}, fn {key, values}, acc ->
-        name = key |> to_string() |> String.downcase()
-
-        if name in @dropped_headers do
-          acc
-        else
-          Map.put(acc, name, List.first(List.wrap(values)) || "")
+          _other, {req, resp} ->
+            {:cont, {req, resp}}
         end
-      end)
+      end
+
+      defp finish(%{body: {:overflow, _partial}}, _max) do
+        {:error, %ResponseBudgetError{message: "response exceeded the byte budget before decode"}}
+      end
+
+      defp finish(%{body: body} = response, max) when is_binary(body) do
+        if byte_size(body) > max do
+          {:error, %ResponseBudgetError{message: "response exceeded the byte budget"}}
+        else
+          {:ok,
+           %{status: response.status, headers: normalize_headers(response.headers), body: body}}
+        end
+      end
+
+      defp finish(%{body: nil} = response, _max) do
+        {:ok, %{status: response.status, headers: normalize_headers(response.headers), body: ""}}
+      end
+
+      defp finish(_other, _max) do
+        {:error, %ResponseBudgetError{message: "response body was not a bounded binary"}}
+      end
+
+      defp normalize_headers(headers) do
+        Enum.reduce(headers, %{}, fn {key, values}, acc ->
+          name = key |> to_string() |> String.downcase()
+
+          if name in @dropped_headers do
+            acc
+          else
+            Map.put(acc, name, List.first(List.wrap(values)) || "")
+          end
+        end)
+      end
     end
   end
 end

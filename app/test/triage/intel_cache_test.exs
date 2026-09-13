@@ -10,6 +10,30 @@ defmodule Triage.IntelCacheTest do
     refute Intel.safe_link?("data:text/html,<script>")
   end
 
+  test "the canonical NVD source key is what the writer and the reader both use" do
+    assert Intel.nvd_source("CVE-2024-3094") == "nvd:CVE-2024-3094"
+    # Case and surrounding whitespace are normalized, so a refresh typed however the
+    # operator spells it cannot land under a source the reader never looks up.
+    assert Intel.nvd_source("  cve-2024-3094 ") == "nvd:CVE-2024-3094"
+
+    {:ok, _} =
+      Intel.replace_advisories(Intel.nvd_source("cve-2024-3094"), [
+        %{
+          external_id: "CVE-2024-3094",
+          summary: "nvd row",
+          published_at: ~U[2026-09-12 10:00:00Z]
+        }
+      ])
+
+    assert [row] = Intel.cached_nvd("CVE-2024-3094")
+    assert row.source == "nvd:CVE-2024-3094"
+    assert Intel.cached_nvd("cve-2024-3094") != []
+
+    # A differently cased source is a different source: this is exactly the mismatch
+    # the CLI's failure path used to record against.
+    assert Intel.cached_advisories("nvd:cve-2024-3094") == []
+  end
+
   test "cached news are read without any network effect" do
     {:ok, _} =
       Intel.replace_news("synthetic", [

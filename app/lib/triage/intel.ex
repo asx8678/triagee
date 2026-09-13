@@ -140,13 +140,22 @@ defmodule Triage.Intel do
   here; it is never folded into the external id.
   """
   def cached_nvd(cve) when is_binary(cve) do
-    source = "nvd:" <> String.upcase(String.trim(cve))
+    source = nvd_source(cve)
 
     from(a in Advisory, where: a.source == ^source, order_by: [desc: a.fetched_at, desc: a.id])
     |> Repo.all()
   end
 
   def cached_nvd(_other), do: []
+
+  @doc """
+  Canonical source key for a per-CVE NVD refresh: `"nvd:CVE-…"`.
+
+  The CLI writes rows under this key and `cached_nvd/1` reads it, so both derive it
+  here. Spelling it out separately in the success and failure paths is how a failed
+  refresh ends up recorded under a differently cased source than the row it protects.
+  """
+  def nvd_source(cve) when is_binary(cve), do: "nvd:" <> String.upcase(String.trim(cve))
 
   @doc "Latest refresh receipt per source (for stale-status display)."
   def latest_receipts do
