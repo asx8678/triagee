@@ -13,6 +13,7 @@ Commits (none pushed, no deployment):
 | `0e79676` | Item 6: the findings list pages by keyset position, not by offset. |
 | `84ac6ed` | Item 8: credo and dialyzer added to the gate, and everything they found. |
 | `0f31ad8` | Item 9: the case detail view's render split into section components. |
+| the commit carrying this record | Item 9 completed: the snapshot import split into its stages, the boundary specs, and the checkpoint inventory's `.github` scope. |
 
 ## Item 6 — one pagination strategy (done)
 
@@ -82,13 +83,31 @@ with its reason stated in the file itself:
    raising the thresholds to today's worst function; both would have been less
    visible than disabling the checks and recording the counts here.
 
-**Remaining gap, recorded honestly:** the spec coverage the review noted is still
-partial — **9 `@spec`s for 346 public `def`s**. What was fixed is the tooling and
-the two incorrect specs; adding specs does not change dialyzer's findings here, and
-writing 140+ by hand is a per-module job best done against a gate that now exists.
-The three error modules' `t/0` types are the first of them.
+**Specs.** The review's other half of this item was coverage: 9 `@spec`s for the
+whole codebase. The boundary contracts now carry thirty-three, each verified by
+dialyzer (it rejects a spec that does not match the code, which is what makes
+them worth writing):
 
-## Item 9 — the oversized modules (the LiveView done; `import.ex` deliberately not)
+| Module | Specs |
+|---|---|
+| `Triage.Import` | `parse/1`, `validate/1`, `dry_run/1`, `apply/1`, `import_snapshot/1`, `write!/1`, `max_document_bytes/0`, plus `problem/0`, `snapshot/0` and `report/0` types |
+| `Triage.Risk` | `classify/1`, `aggregate/1`, `policy_version/0`, `priorities/0`, plus `t/0` |
+| `Triage.Exposure` | `record/5`, `current_by_placement/2`, `exposures/0`, plus `Evidence.t/0` |
+| `TriageWeb.FindingFilters` | `parse/1`, `parse_event/1`, `query_params/1`, `defaults/0`, `sorts/0`, `scope_value/1`, plus `filters/0` |
+| `TriageWeb.CaseFilters` | `parse/1`, `parse_event/1`, `query_params/1`, `defaults/0`, plus `filters/0` |
+
+Writing them found one real over-restriction: `FindingFilters.query_params/1` is
+called with the subset of keys a link needs, so a spec of the full `filters()`
+shape made dialyzer prove those calls could never succeed — nine `no_return`
+findings in the two finding views. The spec now states the contract the function
+actually has.
+
+**Still open, recorded honestly:** the remaining ~340 application-API functions
+are unspecced, and the import split moved ~99 internal functions into the public
+count. Coverage is now measured over the boundary layer deliberately rather than
+claimed as complete.
+
+## Item 9 — the oversized modules (done)
 
 `TriageWeb.CaseLive.Show` was 1415 lines with one 590-line `render/1`, 74 private
 defs and 17 `handle_event` clauses. It is now three modules:
@@ -106,12 +125,31 @@ the LiveView. The split also enables per-section tests, which are added
 (`case_live_sections_test.exs`, 9 tests): each section now renders on its own and
 asserts its content and its blocking conditions.
 
-`Triage.Import` (1473 lines) was **not** split. The review rated it optional and
-lower value — it is cohesive, backed by a 993-line test file — and its 11
-complexity findings are in the import pipeline's validation and reconciliation
-stages, where an eager mechanical split would move defensive code without
-improving it. It is recorded here as an open, deliberate deferral rather than an
-oversight, and it is now the largest module in the codebase.
+`Triage.Import` was also split, along the stage boundaries the module's own
+comment clusters already drew (the review called this optional and lower value,
+and the clusters made it mechanical):
+
+| Module | Lines | Owns |
+|---|---:|---|
+| `import.ex` | 328 | the public API: `parse/1`, `validate/1`, `dry_run/1`, `apply/1`, `import_snapshot/1`, `write!/1` |
+| `import/parse.ex` | 656 | parsing, validation and normalization (pure, no database) |
+| `import/write.ex` | 354 | the write path and the stale-observation rule |
+| `import/reconcile.ex` | 182 | read-only reconciliation and the current-row loads |
+| `import/contract.ex` | 69 | the format, version, vocabularies, key sets and budgets |
+
+The split needed one non-obvious piece: the seven budget and vocabulary
+attributes were used by three of the stages, and a split that copied them would
+have created exactly the drift the whole review is about. They live in
+`Triage.Import.Contract` now, which injects them with `use` so the values stay
+module attributes — usable in patterns — while having one definition. The
+cross-stage calls are qualified through aliases, and the split is acyclic:
+`Import` and `Write` depend on `Parse` and `Reconcile`, which depend on nothing
+in the pipeline.
+
+Two honest costs are recorded rather than glossed: the three stage modules expose
+~99 functions that were private, because Elixir has no module-private visibility
+across files (their `@moduledoc`s say they are internal to the pipeline), and the
+same 54 complexity findings follow those functions into their new files.
 
 ## Also fixed
 
@@ -137,6 +175,10 @@ oversight, and it is now the largest module in the codebase.
 | Case view suites after the split | 19 passed, unchanged |
 | New per-section tests | 9 passed |
 | `group_cursor_test.exs` | 10 passed |
+| Import suites after the split (`import_test`, `import_flow_test`, `import_concurrency_test`) | 49 passed, 2 skipped — unchanged |
+| Boundary specs | 33, each accepted by dialyzer (a spec that does not match the code fails the gate) |
+| Disabled metrics, re-measured with the checks temporarily enabled | 36 nesting + 18 complexity, same total as before the split |
+| Checkpoint inventory | 211 paths, manifest 211 ok / 0 failed, `.github/workflows/ci.yml` included |
 | Live smoke (dev server, both changed views) | `/findings` slices walk with zero overlap; `/cases/:id` renders; invalid cursor → visible invalid-filter state; past-the-end position → its own notice |
 
 ## Artifacts
@@ -154,12 +196,24 @@ oversight, and it is now the largest module in the codebase.
 | `app/lib/triage/collection/errors.ex` | `3c222dae14be3bc156ed2e1ad8c90b5532c9996cd518309db403ef7c7f778086` |
 | `app/test/triage/inventory/group_cursor_test.exs` | `f5a47c82e8251b8b7e777605bc58c077484d5ee3e94f781025a2f8297e63ebc9` |
 | `app/test/triage_web/live/case_live_sections_test.exs` | `a79c6f6efeeb78aa62f955e796e1be23ce4086e6128c6984fddbdc6f689f2573` |
+| `app/lib/triage/import.ex` | `873505110f8ffda4e8cb3f2511a0a6e4f7d7699e9195a1801640a57f821751fe` |
+| `app/lib/triage/import/contract.ex` | `2edb02f33a58b386b4fd88d2b53faa010c0ebc462c77b57f4803623e9ec15457` |
+| `app/lib/triage/import/parse.ex` | `ba735331b55c39223533461a7de1e4f871715297c8ad07430db0005ea5935a49` |
+| `app/lib/triage/import/write.ex` | `1019a00e5662aa1fc405bfcb5232a21f1c93d026f9d65672358389252c84a2dd` |
+| `app/lib/triage/import/reconcile.ex` | `c544b4037faf0cfceafcb4a8161292738bbaa51548cfe3fe14a6b8c0604ed141` |
+| `app/lib/triage/risk.ex` | `e6142f693400aaff789022784ab3e69a0ba4a6811146c67ef5b95ebd8aa0bf78` |
+| `app/lib/triage/exposure.ex` | `d515387853b1d32f2b772bd582e07667303b905267836b3f57a31db90183c43d` |
+| `app/lib/triage_web/finding_filters.ex` | `b0f0c193311cd9322fe17347dc5923b38f3f2852948d96f3d2310351d05714f2` |
+| `app/lib/triage_web/case_filters.ex` | `71d1f917dea31d2287d71e96869f4dae5f45c95f75aa03d7f124cd2157f9d492` |
+| `scripts/checkpoint_inventory.sh` | regenerated inventory: `evidence/checkpoint/source-only.paths` (211 paths) |
 
 ## Open
 
-1. `Triage.Import`'s split — deliberately deferred (above).
-2. Spec coverage: 9 of 346 public functions (above).
-3. The 54 complexity findings behind the two disabled metrics — recorded with
-   their counts and worst offenders in `.credo.exs`; a per-function refactor is
-   the way to retire that policy.
-4. The checkpoint inventory's `.github/` scope (above).
+1. Spec coverage beyond the boundary layer: 33 specs against ~340 application-API
+   functions (above).
+2. The 54 complexity findings behind the two disabled metrics — re-measured after
+   the import split as 36 nesting + 18 complexity, recorded with their counts and
+   worst offenders in `.credo.exs`; a per-function refactor is the way to retire
+   that policy.
+3. Nothing else: the import split is done, and the checkpoint inventory now covers
+   `.github` (211 paths, manifest 211 ok / 0 failed).

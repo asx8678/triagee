@@ -27,9 +27,10 @@
           # covered by test/triage/collection/residual_test.exs.
           {Credo.Check.Refactor.Apply, []},
 
-          # Two advisory metrics, not defects. At the time of writing they
-          # reported 36 nesting and 18 complexity findings across the boundary
-          # layer (the worst: complexity 20 in
+          # Two advisory metrics, not defects. They report 36 nesting and 18
+          # complexity findings across the boundary layer, re-measured after the
+          # import pipeline was itself split into four modules (the functions
+          # moved; the findings followed them). The worst: complexity 20 in
           # Triage.Collection.Normalize.reconcile_claims and
           # Triage.Import.budget_errors; nesting depth 5 in
           # Triage.Import.preflight and Triage.ImportFlow.apply). Those modules

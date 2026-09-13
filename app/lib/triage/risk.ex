@@ -18,7 +18,18 @@ defmodule Triage.Risk do
 
   defstruct [:priority, :severity, :exposure, reasons: [], policy_version: @policy_version]
 
+  @typedoc "One classified occurrence: its priority, the inputs behind it and the policy version."
+  @type t :: %__MODULE__{
+          priority: String.t(),
+          severity: String.t(),
+          exposure: String.t(),
+          reasons: [String.t()],
+          policy_version: pos_integer()
+        }
+
+  @spec policy_version() :: pos_integer()
   def policy_version, do: @policy_version
+  @spec priorities() :: [String.t()]
   def priorities, do: @priorities
 
   @doc """
@@ -30,6 +41,7 @@ defmodule Triage.Risk do
     * `:known_exploited` — boolean or nil (nil/absent is NOT "not exploited")
     * `:fix_available` — boolean or nil (remediation information only)
   """
+  @spec classify(map()) :: t()
   def classify(attrs) when is_map(attrs) do
     severity = attrs |> get(:severity) |> normalize_severity()
 
@@ -106,6 +118,7 @@ defmodule Triage.Risk do
   end
 
   @doc "Aggregates placement-level priorities to a CVE-level maximum."
+  @spec aggregate([t()]) :: t() | nil
   def aggregate(results) when is_list(results) and results != [] do
     Enum.max_by(results, &rank/1)
   end

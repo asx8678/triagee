@@ -2,12 +2,15 @@
 
 **Code review findings implemented (2026-09-13: `mix ci` exit 0 — `credo --strict`
 reports no issues, 634 passed / 2 skipped, `dialyzer` 0 errors).** The findings
-list now pages by keyset position like the review queue; `credo` and `dialyzer`
-are part of the gate and the CI workflow; the case detail view's 1415-line module
-is now a LiveView plus section components and a formatter, with per-section tests.
-Open, deliberately and in writing: the `Triage.Import` split, spec coverage (9 of
-346 public functions), and two advisory complexity metrics disabled with their
-counts and worst offenders recorded in `.credo.exs`. See
+list pages by keyset position like the review queue; `credo` and `dialyzer` are
+part of the gate and the CI workflow; both oversized modules are split — the case
+detail view into section components plus a formatter, and the snapshot import into
+its parse/write/reconcile stages plus a shared contract — with per-section tests
+and no private state leaked between them. Boundary specs are added and verified by
+dialyzer (33, in `Triage.Import`, `Risk`, `Exposure` and both filter modules).
+Open, deliberately and in writing: spec coverage beyond that boundary layer, and
+two advisory complexity metrics disabled with re-measured counts (36 nesting + 18
+complexity) and their worst offenders recorded in `.credo.exs`. See
 [CODE_REVIEW_FIXES_EXECUTION.md](CODE_REVIEW_FIXES_EXECUTION.md).
 
 **A+B implemented (independent Astra verification PASS, 2026-09-12). UI redesign,

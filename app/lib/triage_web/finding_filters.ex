@@ -37,6 +37,22 @@ defmodule TriageWeb.FindingFilters do
   (`:sort` nil means `severity`) and the start of that order (`:before` nil
   means the newest slice).
   """
+  @typedoc """
+  The validated filter state: every accepted scope value, the result order and
+  its position, and the recognized fields that were rejected.
+  """
+  @type filters :: %{
+          owner: String.t() | nil,
+          environment: String.t() | nil,
+          q: String.t() | nil,
+          include_suppressed: boolean(),
+          severity: String.t() | nil,
+          sort: String.t() | nil,
+          before: Triage.Inventory.GroupCursor.t() | nil,
+          invalid: [atom()]
+        }
+
+  @spec defaults() :: filters()
   def defaults do
     %{
       owner: nil,
@@ -51,6 +67,7 @@ defmodule TriageWeb.FindingFilters do
   end
 
   @doc "Result orders accepted by `parse/1`, i.e. `Triage.Inventory.group_sorts/0`."
+  @spec sorts() :: [String.t()]
   def sorts, do: Triage.Inventory.group_sorts()
 
   @doc """
@@ -60,6 +77,7 @@ defmodule TriageWeb.FindingFilters do
   accepted here: its presence means an ambiguous or nested wrapper that must
   be rejected, not ignored as harmless metadata.
   """
+  @spec parse(term()) :: filters()
   def parse(params) when is_map(params) do
     if Map.has_key?(params, "filters") do
       mark_invalid(defaults(), :filters)
@@ -106,6 +124,7 @@ defmodule TriageWeb.FindingFilters do
   recognized flat fields carrying real values. Non-map event bodies surface
   the invalid state instead of raising and killing the LiveView.
   """
+  @spec parse_event(term()) :: filters()
   def parse_event(%{"filters" => filters} = params) when is_map(filters) do
     if blank_flat_fields?(Map.take(params, @recognized)) do
       parse(filters)
@@ -146,6 +165,12 @@ defmodule TriageWeb.FindingFilters do
   Atom-keyed query params for verified routes, dropping blank All choices and
   encoding `suppressed` as `\"1\"`. Built from validated values only.
   """
+  # A plain map, not the full `filters()` shape: callers routinely build the
+  # subset of keys a link needs (the list and detail views do), and this function
+  # reads only the keys it emits and falls back to an empty query for anything
+  # else. Declaring the narrower shape made dialyzer prove those calls could
+  # never succeed.
+  @spec query_params(map()) :: map()
   def query_params(
         %{owner: owner, environment: environment, q: q, include_suppressed: s} = parsed
       ) do
@@ -271,6 +296,7 @@ defmodule TriageWeb.FindingFilters do
   contract when it emits route params, so the parse and emit directions cannot
   silently disagree about what a valid scope value is.
   "
+  @spec scope_value(term()) :: {:ok, String.t() | nil} | {:error, nil}
   def scope_value(nil), do: {:ok, nil}
 
   def scope_value(value) when is_binary(value) do

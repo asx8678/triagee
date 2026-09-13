@@ -28,6 +28,8 @@ defmodule Triage.Exposure do
       timestamps(type: :utc_datetime)
     end
 
+    @type t :: %__MODULE__{}
+
     def changeset(evidence, attrs) do
       evidence
       |> cast(attrs, [:placement_id, :exposure, :source, :observed_at, :expires_at])
@@ -36,9 +38,12 @@ defmodule Triage.Exposure do
     end
   end
 
+  @spec exposures() :: [String.t()]
   def exposures, do: @exposures
 
   @doc "Records new exposure evidence for a placement. History is never rewritten."
+  @spec record(pos_integer(), String.t(), String.t(), DateTime.t(), DateTime.t() | nil) ::
+          {:ok, Evidence.t()} | {:error, Ecto.Changeset.t() | :invalid_exposure_evidence}
   def record(placement_id, exposure, source, observed_at, expires_at \\ nil)
 
   def record(placement_id, exposure, source, observed_at, expires_at)
@@ -62,6 +67,8 @@ defmodule Triage.Exposure do
 
   Expired evidence becomes `unknown` — staleness never silently keeps trust.
   """
+  @spec current_by_placement([pos_integer()], DateTime.t()) ::
+          %{optional(pos_integer()) => String.t()}
   def current_by_placement(placement_ids, now \\ DateTime.utc_now())
       when is_list(placement_ids) do
     # `DISTINCT ON` keeps the latest-per-placement reduction in PostgreSQL, the

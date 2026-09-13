@@ -18,8 +18,12 @@ modified=(
 )
 
 # Untracked source trees taken whole; ignore rules inside them still apply.
+# `.github` is a root dot-directory, so it is listed explicitly: the CI workflow
+# is product configuration and belongs in the inventory rather than in the
+# excluded classes.
 trees=(
   app
+  .github
 )
 
 # Root documents written by this workstream.
@@ -36,6 +40,7 @@ docs=(
   UI_IMPROVEMENTS_PLAN.md
   UI_IMPROVEMENTS_REPORT.md
   OVERVIEW_INTELLIGENCE_PLAN.md
+  CODE_REVIEW_FIXES_EXECUTION.md
   scripts/checkpoint_inventory.sh
 )
 

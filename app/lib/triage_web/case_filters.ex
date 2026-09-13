@@ -31,6 +31,18 @@ defmodule TriageWeb.CaseFilters do
   alias TriageWeb.FindingFilters
 
   @doc "The intentional All/newest state: no scope restrictions, no cursor."
+  @typedoc """
+  The validated queue state: the saved-scope filters, the keyset position, and
+  the recognized fields that were rejected.
+  """
+  @type filters :: %{
+          owner: String.t() | nil,
+          environment: String.t() | nil,
+          before_id: pos_integer() | nil,
+          invalid: [atom()]
+        }
+
+  @spec defaults() :: filters()
   def defaults do
     %{owner: nil, environment: nil, before_id: nil, invalid: []}
   end
@@ -43,6 +55,7 @@ defmodule TriageWeb.CaseFilters do
   """
   # Plain string-keyed maps only: structs are rejected explicitly instead of
   # slipping through is_map/1 as a silent All.
+  @spec parse(term()) :: filters()
   def parse(params) when is_map(params) and not is_struct(params) do
     if Map.has_key?(params, "filters") do
       mark_invalid(defaults(), :filters)
@@ -92,6 +105,7 @@ defmodule TriageWeb.CaseFilters do
   cursor. Genuine event metadata such as `"_target"` never reaches these
   checks. Non-map event bodies surface the invalid state instead of raising.
   """
+  @spec parse_event(term()) :: filters()
   def parse_event(%{"filters" => filters} = params)
       when is_map(filters) and not is_struct(filters) and not is_struct(params) do
     if blank_flat_fields?(Map.take(params, @recognized)) do
@@ -120,6 +134,7 @@ defmodule TriageWeb.CaseFilters do
   invalid UTF-8, wrong types and non-positive cursors are silently dropped.
   Total: any other shape yields an empty map instead of raising.
   """
+  @spec query_params(term()) :: map()
   def query_params(%{owner: owner, environment: environment, before_id: before_id}) do
     qs =
       %{owner: validated_scope(owner), environment: validated_scope(environment)}
