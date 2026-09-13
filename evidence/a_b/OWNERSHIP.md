@@ -1,0 +1,14 @@
+# A+B frozen ownership and acceptance (before worker launch)
+
+Coordinator: Astra; no worktrees/git mutation/.pi configuration edits. Existing source manifest: initial.paths + initial.sha256. Credential/DB/dependency/build/crash/harness contents excluded, not read. Initial Git status records inherited changes; app entirely untracked. `app/assets` absent (source assets are under priv/static).
+
+Disjoint leaves (exact openai-codex/gpt-5.6-sol, low, nonrecursive):
+1. A docs: CURRENT_STATUS.md, CHECKPOINT_REVIEW.md, .gitignore, app/.gitignore only. Review explicit inventory/exclusions and sanitized source only; no staging/commit. Do not edit NEXT_STEPS_PLAN.md.
+2. B runtime: app/config/runtime.exs, app/config/dev.exs, app/config/test.exs, app/test/triage/runtime_config_test.exs, app/LOCAL_RUNTIME.md only. No DB effects. Runtime config tests/probes must avoid app/test_helper startup and user ports; pure subprocess Config.Reader tests allowed. No shared compilation with coordinator while active.
+3. B verification: app/scripts/verify_owned_db.sh, app/scripts/verify_owned_db.exs, app/scripts/verify_owned_db_test.sh, app/OWNED_DB_VERIFICATION.md only. No DB/runtime execution; shell/static checks and fake-command guard tests only. No worker2 tests/config ownership.
+Coordinator only: NEXT_STEPS_PLAN.md, A_B_EXECUTION.md, evidence/a_b/*; integrated tests/runtime/DB after every worker stops. Necessary ownership extensions require explicit coordinator approval first.
+Fresh reviewer after integration: exact openai-codex/gpt-6-astra, high, nonrecursive; independent bounded final-tree probes, evidence/a_b/ASTRA_REVIEW.md and absent-before astra-* evidence only.
+
+Execution amendments: the two original B leaves received disjoint bounded repair runs after stopping. A subsequent stopped-writers B repair explicitly extended runtime ownership to app/config/prod.exs for IPv6 local HTTP usability; coordinator integrated bracketed IPv6 Host handling after that worker stopped. Coordinator retained two AST-equal precommit-only formatting effects in app/lib/triage/import_flow.ex and app/test/triage/replay_runs_test.exs after exact initial-hash audit. All final app ownership then froze at candidate-app.sha256 before fresh Astra review; only root status/evidence closeout changed after its PASS.
+
+Acceptance ledger: A authoritative bounded status + explicit checkpoint list/exclusions/secret-review limits + unresolved missing old baseline. B default/test/prod runtime config, missing secrets, rejected public/invalid bind and invalid port, ephemeral actual loopback listener; focused compatibility tests; guard refuses invalid/mismatched/populated/unowned DB before effects; configured/current DB exact match, absent-before ownership and owned cleanup; one full mutating precommit + separate exact guarded concurrency; initial/final source hashes and side-effect review; independent Astra verification; C–F gated and no commit claimed.

@@ -7,8 +7,26 @@ tmp/cve-collector/node_modules
 
 # Secrets and databases — defense in depth
 .env
+.env.*
+!.env.example
 *.pat
+*.pem
+*.key
+*.p12
+*.pfx
 *.db
 *.db-wal
 *.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.dump
+*.sql
 reports/
+
+# Local agent harness journals (tracked harness configuration remains untouched)
+.pi/fabric/mesh/events.jsonl
+.pi/fabric/mesh/sequence

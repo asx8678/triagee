@@ -1,0 +1,13 @@
+/deps
+/_build
+/.elixir_ls
+/.fetch
+*.ez
+.env
+
+# Local BEAM crash artifacts
+erl_crash.dump
+
+# Generated client vendor assets — regenerate with `mix assets.setup`
+# (part of `mix setup`, `mix test` and `mix precommit`)
+/priv/static/assets/vendor/

@@ -1,0 +1,374 @@
+<Layouts.app flash={@flash} active_page="home">
+  <div id="home-overview" class="stack ov-dashboard">
+    <.page_header
+      id="home-title"
+      title="Overview"
+      subtitle="Open advisories across every team's images · distinct CVEs, not occurrences."
+    >
+      <:actions>
+        <.link id="home-cases" href={~p"/cases"} class="button">Open review queue</.link>
+      </:actions>
+    </.page_header>
+
+    <!-- Command bar: one focused search, then the full filterable list. -->
+    <section id="home-workflows" class="ov-command" aria-labelledby="find-vulnerability-title">
+      <h2 id="find-vulnerability-title" class="sr-only">Find a vulnerability</h2>
+      <div class="ov-command-bar">
+        <.form
+          for={to_form(%{})}
+          action={~p"/findings"}
+          method="get"
+          id="overview-search"
+          class="ov-search"
+        >
+          <.input
+            id="overview-search-input"
+            type="search"
+            name="q"
+            value=""
+            label="CVE or package"
+            placeholder="CVE ID or package name"
+          />
+          <button type="submit" class="button button-secondary">Search</button>
+        </.form>
+        <.link id="home-findings" href={~p"/findings"} class="ov-command-link">
+          Browse all findings
+        </.link>
+      </div>
+    </section>
+
+    <!-- Primary posture: active distinct CVEs by severity, then occurrence volume. -->
+    <section id="home-inventory" class="stack" aria-labelledby="home-inventory-title">
+      <div class="section-header">
+        <h2 id="home-inventory-title">Local inventory</h2>
+        <span class="supporting">Advisories with an active image placement right now</span>
+      </div>
+
+      <%= case @summary do %>
+        <% {:ok, s} -> %>
+          <p id="home-inventory-intro" class="supporting ov-note">
+            Each count is one distinct CVE, not an image occurrence. Suppressed and
+            no-longer-observed advisories are excluded; zero is not a clean estate.
+          </p>
+
+          <dl id="home-summary" class="ov-kpis">
+            <div class="ov-kpi ov-kpi-critical">
+              <dt>Active critical</dt>
+              <dd id="home-critical-count">
+                <.link href={~p"/findings?severity=CRITICAL"}>{s.critical}</.link>
+              </dd>
+              <p>Distinct CVEs to review</p>
+            </div>
+            <div class="ov-kpi ov-kpi-high">
+              <dt>High</dt>
+              <dd id="home-high-count">
+                <.link href={~p"/findings?severity=HIGH"}>{s.high}</.link>
+              </dd>
+              <p>Distinct CVEs</p>
+            </div>
+            <div class="ov-kpi ov-kpi-medium">
+              <dt>Medium</dt>
+              <dd id="home-medium-count">
+                <.link href={~p"/findings?severity=MEDIUM"}>{s.medium}</.link>
+              </dd>
+              <p>Distinct CVEs</p>
+            </div>
+            <div class="ov-kpi ov-kpi-low">
+              <dt>Low</dt>
+              <dd id="home-low-count">
+                <.link href={~p"/findings?severity=LOW"}>{s.low}</.link>
+              </dd>
+              <p>Distinct CVEs</p>
+            </div>
+            <div class="ov-kpi">
+              <dt>Total</dt>
+              <dd id="home-total-count">{s.total}</dd>
+              <p>All severities</p>
+            </div>
+          </dl>
+
+          <div class="ov-sevbar-wrap">
+            <span
+              class="ov-sevbar"
+              role="img"
+              aria-label={"Severity mix of #{s.total} distinct CVEs: #{s.critical} critical, #{s.high} high, #{s.medium} medium, #{s.low} low"}
+            >
+              <span class="ov-sevbar-seg ov-sevbar-critical" style={"flex: #{s.critical} 1 0"}></span>
+              <span class="ov-sevbar-seg ov-sevbar-high" style={"flex: #{s.high} 1 0"}></span>
+              <span class="ov-sevbar-seg ov-sevbar-medium" style={"flex: #{s.medium} 1 0"}></span>
+              <span class="ov-sevbar-seg ov-sevbar-low" style={"flex: #{s.low} 1 0"}></span>
+            </span>
+            <p class="supporting">Severity mix · {s.total} distinct CVEs</p>
+          </div>
+        <% _ -> %>
+          <.notice id="home-summary-error" kind="warning" title="Inventory counts unavailable">
+            Could not load inventory counts.
+            <.link href={~p"/findings"}>Retry via findings</.link>
+          </.notice>
+      <% end %>
+
+      <div class="ov-secondary">
+        <h2 id="overview-inventory-title" class="ov-secondary-title">Occurrence counts</h2>
+        <%= case @occurrence_counts do %>
+          <% {:ok, counts} -> %>
+            <dl id="overview-counts" class="ov-inline-stats">
+              <div>
+                <dt>Open occurrences</dt>
+                <dd id="open-occurrence-count">
+                  <.link id="overview-open-link" href={~p"/findings"}>{counts.open}</.link>
+                </dd>
+              </div>
+              <div>
+                <dt>Suppressed occurrences</dt>
+                <dd id="suppressed-occurrence-count">
+                  <.link id="overview-suppressed-link" href={~p"/findings?suppressed=1"}>
+                    {counts.suppressed}
+                  </.link>
+                </dd>
+              </div>
+            </dl>
+            <p class="supporting">
+              Package occurrences, not distinct CVEs. Suppression is not mitigation.
+            </p>
+          <% _ -> %>
+            <.notice
+              id="overview-counts-unavailable"
+              kind="warning"
+              title="Occurrence counts unavailable"
+            >
+              Counts could not be loaded. <.link href={~p"/"}>Retry Overview</.link>
+            </.notice>
+        <% end %>
+      </div>
+
+      <div class="ov-grid">
+        <div class="ov-col">
+          <%= case @critical do %>
+            <% {:ok, rows} when rows != [] -> %>
+              <div class="section-header">
+                <h3 id="home-critical-title">Critical advisories to review</h3>
+                <span id="home-critical-caption" class="supporting">
+                  {critical_caption(overview_total(@critical_total, rows))}
+                </span>
+              </div>
+              <div
+                id="home-critical-list"
+                class="table-region"
+                role="region"
+                tabindex="0"
+                aria-label="Critical advisories"
+              >
+                <table class="data-table">
+                  <caption class="supporting">
+                    Open critical advisories, most affected images first. First observed is local
+                    observation time, not CVE publication time.
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">CVE</th>
+                      <th scope="col">Teams</th>
+                      <th scope="col">Images</th>
+                      <th scope="col">Occurrences</th>
+                      <th scope="col">First observed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr :for={row <- Enum.take(rows, 10)} id={"home-critical-#{row.cve}"}>
+                      <td class="triage-cve">
+                        <.link href={~p"/cves/#{row.cve}"}>{row.cve}</.link>
+                      </td>
+                      <td>{display_value(row.team_list, "No team named")}</td>
+                      <td>{row.images}</td>
+                      <td>{row.occurrences}</td>
+                      <td><.timestamp value={row.first_seen} /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="cluster">
+                <.link id="home-critical-all" href={~p"/findings?severity=CRITICAL"}>
+                  See all {overview_total(@critical_total, rows)} critical advisories
+                </.link>
+              </p>
+            <% {:ok, _empty} -> %>
+              <.notice id="home-critical-empty" kind="info">
+                No critical advisories currently in scope.
+              </.notice>
+            <% _ -> %>
+              <.notice id="home-critical-error" kind="warning">
+                Critical list could not be loaded.
+                <.link href={~p"/findings?severity=CRITICAL"}>Open findings</.link>
+              </.notice>
+          <% end %>
+        </div>
+
+        <section id="home-newest" class="ov-col" aria-labelledby="home-newest-title">
+          <div class="section-header">
+            <h3 id="home-newest-title">Newest advisories</h3>
+            <span class="supporting">First observed locally</span>
+          </div>
+          <%= case @newest do %>
+            <% {:ok, []} -> %>
+              <.empty_state
+                id="home-newest-empty"
+                title="No open advisories recorded"
+                description="The inventory is empty. An empty overview is not proof of a clean estate."
+              >
+                <:actions><.link href={~p"/findings"}>Browse findings</.link></:actions>
+              </.empty_state>
+            <% {:ok, rows} -> %>
+              <ul id="home-newest-list" class="ov-list">
+                <li
+                  :for={row <- Enum.take(rows, 5)}
+                  id={"home-newest-#{row.cve}"}
+                  class="ov-list-row"
+                >
+                  <div class="ov-list-main">
+                    <h4 class="ov-list-title">
+                      <.link href={~p"/cves/#{row.cve}"}>{row.cve}</.link>
+                    </h4>
+                    <p class="supporting">
+                      {display_value(row.team_list, "No team named")} · {if row.images == 1,
+                        do: "#{row.images} image",
+                        else: "#{row.images} images"} ·
+                      first observed <.timestamp value={row.first_seen} />
+                    </p>
+                  </div>
+                  <.status_badge label={row.severity} kind="severity" />
+                </li>
+              </ul>
+              <p
+                :if={overview_total(@newest_total, rows) > 5}
+                id="home-newest-truncated"
+                class="supporting cluster"
+              >
+                Showing 5 of {overview_total(@newest_total, rows)} by first observation ·
+                <.link id="home-newest-all" href={~p"/findings?sort=newest"}>See all findings</.link>
+              </p>
+            <% _ -> %>
+              <.notice id="home-newest-error" kind="warning" title="Newest CVEs unavailable">
+                Could not load inventory.
+                <.link href={~p"/findings"}>Browse findings directly</.link>
+              </.notice>
+          <% end %>
+        </section>
+      </div>
+    </section>
+
+    <!-- Saved local work, kept separate from inventory facts. -->
+    <section class="stack" aria-labelledby="recent-cases-title">
+      <div class="section-header">
+        <h2 id="recent-cases-title">Recently discovered new CVEs</h2>
+        <span class="supporting">Up to 5 saved review cases · newest case first · scope as saved</span>
+      </div>
+      <%= case @recent_cases do %>
+        <% {:ok, []} -> %>
+          <.empty_state
+            id="overview-cases-empty"
+            title="No saved review cases"
+            description="Find an occurrence, select a team and environment, then explicitly open a local case."
+          >
+            <:actions><.link href={~p"/findings"}>Find an occurrence</.link></:actions>
+          </.empty_state>
+        <% {:ok, rows} -> %>
+          <ul id="overview-recent-cases" class="ov-cases">
+            <li :for={row <- rows} id={"overview-case-#{row.id}"} class="ov-case">
+              <h3>
+                <.link href={~p"/cases/#{row.id}"}>
+                  {display_value(row.finding.cve, "CVE not captured")} · Case {row.id}
+                </.link>
+              </h3>
+              <p>
+                {display_value(row.finding.package_name, "Package not captured")}
+                <code>{display_value(row.finding.package_version, "Version not captured")}</code>
+              </p>
+              <p class="supporting">
+                Saved scope: {display_value(row.owner, "Team not captured")} / {display_value(
+                  row.environment,
+                  "Environment not captured"
+                )}
+              </p>
+              <p class="supporting">
+                Opened <.timestamp value={row.opened_at} />
+              </p>
+              <p class="supporting" id={"overview-case-#{row.id}-assessment"}>
+                {assessment_state(row)}
+                <%= if row.review_status == :needs_revalidation do %>
+                  · revalidation needed
+                <% end %>
+              </p>
+            </li>
+          </ul>
+        <% _ -> %>
+          <.notice id="overview-cases-unavailable" kind="warning" title="Recent cases unavailable">
+            Cases could not be loaded. <.link href={~p"/cases"}>Try the review queue</.link>
+          </.notice>
+      <% end %>
+    </section>
+
+    <!-- Public intelligence stays a separate, sourced feed: absence is never unaffected. -->
+    <section id="home-news" class="stack" aria-labelledby="home-news-title">
+      <div class="section-header">
+        <h2 id="home-news-title">CVE news and advisories</h2>
+        <span class="supporting">
+          Cached operator-refreshed public data · absence never means unaffected
+        </span>
+      </div>
+      <%= case @news do %>
+        <% {:ok, []} -> %>
+          <.empty_state
+            id="home-news-empty"
+            title="No cached intelligence"
+            description="A refresh has not populated the intel cache. Run `mix triage.intel --kev --receipts` with explicit operator approval."
+          />
+        <% {:ok, rows} -> %>
+          <dl id="home-receipts" class="ov-receipts">
+            <%= for receipt <- @news_receipts do %>
+              <div>
+                <dt>{receipt.source}</dt>
+                <dd class="supporting">
+                  {if receipt.succeeded, do: "OK", else: "FAILED"} · {receipt.attempted_at_label}
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+          <ul id="home-news-list" class="ov-list">
+            <li
+              :for={item <- rows}
+              id={"home-news-#{item.source |> to_string()}-#{item.item_id}"}
+              class="ov-list-row"
+            >
+              <div class="ov-list-main">
+                <h3 class="ov-list-title">
+                  <%= if item.link do %>
+                    <.link href={item.link} target="_blank" rel="noopener noreferrer">
+                      {item.title}
+                    </.link>
+                  <% else %>
+                    {item.title}
+                  <% end %>
+                </h3>
+                <p class="supporting">
+                  Source: {item.source} · published <.timestamp value={item.published_at} /> ·
+                  cached <.timestamp value={item.fetched_at} />
+                </p>
+                <p :if={item.summary not in [nil, ""]}>{item.summary}</p>
+              </div>
+            </li>
+          </ul>
+        <% _ -> %>
+          <.notice id="home-news-error" kind="warning" title="Intel cache unavailable">
+            The intel cache could not be read.
+          </.notice>
+      <% end %>
+    </section>
+
+    <footer class="overview-tools cluster" aria-label="Other local workflows">
+      <.link id="home-whats-new" href={~p"/whats-new"}>Read activity</.link>
+      <span class="muted">Data tools:</span>
+      <.link id="home-imports" href={~p"/imports"}>Imports</.link>
+      <.link id="home-replay" href={~p"/replay"}>Replay</.link>
+      <.link id="home-replay-history" href={~p"/replay/history"}>Replay History</.link>
+    </footer>
+  </div>
+</Layouts.app>
