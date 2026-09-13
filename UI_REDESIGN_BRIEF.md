@@ -129,6 +129,22 @@ Suggested starting defaults, to validate in the rendered app:
 
 These are design defaults, not claims about WCAG minimum font sizes.
 
+Density override (operator, 2026-09-13), now the validated defaults app-wide
+because the overview is a command surface, not a reading page:
+
+- Controls (buttons, inputs, selects, nav links) are 28px (1.75rem) high with
+  13px labels. The binding accessibility minimum is the WCAG 2.2 AA target-size
+  criterion of 24x24 CSS px (2.5.8), not the 40-44px default above; standalone
+  numeric links keep a 24x24px box.
+- Body 15px, data tables and list rows 13px, supporting text 12px, badges 11px,
+  KPI numerals 20px in the monospace stack.
+- Page h1 22px, section h2 17px, card h3 15px; 4px radii; 2px focus outlines.
+- The overview carries no page header and no search form of its own: one visible
+  posture band leads it, and every workflow link lives in the persistent top
+  navigation. The h1, the section name and the distinct-CVE caveat remain in the
+  document as sr-only text for assistive technology.
+- The sentence-case rule above is unchanged: no uppercase micro-labels.
+
 Use the existing readable font or a system stack; do not fetch external
 assets merely for styling. Prefer sentence-case labels over pervasive
 uppercase and letter spacing.

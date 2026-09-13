@@ -1,104 +1,66 @@
 <Layouts.app flash={@flash} active_page="home">
   <div id="home-overview" class="stack ov-dashboard">
-    <.page_header
-      id="home-title"
-      title="Overview"
-      subtitle="Open advisories across every team's images · distinct CVEs, not occurrences."
-    >
-      <:actions>
-        <.link id="home-cases" href={~p"/cases"} class="button">Open review queue</.link>
-      </:actions>
-    </.page_header>
+    <!-- Posture only: no page header, and every workflow link lives in the
+         persistent top navigation. The heading stays in the document for
+         assistive technology, not as drawn chrome. -->
+    <h1 id="home-title" class="sr-only">Overview</h1>
 
-    <!-- Command bar: one focused search, then the full filterable list. -->
-    <section id="home-workflows" class="ov-command" aria-labelledby="find-vulnerability-title">
-      <h2 id="find-vulnerability-title" class="sr-only">Find a vulnerability</h2>
-      <div class="ov-command-bar">
-        <.form
-          for={to_form(%{})}
-          action={~p"/findings"}
-          method="get"
-          id="overview-search"
-          class="ov-search"
-        >
-          <.input
-            id="overview-search-input"
-            type="search"
-            name="q"
-            value=""
-            label="CVE or package"
-            placeholder="CVE ID or package name"
-          />
-          <button type="submit" class="button button-secondary">Search</button>
-        </.form>
-        <.link id="home-findings" href={~p"/findings"} class="ov-command-link">
-          Browse all findings
-        </.link>
-      </div>
-    </section>
-
-    <!-- Primary posture: active distinct CVEs by severity, then occurrence volume. -->
     <section id="home-inventory" class="stack" aria-labelledby="home-inventory-title">
-      <div class="section-header">
-        <h2 id="home-inventory-title">Local inventory</h2>
-        <span class="supporting">Advisories with an active image placement right now</span>
-      </div>
+      <h2 id="home-inventory-title" class="sr-only">Local inventory</h2>
 
       <%= case @summary do %>
         <% {:ok, s} -> %>
-          <p id="home-inventory-intro" class="supporting ov-note">
-            Each count is one distinct CVE, not an image occurrence. Suppressed and
-            no-longer-observed advisories are excluded; zero is not a clean estate.
+          <%!-- Assistive technology only: a count of distinct CVEs is not a clean estate. --%>
+          <p id="home-inventory-intro" class="sr-only">
+            Each count is one distinct CVE, not an image occurrence. Suppressed and no-longer-observed
+            advisories are excluded; zero is not a clean estate.
           </p>
 
-          <dl id="home-summary" class="ov-kpis">
-            <div class="ov-kpi ov-kpi-critical">
-              <dt>Active critical</dt>
-              <dd id="home-critical-count">
-                <.link href={~p"/findings?severity=CRITICAL"}>{s.critical}</.link>
-              </dd>
-              <p>Distinct CVEs to review</p>
-            </div>
-            <div class="ov-kpi ov-kpi-high">
-              <dt>High</dt>
-              <dd id="home-high-count">
-                <.link href={~p"/findings?severity=HIGH"}>{s.high}</.link>
-              </dd>
-              <p>Distinct CVEs</p>
-            </div>
-            <div class="ov-kpi ov-kpi-medium">
-              <dt>Medium</dt>
-              <dd id="home-medium-count">
-                <.link href={~p"/findings?severity=MEDIUM"}>{s.medium}</.link>
-              </dd>
-              <p>Distinct CVEs</p>
-            </div>
-            <div class="ov-kpi ov-kpi-low">
-              <dt>Low</dt>
-              <dd id="home-low-count">
-                <.link href={~p"/findings?severity=LOW"}>{s.low}</.link>
-              </dd>
-              <p>Distinct CVEs</p>
-            </div>
-            <div class="ov-kpi">
-              <dt>Total</dt>
-              <dd id="home-total-count">{s.total}</dd>
-              <p>All severities</p>
-            </div>
-          </dl>
+          <div class="ov-band">
+            <dl id="home-summary" class="ov-kpis">
+              <div class="ov-kpi ov-kpi-critical">
+                <dt>Critical</dt>
+                <dd id="home-critical-count">
+                  <.link href={~p"/findings?severity=CRITICAL"}>{s.critical}</.link>
+                </dd>
+              </div>
+              <div class="ov-kpi ov-kpi-high">
+                <dt>High</dt>
+                <dd id="home-high-count">
+                  <.link href={~p"/findings?severity=HIGH"}>{s.high}</.link>
+                </dd>
+              </div>
+              <div class="ov-kpi ov-kpi-medium">
+                <dt>Medium</dt>
+                <dd id="home-medium-count">
+                  <.link href={~p"/findings?severity=MEDIUM"}>{s.medium}</.link>
+                </dd>
+              </div>
+              <div class="ov-kpi ov-kpi-low">
+                <dt>Low</dt>
+                <dd id="home-low-count">
+                  <.link href={~p"/findings?severity=LOW"}>{s.low}</.link>
+                </dd>
+              </div>
+              <div class="ov-kpi ov-kpi-total">
+                <dt>Total</dt>
+                <dd id="home-total-count">{s.total}</dd>
+              </div>
+            </dl>
 
-          <div class="ov-sevbar-wrap">
-            <span
-              class="ov-sevbar"
-              role="img"
-              aria-label={"Severity mix of #{s.total} distinct CVEs: #{s.critical} critical, #{s.high} high, #{s.medium} medium, #{s.low} low"}
-            >
-              <span class="ov-sevbar-seg ov-sevbar-critical" style={"flex: #{s.critical} 1 0"}></span>
-              <span class="ov-sevbar-seg ov-sevbar-high" style={"flex: #{s.high} 1 0"}></span>
-              <span class="ov-sevbar-seg ov-sevbar-medium" style={"flex: #{s.medium} 1 0"}></span>
-              <span class="ov-sevbar-seg ov-sevbar-low" style={"flex: #{s.low} 1 0"}></span>
-            </span>
-            <p class="supporting">Severity mix · {s.total} distinct CVEs</p>
+            <div class="ov-sevbar-wrap">
+              <span
+                class="ov-sevbar"
+                role="img"
+                aria-label={"Severity mix of #{s.total} distinct CVEs: #{s.critical} critical, #{s.high} high, #{s.medium} medium, #{s.low} low"}
+              >
+                <span class="ov-sevbar-seg ov-sevbar-critical" style={"flex: #{s.critical} 1 0"}></span>
+                <span class="ov-sevbar-seg ov-sevbar-high" style={"flex: #{s.high} 1 0"}></span>
+                <span class="ov-sevbar-seg ov-sevbar-medium" style={"flex: #{s.medium} 1 0"}></span>
+                <span class="ov-sevbar-seg ov-sevbar-low" style={"flex: #{s.low} 1 0"}></span>
+              </span>
+              <p class="supporting">Severity mix · {s.total} distinct CVEs</p>
+            </div>
           </div>
         <% _ -> %>
           <.notice id="home-summary-error" kind="warning" title="Inventory counts unavailable">
@@ -128,7 +90,7 @@
               </div>
             </dl>
             <p class="supporting">
-              Package occurrences, not distinct CVEs. Suppression is not mitigation.
+              Occurrences, not distinct CVEs · suppression is not mitigation.
             </p>
           <% _ -> %>
             <.notice
@@ -362,13 +324,5 @@
           </.notice>
       <% end %>
     </section>
-
-    <footer class="overview-tools cluster" aria-label="Other local workflows">
-      <.link id="home-whats-new" href={~p"/whats-new"}>Read activity</.link>
-      <span class="muted">Data tools:</span>
-      <.link id="home-imports" href={~p"/imports"}>Imports</.link>
-      <.link id="home-replay" href={~p"/replay"}>Replay</.link>
-      <.link id="home-replay-history" href={~p"/replay/history"}>Replay History</.link>
-    </footer>
   </div>
 </Layouts.app>

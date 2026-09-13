@@ -59,6 +59,29 @@ defmodule TriageWeb.OverviewReadabilityTest do
              "Occurrence counts"
   end
 
+  test "the overview is posture only: no page header, section chrome or search", %{conn: conn} do
+    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    # One h1 and an accessible section name survive in the document, but
+    # neither is drawn: the first visible element is the posture band.
+    assert LazyHTML.query(document, "h1") |> Enum.count() == 1
+    assert document |> LazyHTML.query("#home-title") |> LazyHTML.attribute("class") == ["sr-only"]
+
+    assert document
+           |> LazyHTML.query("#home-inventory-title")
+           |> LazyHTML.attribute("class") == ["sr-only"]
+
+    assert document
+           |> LazyHTML.query("#home-inventory-intro")
+           |> LazyHTML.attribute("class") == ["sr-only"]
+
+    # No search form, no page header, no duplicated bottom link row.
+    assert LazyHTML.query(document, "#overview-search") |> Enum.count() == 0
+    assert LazyHTML.query(document, "#home-workflows") |> Enum.count() == 0
+    assert LazyHTML.query(document, ".page-header") |> Enum.count() == 0
+    assert LazyHTML.query(document, ".overview-tools") |> Enum.count() == 0
+  end
+
   test "local inventory distinguishes distinct CVEs from occurrences and names the critical table",
        %{conn: conn} do
     document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()

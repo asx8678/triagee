@@ -10,6 +10,8 @@ defmodule TriageWeb.PageControllerTest do
     assert LazyHTML.query(document, "#environment-notice") |> LazyHTML.text() =~
              "Live collection is disabled"
 
+    # The workflow links live in the persistent top navigation; the overview
+    # itself carries no page header.
     for {key, path} <- [
           {"findings", "/findings"},
           {"cases", "/cases"},
@@ -18,14 +20,16 @@ defmodule TriageWeb.PageControllerTest do
           {"replay-history", "/replay/history"},
           {"imports", "/imports"}
         ] do
-      assert document |> LazyHTML.query("#home-#{key}[href='#{path}']") |> Enum.count() == 1
+      assert document |> LazyHTML.query("#nav-#{key}[href='#{path}']") |> Enum.count() == 1
     end
 
     assert document |> LazyHTML.query("#home-workflows .triage-action-card") |> Enum.count() == 0
 
-    assert document
-           |> LazyHTML.query("#overview-search[action='/findings'][method='get'] input[name='q']")
-           |> Enum.count() == 1
+    # The overview is a posture dashboard: no search form and no page header,
+    # because every workflow is one click away in the top navigation.
+    assert LazyHTML.query(document, "#overview-search") |> Enum.count() == 0
+    assert LazyHTML.query(document, "#home-workflows") |> Enum.count() == 0
+    assert LazyHTML.query(document, ".page-header") |> Enum.count() == 0
 
     assert document |> LazyHTML.query("#environment-notice") |> Enum.count() == 1
     assert document |> LazyHTML.query("#overview-counts") |> Enum.count() == 1
