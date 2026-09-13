@@ -1,12 +1,14 @@
 defmodule Triage.InventoryPagingTest do
   @moduledoc """
   Regressions for bounded, sortable advisory groups: the unpaged total a page is
-  computed from, the strict total order of every published sort, and the
-  partition property that paging neither duplicates nor drops a group.
+  computed from, the strict total order of every published sort, and the keyset
+  partition property — walking the list with only the positions it hands out
+  neither duplicates nor drops a group, at any depth.
   """
 
   use Triage.DataCase, async: true
 
+  alias Triage.Inventory.GroupCursor
   alias Triage.{Inventory, Seeds}
 
   @now ~U[2026-09-10 12:00:00Z]
@@ -68,17 +70,35 @@ defmodule Triage.InventoryPagingTest do
              Enum.map(Inventory.list_groups(sort: Inventory.default_group_sort()), & &1.cve)
   end
 
-  test "paging partitions the unpaged list exactly" do
-    all = Enum.map(Inventory.list_groups(sort: "cve"), & &1.cve)
-    assert length(all) > 5
+  test "walking the list with only its own positions partitions it, for every order" do
+    for sort <- Inventory.group_sorts() do
+      all = Enum.map(Inventory.list_groups(sort: sort), & &1.cve)
+      assert length(all) > 5
 
-    paged =
-      for offset <- 0..(length(all) - 1)//5 do
-        Inventory.list_groups(sort: "cve", limit: 5, offset: offset) |> Enum.map(& &1.cve)
+      walked = walk_positions([sort: sort], 5)
+
+      assert walked == all, "sort #{sort} lost or repeated a group while paging"
+      assert walked == Enum.uniq(walked)
+    end
+  end
+
+  test "every order's positions are its own" do
+    # A position names the order it belongs to, so using it with another order
+    # is a programming error rather than a silently different slice.
+    severity_position = %{severity_rank: 4, images: 1, cve: "CVE-2098-70011"}
+
+    for sort <- ["cve", "occurrences", "newest"] do
+      assert_raise ArgumentError, fn ->
+        Inventory.list_groups(sort: sort, before: severity_position)
       end
-      |> List.flatten()
+    end
 
-    assert paged == all
+    rows = Inventory.list_groups(sort: "severity", before: severity_position)
+    assert rows != []
+
+    assert Enum.all?(rows, fn row ->
+             {-row.severity_rank, -row.images, row.cve} > {-4, -1, "CVE-2098-70011"}
+           end)
   end
 
   test "paging keeps every filter, not only the ordering" do
@@ -90,34 +110,78 @@ defmodule Triage.InventoryPagingTest do
 
     assert Inventory.count_groups(owner: "alpha") == length(scoped)
 
-    assert Inventory.list_groups(owner: "alpha", sort: "cve", offset: 1)
+    assert walk_positions([owner: "alpha", sort: "cve"], 3) == Enum.map(scoped, & &1.cve)
+
+    # A position continues inside the scoped list too: the filters, not the
+    # position, decide which groups exist.
+    {:ok, cursor} =
+      Inventory.list_groups(owner: "alpha", sort: "cve", limit: 1)
+      |> List.last()
+      |> then(&GroupCursor.parse("cve", GroupCursor.encode("cve", &1)))
+
+    assert Inventory.list_groups(owner: "alpha", sort: "cve", before: cursor)
            |> Enum.map(& &1.cve) == scoped |> Enum.map(& &1.cve) |> Enum.drop(1)
   end
 
-  test "a page past the end is empty rather than shortened or wrapped" do
-    assert Inventory.list_groups(limit: 5, offset: 10_000) == []
-    assert Inventory.list_groups(limit: 5, offset: Inventory.count_groups([])) == []
+  test "a position past the last group is an empty page, not a wrapped one" do
+    {:ok, cursor} =
+      Inventory.list_groups(sort: "cve")
+      |> List.last()
+      |> then(&GroupCursor.parse("cve", GroupCursor.encode("cve", &1)))
+
+    assert Inventory.list_groups(sort: "cve", limit: 5, before: cursor) == []
   end
 
-  test "the page size is bounded while a deep offset stays reachable" do
+  test "the page size is bounded and a position must be one this order could produce" do
     assert Inventory.list_groups(limit: 0) == []
     assert length(Inventory.list_groups(limit: 2)) == 2
-
-    # A late page of a large inventory must not be rejected by the page-size cap.
-    assert Inventory.list_groups(limit: 2, offset: 10_000) == []
 
     assert_raise ArgumentError, fn -> Inventory.list_groups(limit: -1) end
     assert_raise ArgumentError, fn -> Inventory.list_groups(limit: 201) end
     assert_raise ArgumentError, fn -> Inventory.list_groups(limit: "2") end
-    assert_raise ArgumentError, fn -> Inventory.list_groups(offset: -1) end
-    assert_raise ArgumentError, fn -> Inventory.list_groups(offset: 2.0) end
     assert_raise ArgumentError, fn -> Inventory.list_groups(sort: "nonsense") end
     assert_raise ArgumentError, fn -> Inventory.list_groups(sort: :newest) end
+
+    # Not the parsed shape of any position, so it is rejected rather than
+    # coerced into one.
+    for bad <- [
+          "4~1~CVE-x",
+          5,
+          :cve,
+          %{cve: "CVE-x"},
+          %{severity_rank: 4, images: 1},
+          %{severity_rank: 4, images: 1, cve: "CVE-x", extra: 1},
+          %{severity_rank: 5, images: 1, cve: "CVE-x"}
+        ] do
+      assert_raise ArgumentError, fn -> Inventory.list_groups(sort: "severity", before: bad) end
+    end
   end
 
   test "the newest rail shares the list's newest order" do
     assert Enum.map(Inventory.newest_cve_groups(3), & &1.cve) ==
              Inventory.list_groups(sort: "newest", limit: 3) |> Enum.map(& &1.cve)
+  end
+
+  # Walks one order with only the positions it hands out, page by page. The
+  # page bound keeps a broken position from looping forever: it fails as a
+  # partition mismatch instead of hanging the suite.
+  defp walk_positions(opts, page_size) do
+    sort = Keyword.get(opts, :sort) || Inventory.default_group_sort()
+    bound = div(Inventory.count_groups(opts), page_size) + 2
+
+    {_, pages} =
+      Enum.reduce_while(1..bound, {nil, []}, fn _page, {before, acc} ->
+        case Inventory.list_groups(opts ++ [limit: page_size, before: before]) do
+          [] ->
+            {:halt, {nil, acc}}
+
+          rows ->
+            {:ok, cursor} = GroupCursor.parse(sort, GroupCursor.encode(sort, List.last(rows)))
+            {:cont, {cursor, acc ++ [Enum.map(rows, & &1.cve)]}}
+        end
+      end)
+
+    List.flatten(pages)
   end
 
   defp add_advisories!(count) do

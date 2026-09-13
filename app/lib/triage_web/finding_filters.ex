@@ -2,7 +2,7 @@ defmodule TriageWeb.FindingFilters do
   @moduledoc """
   Shared, explicit validation and normalization contract for the finding list
   and detail scope parameters: `owner`, `environment`, `q`, `suppressed`,
-  `severity`, plus the list-only `sort` and `page` result-order controls.
+  `severity`, plus the list-only `sort` order and its `before` keyset position.
 
   Scope filters are display scoping, never authorization. A value is accepted
   only when it is a plain binary that is valid UTF-8 with no NUL or other
@@ -19,19 +19,23 @@ defmodule TriageWeb.FindingFilters do
   """
 
   @max_length 120
-  @recognized ~w(owner environment q suppressed severity sort page)
+  @recognized ~w(owner environment q suppressed severity sort before)
+
+  # Every recognized field except `before`, which cannot be validated on its
+  # own: a position only means something in one result order, so it is checked
+  # once the order is known.
+  @independent ~w(owner environment q suppressed severity sort)
   @suppressed_truthy ~w(1 true on)
   @suppressed_falsy ~w(0 false)
   @severities ~w(CRITICAL HIGH MEDIUM LOW)
   @unsafe_text ~r/[\x00-\x1F\x7F]/
 
-  # The accepted orders live with the query that implements them, so the
-  # contract and Triage.Inventory.list_groups/1 cannot drift apart.
-  @max_page 10_000
+  alias Triage.Inventory.GroupCursor
 
   @doc """
-  The intentional All choice: no scope restrictions and the default result
-  order (`:sort` nil means `severity`; `:page` nil means page 1).
+  The intentional All choice: no scope restrictions, the default result order
+  (`:sort` nil means `severity`) and the start of that order (`:before` nil
+  means the newest slice).
   """
   def defaults do
     %{
@@ -41,7 +45,7 @@ defmodule TriageWeb.FindingFilters do
       include_suppressed: false,
       severity: nil,
       sort: nil,
-      page: nil,
+      before: nil,
       invalid: []
     }
   end
@@ -61,7 +65,7 @@ defmodule TriageWeb.FindingFilters do
       mark_invalid(defaults(), :filters)
     else
       params
-      |> Map.take(@recognized)
+      |> Map.take(@independent)
       |> Enum.reduce(defaults(), fn {field, value}, acc ->
         field = String.to_existing_atom(field)
         {status, normalized} = field_value(field, value)
@@ -72,6 +76,7 @@ defmodule TriageWeb.FindingFilters do
         |> Map.put(key, normalized)
         |> then(fn acc -> if status == :error, do: mark_invalid(acc, field), else: acc end)
       end)
+      |> parse_cursor(Map.get(params, "before"))
     end
   end
 
@@ -79,6 +84,18 @@ defmodule TriageWeb.FindingFilters do
   # booleans, ...) surfaces the invalid state instead of raising and killing
   # the LiveView channel.
   def parse(_other), do: mark_invalid(defaults(), :filters)
+
+  # A position is only a position in one order, so the cursor is validated
+  # against the order this parse resolved — the default order when the request
+  # named none. A position issued for a different order is not a position here,
+  # and a malformed or non-canonical one is a visible invalid filter rather
+  # than a silently different slice of the list.
+  defp parse_cursor(acc, value) do
+    case GroupCursor.parse(acc.sort || Triage.Inventory.default_group_sort(), value) do
+      {:ok, before} -> %{acc | before: before}
+      {:error, :before} -> mark_invalid(acc, :before)
+    end
+  end
 
   @doc """
   Parses a `filter` event. Exactly one `"filters"` wrapper level is supported:
@@ -117,11 +134,12 @@ defmodule TriageWeb.FindingFilters do
   end
 
   # The real filter form serializes its order control on every event, so a flat
-  # value that equals the default order — or the first page — carries no second
-  # filter intent next to a wrapper. Any other value there is a genuine conflict
-  # and stays rejected as ambiguous.
+  # value that equals the default order — and no position at all, because the
+  # form has no cursor field — carries no second filter intent next to a
+  # wrapper. Any other value there is a genuine conflict and stays rejected as
+  # ambiguous.
   defp neutral_order?(parsed) do
-    parsed.sort in [nil, Triage.Inventory.default_group_sort()] and parsed.page in [nil, 1]
+    parsed.sort in [nil, Triage.Inventory.default_group_sort()] and parsed.before == nil
   end
 
   @doc """
@@ -138,12 +156,23 @@ defmodule TriageWeb.FindingFilters do
         q: q,
         severity: Map.get(parsed, :severity),
         sort: Map.get(parsed, :sort),
-        page: Map.get(parsed, :page)
+        before: encode_cursor(parsed)
       }
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
       |> Map.new()
 
     if s, do: Map.put(qs, :suppressed, "1"), else: qs
+  end
+
+  # A position is emitted re-encoded from its parsed fields, so a route this
+  # module builds can only ever carry a cursor this module accepted.
+  defp encode_cursor(parsed) do
+    sort = Map.get(parsed, :sort) || Triage.Inventory.default_group_sort()
+
+    case Map.get(parsed, :before) do
+      nil -> nil
+      before -> GroupCursor.encode(sort, before)
+    end
   end
 
   defp field_value(:severity, nil), do: {:ok, nil}
@@ -199,35 +228,6 @@ defmodule TriageWeb.FindingFilters do
   end
 
   defp field_value(:sort, _other), do: {:error, nil}
-
-  defp field_value(:page, nil), do: {:ok, nil}
-
-  defp field_value(:page, value) when is_binary(value) do
-    cond do
-      not String.valid?(value) ->
-        {:error, nil}
-
-      Regex.match?(@unsafe_text, value) ->
-        {:error, nil}
-
-      true ->
-        case String.trim(value) do
-          # A blank page is the neutral first page, exactly like a blank scope.
-          "" ->
-            {:ok, nil}
-
-          # Page numbers are bounded: an out-of-range page is a visible invalid
-          # filter, never a silent clamp into someone else's slice of the list.
-          trimmed ->
-            case Integer.parse(trimmed) do
-              {page, ""} when page >= 1 and page <= @max_page -> {:ok, page}
-              _other -> {:error, nil}
-            end
-        end
-    end
-  end
-
-  defp field_value(:page, _other), do: {:error, nil}
 
   defp field_value(:suppressed, nil), do: {:ok, false}
 

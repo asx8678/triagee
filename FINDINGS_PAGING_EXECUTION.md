@@ -9,6 +9,14 @@ No commit, stage, push, or deployment was performed. HEAD remains
 `dc4843141b94aa8f9a040eec6aa0ea61978784cc`; `app/` is still untracked, so the
 hashes below are the only stable identifiers for this change.
 
+> **Superseded in part.** The offset/page contract recorded below was replaced
+> by a keyset position when the code-review findings were implemented; the list
+> now continues from a `before` position exactly as the review queue does, and
+> `limit`/`offset` paging no longer exists in `Triage.Inventory.list_groups/1`.
+> Everything else in this record — the bounded list, the strict total orders,
+> the unpaged `count_groups/1` total and the honest captions — still holds.
+> See `CODE_REVIEW_FIXES_EXECUTION.md`.
+
 ## What changed
 
 `Triage.Inventory.list_groups/1` applied scope, severity and suppression filters

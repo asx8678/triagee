@@ -33,11 +33,11 @@ defmodule TriageWeb.FindingLive.Show do
       q: parsed.q,
       suppressed: parsed.include_suppressed,
       severity: parsed.severity,
-      # Result order and page of the list this occurrence was opened from, so
-      # the back link returns to the same filtered page instead of the default
-      # view. Kept separate from `scope_qs/1`, which also feeds /cases links.
+      # Result order and position in the list this occurrence was opened from,
+      # so the back link returns to the same slice instead of the default view.
+      # Kept separate from `scope_qs/1`, which also feeds /cases links.
       sort: parsed.sort,
-      page: parsed.page
+      before: parsed.before
     }
 
     if parsed.invalid != [] do
@@ -109,7 +109,7 @@ defmodule TriageWeb.FindingLive.Show do
           suppressed: false,
           severity: nil,
           sort: nil,
-          page: nil
+          before: nil
         }
 
       scope ->
@@ -152,9 +152,9 @@ defmodule TriageWeb.FindingLive.Show do
         Invalid scope parameter{if length(@invalid_scope) == 1, do: "", else: "s"} for
         <strong>{Enum.map_join(@invalid_scope, ", ", &to_string/1)}</strong>
         — no finding details are shown.
-        Filters accept plain text of at most 120 characters without control characters; the page must
-        be a whole number from 1 up, and the order one of the listed choices.
-        Return to the inventory to choose valid filters.
+        Filters accept plain text of at most 120 characters without control characters; the order
+        must be one of the listed choices, and a position must be one the findings list issued.
+        A position is never guessed. Return to the inventory to choose valid filters.
       </p>
 
       <%= if @data do %>
@@ -457,8 +457,9 @@ defmodule TriageWeb.FindingLive.Show do
 
   defp back_path(scope), do: ~p"/findings?#{findings_list_qs(scope)}"
 
-  # The findings list query, including the result order and page. Distinct from
-  # `scope_qs/1`, which is also used for /cases links and must stay scope-only.
+  # The findings list query, including the result order and position. Distinct
+  # from `scope_qs/1`, which is also used for /cases links and must stay
+  # scope-only.
   defp findings_list_qs(scope) do
     FindingFilters.query_params(%{
       owner: scope.owner,
@@ -467,7 +468,7 @@ defmodule TriageWeb.FindingLive.Show do
       include_suppressed: scope.suppressed,
       severity: Map.get(scope, :severity),
       sort: Map.get(scope, :sort),
-      page: Map.get(scope, :page)
+      before: Map.get(scope, :before)
     })
   end
 

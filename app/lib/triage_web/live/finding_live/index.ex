@@ -10,6 +10,7 @@ defmodule TriageWeb.FindingLive.Index do
   use TriageWeb, :live_view
 
   alias Triage.Inventory
+  alias Triage.Inventory.GroupCursor
   alias TriageWeb.FindingFilters
 
   # One page of advisory groups. The list is bounded so a large estate cannot
@@ -43,7 +44,6 @@ defmodule TriageWeb.FindingLive.Index do
     # nothing is queried and the state is surfaced visibly instead.
     unknown_team? = not invalid and team_unknown?(parsed.owner)
     sort = parsed.sort || default_sort()
-    requested_page = parsed.page || 1
 
     scope_opts = [
       owner: parsed.owner,
@@ -53,22 +53,26 @@ defmodule TriageWeb.FindingLive.Index do
       severity: parsed.severity
     ]
 
-    {groups, total, page, pages} =
+    # One row beyond the page says whether an older slice exists. The position
+    # kept for that slice is the last row actually shown, so the next page
+    # continues exactly after it and can neither repeat nor skip a group.
+    {groups, total, has_more?, next_before} =
       if invalid or unknown_team? do
-        {[], 0, 1, 1}
+        {[], 0, false, nil}
       else
         total = Inventory.count_groups(scope_opts)
-        pages = page_count(total)
-        # A page past the end renders the last page rather than a misleading
-        # empty table, and the rendered page number is the effective one.
-        page = min(requested_page, pages)
 
-        groups =
+        rows =
           Inventory.list_groups(
-            scope_opts ++ [sort: sort, limit: @per_page, offset: (page - 1) * @per_page]
+            scope_opts ++ [sort: sort, limit: @per_page + 1, before: parsed.before]
           )
 
-        {groups, total, page, pages}
+        has_more? = length(rows) > @per_page
+        groups = Enum.take(rows, @per_page)
+
+        next_before = if has_more?, do: position(sort, List.last(groups))
+
+        {groups, total, has_more?, next_before}
       end
 
     {:noreply,
@@ -82,7 +86,7 @@ defmodule TriageWeb.FindingLive.Index do
          include_suppressed: parsed.include_suppressed,
          severity: parsed.severity,
          sort: sort,
-         page: page
+         before: parsed.before
        }
      )
      |> assign(:invalid_filters, if(invalid, do: parsed.invalid, else: []))
@@ -91,10 +95,12 @@ defmodule TriageWeb.FindingLive.Index do
      |> assign(:environments, Inventory.environments())
      |> assign(:counts, Inventory.summary_counts())
      |> assign(:advisory_count, total)
-     |> assign(:page, page)
-     |> assign(:page_count, pages)
-     |> assign(:showing_from, if(groups == [], do: 0, else: (page - 1) * @per_page + 1))
-     |> assign(:showing_to, (page - 1) * @per_page + length(groups))
+     |> assign(:shown, length(groups))
+     |> assign(:per_page, @per_page)
+     |> assign(:has_more?, has_more?)
+     |> assign(:cursor, parsed.before)
+     |> assign(:next_before, next_before)
+     |> assign(:beyond_end?, groups == [] and total > 0)
      |> assign(:order_note, sort_note(sort))
      |> assign(:sort_options, sort_options())
      |> assign(
@@ -126,10 +132,11 @@ defmodule TriageWeb.FindingLive.Index do
        |> assign(:invalid_filters, parsed.invalid)
        |> assign(:unknown_team?, false)
        |> assign(:advisory_count, 0)
-       |> assign(:page, 1)
-       |> assign(:page_count, 1)
-       |> assign(:showing_from, 0)
-       |> assign(:showing_to, 0)
+       |> assign(:shown, 0)
+       |> assign(:has_more?, false)
+       |> assign(:cursor, nil)
+       |> assign(:next_before, nil)
+       |> assign(:beyond_end?, false)
        |> assign(:empty?, true)
        |> stream(:groups, [], reset: true)}
     end
@@ -154,8 +161,12 @@ defmodule TriageWeb.FindingLive.Index do
     Enum.map(Inventory.group_sorts(), &{Map.fetch!(@sort_labels, &1), &1})
   end
 
-  defp page_count(0), do: 1
-  defp page_count(total), do: div(total + @per_page - 1, @per_page)
+  # The position of one row: its own cursor, parsed back so only a value this
+  # contract accepts is ever carried into a link.
+  defp position(sort, row) do
+    {:ok, cursor} = GroupCursor.parse(sort, GroupCursor.encode(sort, row))
+    cursor
+  end
 
   defp sort_note("severity") do
     "Sorted by highest scanner severity, then affected image count (most first), then advisory id (A–Z)."
@@ -171,11 +182,22 @@ defmodule TriageWeb.FindingLive.Index do
 
   defp sort_note("cve"), do: "Sorted by advisory id (A–Z)."
 
-  # The canonical list query. The default order and the first page stay out of
+  # The canonical list query. The default order and the newest slice stay out of
   # the URL so a shared link keeps its shortest form; both are still applied.
-  defp list_query(filters, page_override) do
-    page = page_override || filters[:page] || 1
+  #
+  # `position` selects the slice: `nil` keeps the one these filters are already
+  # on, so a detail link returns to the same place in the list; `:start` drops
+  # the position for the newest slice; and a parsed position moves to the slice
+  # that continues after it.
+  defp list_query(filters, position) do
     sort = filters[:sort] || default_sort()
+
+    before =
+      case position do
+        :start -> nil
+        nil -> filters[:before]
+        cursor -> cursor
+      end
 
     FindingFilters.query_params(%{
       owner: filters[:owner],
@@ -184,12 +206,12 @@ defmodule TriageWeb.FindingLive.Index do
       include_suppressed: filters[:include_suppressed],
       severity: filters[:severity],
       sort: if(sort == default_sort(), do: nil, else: sort),
-      page: if(page == 1, do: nil, else: page)
+      before: before
     })
   end
 
-  defp list_path(filters, page_override) do
-    case list_query(filters, page_override) do
+  defp list_path(filters, position) do
+    case list_query(filters, position) do
       qs when map_size(qs) == 0 -> ~p"/findings"
       qs -> ~p"/findings?#{qs}"
     end
@@ -281,7 +303,6 @@ defmodule TriageWeb.FindingLive.Index do
           <strong>{@advisory_count} matching {if @advisory_count == 1,
             do: "advisory",
             else: "advisories"}</strong>
-          <span :if={@page_count > 1}>· Page {@page} of {@page_count}</span>
           <span>· {@filters[:owner] || "All teams"} · {@filters[:environment] || "All environments"}</span>
           <span :if={@filters[:search]}>· Search: “{@filters[:search]}”</span>
           <span>· {if @filters[:include_suppressed],
@@ -297,23 +318,27 @@ defmodule TriageWeb.FindingLive.Index do
         Invalid filter value{if length(@invalid_filters) == 1, do: "", else: "s"} for
         <strong>{Enum.map_join(@invalid_filters, ", ", &to_string/1)}</strong>
         — no findings were loaded.
-        Filters accept plain text of at most 120 characters without control characters; the page must
-        be a whole number from 1 up, and the order one of the listed choices.
-        Correct the filters or reset to recover.
+        Filters accept plain text of at most 120 characters without control characters; the order
+        must be one of the listed choices, and a position must be one this list itself issued.
+        A position is never guessed. Correct the filters or reset to recover.
       </p>
       <p :if={@unknown_team?} id="unknown-team" class="notice">
         Unknown team — showing no findings. Team filters are not authorization boundaries.
       </p>
+      <p :if={@beyond_end?} id="findings-beyond-end" class="notice">
+        This position is past the end of the list these filters now select, so no advisories are
+        shown. A position belongs to the filters and order it was issued with.
+        <.link patch={list_path(@filters, :start)}>Start from the newest slice</.link>
+      </p>
       <p id="findings-order" class="supporting">
-        {@order_note} Counts in each row use the selected scope and active placements; teams can overlap. {if @advisory_count >
-                                                                                                                0,
-                                                                                                              do:
-                                                                                                                "Showing #{@showing_from}–#{@showing_to} of #{@advisory_count} matching advisories.",
-                                                                                                              else:
-                                                                                                                ""}
+        {@order_note} Counts in each row use the selected scope and active placements; teams can overlap. One page shows at most {@per_page} advisory groups in this order; the matching total is the unpaged count for this scope.
       </p>
 
-      <div :if={@empty? and @invalid_filters == []} id="findings-empty" class="empty-state">
+      <div
+        :if={@empty? and @invalid_filters == [] and not @beyond_end?}
+        id="findings-empty"
+        class="empty-state"
+      >
         <h2>No matching advisories</h2>
         <p>
           No open findings match this scope and search{if @filters[:include_suppressed],
@@ -391,29 +416,31 @@ defmodule TriageWeb.FindingLive.Index do
         </table>
       </div>
       <nav
-        :if={@page_count > 1}
+        :if={@has_more? or @cursor}
         id="findings-pagination"
         class="cluster"
-        aria-label="Advisory list pages"
+        aria-label="Advisory list position"
       >
         <.link
-          :if={@page > 1}
-          id="findings-page-prev"
-          patch={list_path(@filters, @page - 1)}
+          :if={@has_more?}
+          id="older-advisories"
+          patch={list_path(@filters, @next_before)}
           class="button button-secondary"
         >
-          Previous
+          Older advisories
         </.link>
         <span id="findings-page-status" class="supporting">
-          Page {@page} of {@page_count} · showing {@showing_from}–{@showing_to} of {@advisory_count}
+          {@shown} of {@advisory_count} matching advisories · {@per_page} per page · {if @cursor,
+            do: "later slice of this order",
+            else: "newest slice of this order"}
         </span>
         <.link
-          :if={@page < @page_count}
-          id="findings-page-next"
-          patch={list_path(@filters, @page + 1)}
+          :if={@cursor}
+          id="newest-advisories"
+          patch={list_path(@filters, :start)}
           class="button button-secondary"
         >
-          Next
+          Newest advisories
         </.link>
       </nav>
       <p class="supporting">

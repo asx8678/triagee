@@ -1,14 +1,16 @@
 defmodule TriageWeb.FindingLive.PagingTest do
   @moduledoc """
-  Regressions for the bounded findings list: the page size, the filters, order
-  and page number carried into page links, the clamped page-past-the-end state,
-  and the visible invalid-page filter state.
+  Regressions for the bounded findings list: one slice per request, the
+  positions carried into the slice links, the whole-list walk through those
+  links, the visible past-the-end state, and the visible invalid-position
+  state.
   """
 
   use TriageWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
+  alias Triage.Inventory.GroupCursor
   alias Triage.{Inventory, Seeds}
 
   # Mirrors FindingLive.Index @per_page. Pinned deliberately: the page size is a
@@ -23,89 +25,113 @@ defmodule TriageWeb.FindingLive.PagingTest do
     :ok
   end
 
-  test "the list renders one page of groups and says which page it is", %{conn: conn} do
+  test "the list renders the newest slice and says what it is showing", %{conn: conn} do
     total = Inventory.count_groups([])
-    pages = div(total + @per_page - 1, @per_page)
-    assert pages > 1, "fixture must span more than one page"
+    assert total > @per_page, "fixture must span more than one slice"
 
     {:ok, _view, html} = live(conn, ~p"/findings?sort=cve")
 
     assert row_ids(html) ==
              Inventory.list_groups(sort: "cve", limit: @per_page) |> Enum.map(&"group-#{&1.cve}")
 
-    assert LazyHTML.text(LazyHTML.query(LazyHTML.from_document(html), "#findings-page-status")) =~
-             "Page 1 of #{pages}"
+    status = LazyHTML.text(LazyHTML.query(LazyHTML.from_document(html), "#findings-page-status"))
 
-    assert html =~ "Showing 1–#{@per_page} of #{total} matching advisories"
+    assert status =~ "#{@per_page} of #{total} matching advisories"
+    assert status =~ "newest slice"
+    assert status =~ "#{@per_page} per page"
 
-    refute html =~ "findings-page-prev"
-    assert html =~ "findings-page-next"
+    assert html =~ "older-advisories"
+    refute html =~ "newest-advisories"
   end
 
-  test "a page link carries the filters, the order and the page number", %{conn: conn} do
+  test "a slice link carries the filters, the order and the position", %{conn: conn} do
     scoped = Inventory.count_groups(owner: "alpha", severity: "HIGH")
-    assert div(scoped + @per_page - 1, @per_page) > 1, "fixture must span more than one page"
+    assert div(scoped + @per_page - 1, @per_page) > 1, "fixture must span more than one slice"
 
     {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha&severity=HIGH&sort=cve")
-    first_page = row_ids(render(view))
-    assert first_page != []
+    first_slice = row_ids(render(view))
+    assert first_slice != []
 
-    href = page_link_href(view, "#findings-page-next")
+    href = link_href(view, "#older-advisories")
     assert href =~ "owner=alpha"
     assert href =~ "severity=HIGH"
     assert href =~ "sort=cve"
-    assert href =~ "page=2"
+    assert href =~ "before="
 
-    view |> element("#findings-page-next") |> render_click()
+    view |> element("#older-advisories") |> render_click()
 
-    assert render(view) =~ "Page 2 of"
-    assert row_ids(render(view)) != first_page
-    assert render(view) =~ "findings-page-prev"
+    assert row_ids(render(view)) != first_slice
+    assert render(view) =~ "newest-advisories"
+    assert render(view) =~ "later slice"
   end
 
-  test "the default order and the first page stay out of the links", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/findings?sort=severity&page=1")
+  test "following only the positions it hands out walks the whole list exactly once", %{
+    conn: conn
+  } do
+    total = Inventory.count_groups(owner: "alpha")
+    assert total > @per_page, "fixture must span more than one slice"
 
-    href = page_link_href(view, "#findings-page-next")
+    # The bound keeps a repeated position from looping forever: a broken walk
+    # fails the comparison below instead of hanging.
+    bound = div(total, @per_page) + 2
 
-    assert href =~ "page=2"
+    {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha&sort=cve")
+
+    walked =
+      Enum.reduce_while(1..bound, [], fn _slice, acc ->
+        current = row_ids(render(view))
+
+        if has_element?(view, "#older-advisories") do
+          view |> element("#older-advisories") |> render_click()
+          {:cont, acc ++ current}
+        else
+          {:halt, acc ++ current}
+        end
+      end)
+
+    assert walked ==
+             Inventory.list_groups(owner: "alpha", sort: "cve") |> Enum.map(&"group-#{&1.cve}")
+
+    assert walked == Enum.uniq(walked)
+  end
+
+  test "the default order and the newest slice stay out of the links", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/findings?sort=severity")
+
+    href = link_href(view, "#older-advisories")
+
+    assert href =~ "before="
     refute href =~ "sort="
   end
 
-  test "a page past the end renders the last page instead of an empty table", %{conn: conn} do
-    total = Inventory.count_groups([])
-    pages = div(total + @per_page - 1, @per_page)
-    last_page_rows = total - (pages - 1) * @per_page
+  test "a position past the end is a visible notice, not an empty estate", %{conn: conn} do
+    encoded =
+      Inventory.list_groups(sort: "cve")
+      |> List.last()
+      |> then(&GroupCursor.encode("cve", &1))
 
-    {:ok, _view, html} = live(conn, ~p"/findings?sort=cve&page=9999")
+    {:ok, view, html} = live(conn, ~p"/findings?#{%{sort: "cve", before: encoded}}")
 
-    assert html =~ "Page #{pages} of #{pages}"
-    assert length(row_ids(html)) == last_page_rows
+    assert has_element?(view, "#findings-beyond-end")
+    refute html =~ "findings-empty"
+    assert row_ids(html) == []
 
-    assert row_ids(html) ==
-             Inventory.list_groups(sort: "cve", limit: @per_page, offset: (pages - 1) * @per_page)
-             |> Enum.map(&"group-#{&1.cve}")
-
-    assert html =~ "findings-page-prev"
-    refute html =~ "findings-page-next"
+    assert LazyHTML.text(LazyHTML.query(LazyHTML.from_document(html), "#findings-beyond-end")) =~
+             "past the end"
   end
 
-  test "an out-of-range or malformed page is a visible invalid filter", %{conn: conn} do
-    for bad <- ["0", "-3", "2.5", "abc", "1000000"] do
-      {:ok, view, html} = live(conn, ~p"/findings?page=#{bad}")
+  test "a malformed position is a visible invalid filter, never a guessed slice", %{conn: conn} do
+    for bad <- ["nonsense", "4~12", "04~12~CVE-x", "5~12~CVE-x", "4~12~ CVE-x"] do
+      {:ok, view, html} = live(conn, ~p"/findings?#{%{before: bad}}")
 
       assert has_element?(view, "#invalid-filters")
-
-      assert LazyHTML.text(LazyHTML.query(LazyHTML.from_document(html), "#invalid-filters")) =~
-               "page"
-
       assert row_ids(html) == []
       refute html =~ "findings-summary"
-      refute html =~ "findings-page-next"
+      refute html =~ "older-advisories"
     end
   end
 
-  test "the page shows the order it is actually sorted by", %{conn: conn} do
+  test "the list shows the order it is actually sorted by", %{conn: conn} do
     {:ok, _view, newest_html} = live(conn, ~p"/findings?sort=newest")
 
     assert newest_html =~ "Newest first observed"
@@ -138,8 +164,13 @@ defmodule TriageWeb.FindingLive.PagingTest do
            |> LazyHTML.attribute("value") == ["newest"]
   end
 
-  test "changing the order keeps the scope and starts from the first page", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha&page=2")
+  test "changing the order keeps the scope and starts from the newest slice", %{conn: conn} do
+    # A real position for the default order, so dropping it is observable: the
+    # changed order must not carry the old one.
+    encoded =
+      GroupCursor.encode("severity", %{severity_rank: 4, images: 1, cve: "CVE-2098-80011"})
+
+    {:ok, view, _html} = live(conn, ~p"/findings?#{%{owner: "alpha", before: encoded}}")
 
     view
     |> element("#filter-form")
@@ -154,8 +185,8 @@ defmodule TriageWeb.FindingLive.PagingTest do
 
     html = render(view)
 
-    assert html =~ "Page 1 of"
     assert html =~ "alpha"
+    refute html =~ "newest-advisories"
 
     assert row_ids(html) ==
              Inventory.list_groups(owner: "alpha", sort: "cve", limit: @per_page)
@@ -169,7 +200,7 @@ defmodule TriageWeb.FindingLive.PagingTest do
     |> LazyHTML.attribute("id")
   end
 
-  defp page_link_href(view, selector) do
+  defp link_href(view, selector) do
     view
     |> element(selector)
     |> render()
@@ -206,7 +237,7 @@ defmodule TriageWeb.FindingLive.PagingTest do
             cve: "CVE-2098-8001#{n}",
             package_name: "findings-paging-package-#{n}",
             package_version: "1.#{n}",
-            # Uniform severity so a severity-filtered scope also spans pages;
+            # Uniform severity so a severity-filtered scope also spans slices;
             # severity variety is covered by the inventory paging suite.
             severity: "HIGH",
             fix: nil,

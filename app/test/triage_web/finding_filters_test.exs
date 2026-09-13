@@ -18,7 +18,7 @@ defmodule TriageWeb.FindingFiltersTest do
                  severity: nil,
                  include_suppressed: false,
                  sort: nil,
-                 page: nil,
+                 before: nil,
                  invalid: []
                }
 
@@ -28,7 +28,7 @@ defmodule TriageWeb.FindingFiltersTest do
                "q" => "   ",
                "severity" => "  ",
                "sort" => " ",
-               "page" => ""
+               "before" => ""
              }) ==
                %{
                  owner: nil,
@@ -37,7 +37,7 @@ defmodule TriageWeb.FindingFiltersTest do
                  severity: nil,
                  include_suppressed: false,
                  sort: nil,
-                 page: nil,
+                 before: nil,
                  invalid: []
                }
     end
@@ -246,14 +246,23 @@ defmodule TriageWeb.FindingFiltersTest do
              ) == %{owner: "alpha", q: "busybox"}
     end
 
-    test "carries the result order and page only when they were requested" do
+    test "carries the result order and position only when they were requested" do
       assert FindingFilters.query_params(
-               FindingFilters.parse(%{"owner" => "alpha", "sort" => "cve", "page" => "2"})
-             ) == %{owner: "alpha", sort: "cve", page: 2}
+               FindingFilters.parse(%{
+                 "owner" => "alpha",
+                 "sort" => "cve",
+                 "before" => "CVE-2024-1001"
+               })
+             ) == %{owner: "alpha", sort: "cve", before: "CVE-2024-1001"}
+
+      # A position is emitted re-encoded from its parsed fields, never as it
+      # arrived: nothing else can survive the round trip.
+      assert FindingFilters.parse(%{"sort" => "cve", "before" => "CVE-2024-1001"}).before ==
+               %{cve: "CVE-2024-1001"}
     end
   end
 
-  describe "sort and page" do
+  describe "sort and position" do
     test "accepts only the published sort names, normalized" do
       for sort <- ~w(severity newest occurrences cve) do
         assert FindingFilters.parse(%{"sort" => sort}).sort == sort
@@ -285,24 +294,51 @@ defmodule TriageWeb.FindingFiltersTest do
       assert FindingFilters.parse(%{"sort" => "shortlist"}).invalid == [:sort]
     end
 
-    test "page numbers are bounded positive integers" do
-      assert FindingFilters.parse(%{"page" => "3"}).page == 3
-      assert FindingFilters.parse(%{"page" => " 3 "}).page == 3
-      assert FindingFilters.parse(%{"page" => ""}).page == nil
+    test "a position is validated against the order it is used with" do
+      parsed = FindingFilters.parse(%{"sort" => "cve", "before" => "CVE-2024-1001"})
+      assert parsed.before == %{cve: "CVE-2024-1001"}
+      assert parsed.invalid == []
+
+      # A request that names no order means the default order.
+      assert FindingFilters.parse(%{"before" => "4~12~CVE-2024-1001"}).before ==
+               %{severity_rank: 4, images: 12, cve: "CVE-2024-1001"}
+
+      # The same text is not a position in another order.
+      assert :before in FindingFilters.parse(%{
+               "sort" => "cve",
+               "before" => "4~12~CVE-2024-1001"
+             }).invalid
+
+      assert :before in FindingFilters.parse(%{"before" => "CVE-2024-1001"}).invalid
+      assert FindingFilters.parse(%{"before" => ""}).before == nil
     end
 
-    test "an out-of-range, fractional or unsafe page is an invalid filter" do
-      for bad <- ["0", "-1", "2.5", "1e3", "abc", "10001", "3\u0000", "0x10"] do
-        assert :page in FindingFilters.parse(%{"page" => bad}).invalid
+    test "a malformed or non-canonical position is an invalid filter, never coerced" do
+      for bad <- [
+            "nonsense",
+            "4~12",
+            "4~12~CVE-x~extra",
+            "04~12~CVE-x",
+            "4~-1~CVE-x",
+            "5~12~CVE-x",
+            "4~12~ CVE-x",
+            " ",
+            "3\u0000~2~CVE-x"
+          ] do
+        assert :before in FindingFilters.parse(%{"before" => bad}).invalid,
+               "accepted #{inspect(bad)}"
       end
 
-      assert :page in FindingFilters.parse(%{"page" => <<0xFF>>}).invalid
-      assert :page in FindingFilters.parse(%{"page" => 2}).invalid
+      assert :before in FindingFilters.parse(%{"before" => <<0xFF>>}).invalid
+      assert :before in FindingFilters.parse(%{"before" => 2}).invalid
+      assert :before in FindingFilters.parse(%{"before" => ["4~12~CVE-x"]}).invalid
     end
 
-    test "a wrapper event carrying a real sort or page value is ambiguous" do
+    test "a wrapper event carrying a real sort or position is ambiguous" do
       assert :filters in FindingFilters.parse_event(%{"filters" => %{}, "sort" => "cve"}).invalid
-      assert :filters in FindingFilters.parse_event(%{"filters" => %{}, "page" => "2"}).invalid
+
+      assert :filters in FindingFilters.parse_event(%{"filters" => %{}, "before" => "CVE-x"}).invalid
+
       assert FindingFilters.parse_event(%{"filters" => %{"sort" => "cve"}}).sort == "cve"
     end
 
@@ -318,7 +354,7 @@ defmodule TriageWeb.FindingFiltersTest do
       assert :filters in FindingFilters.parse_event(%{
                "filters" => %{"owner" => "beta"},
                "sort" => "newest",
-               "page" => "2"
+               "before" => "2026-09-10T12:00:00Z~CVE-x"
              }).invalid
     end
   end

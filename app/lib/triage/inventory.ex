@@ -16,6 +16,7 @@ defmodule Triage.Inventory do
   """
 
   import Ecto.Query
+  alias Triage.Inventory.GroupCursor
   alias Triage.Repo
 
   @severity_order ~w(CRITICAL HIGH MEDIUM LOW)
@@ -190,18 +191,20 @@ defmodule Triage.Inventory do
       duplicate or skip a group.
     * `:limit` — page size: a non-negative integer of at most 200, so one
       request cannot pull the whole inventory.
-    * `:offset` — non-negative integer of groups to skip. Unbounded, because a
-      later page of a large inventory is a legitimate cursor position. Use
-      `count_groups/1` for the unpaged total, and clamp the requested page
-      against it before computing the offset.
+    * `:before` — a keyset position from `Triage.Inventory.GroupCursor.parse/2`,
+      or nil for the start of the order. The next page continues after exactly
+      that group, so a page costs one page of work rather than one offset and
+      the boundaries stay correct at any depth. A position that is not one this
+      order could produce raises, rather than quietly returning a different
+      slice. `count_groups/1` still reports the unpaged total.
 
   Findings that disappeared from an eligible collection (`resolved_at`) are never
   listed here; absence is not verified remediation.
   """
   def list_groups(opts \\ []) do
-    page_limit = normalize_paging(opts[:limit], :limit)
-    page_offset = normalize_paging(opts[:offset], :offset)
+    page_limit = normalize_group_limit(opts[:limit])
     sort = normalize_group_sort(opts[:sort])
+    before = normalize_group_cursor(sort, opts[:before])
 
     opts
     |> filtered_findings()
@@ -224,8 +227,9 @@ defmodule Triage.Inventory do
       first_seen: min(f.first_seen),
       last_seen: max(f.last_seen)
     })
+    |> apply_group_cursor(sort, before)
     |> apply_group_order(sort)
-    |> apply_group_paging(page_limit, page_offset)
+    |> maybe_limit(page_limit)
     |> Repo.all()
   end
 
@@ -264,41 +268,66 @@ defmodule Triage.Inventory do
     |> apply_group_search(search)
   end
 
-  # Every ordering below is a strict total order: the advisory id is always the
-  # final tie-break, so no two groups can compare equal and paging can neither
+  # The order of one sort, derived from GroupCursor.keys/1: the same list the
+  # cursor predicate is built from, so the fields compared by an ORDER BY and
+  # the fields compared by a position are never two different definitions.
+  #
+  # Every order is a strict total order: the advisory id is always the final
+  # tie-break, so no two groups can compare equal and paging can neither
   # duplicate nor skip a group.
-  defp apply_group_order(query, "severity") do
-    query
-    |> order_by([f],
-      desc: fragment(@severity_rank_sql, f.severity),
-      desc: fragment("count(distinct ?)", f.image_id),
-      asc: f.cve
-    )
+  defp apply_group_order(query, sort) do
+    order =
+      Enum.map(GroupCursor.keys(sort), fn {name, direction, _type} ->
+        {direction, group_order_expression(name)}
+      end)
+
+    order_by(query, ^order)
   end
 
-  defp apply_group_order(query, "newest") do
-    order_by(query, [f], desc: fragment("min(?)", f.first_seen), asc: f.cve)
+  # A keyset position, expressed over the same expressions as the order. Each
+  # field continues in its own direction, and the predicate is the usual
+  # lexicographic chain: after the first differing field, or equal-or-after on
+  # every field before it. The final field is the unique advisory id, so the
+  # chain terminates in a strict position.
+  defp apply_group_cursor(query, _sort, nil), do: query
+
+  defp apply_group_cursor(query, sort, before) do
+    having(query, ^group_cursor_predicate(sort, before))
   end
 
-  defp apply_group_order(query, "occurrences") do
-    order_by(query, [f], desc: fragment("count(distinct ?)", f.id), asc: f.cve)
+  defp group_cursor_predicate(sort, before) do
+    sort
+    |> GroupCursor.keys()
+    |> Enum.reverse()
+    |> Enum.reduce(nil, fn {name, direction, _type}, acc ->
+      expression = group_order_expression(name)
+      value = Map.fetch!(before, name)
+      after_this = group_cursor_after(expression, direction, value)
+
+      case acc do
+        nil -> after_this
+        rest -> dynamic([f], ^after_this or (^expression == ^value and ^rest))
+      end
+    end)
   end
 
-  defp apply_group_order(query, "cve"), do: order_by(query, [f], asc: f.cve)
+  defp group_cursor_after(expression, :desc, value), do: dynamic([f], ^expression < ^value)
+  defp group_cursor_after(expression, :asc, value), do: dynamic([f], ^expression > ^value)
 
-  defp apply_group_paging(query, nil, nil), do: query
+  # One definition of each compared field as SQL, shared by the order and the
+  # cursor predicate above.
+  defp group_order_expression(:severity_rank),
+    do: dynamic([f], fragment(@severity_rank_sql, f.severity))
 
-  defp apply_group_paging(query, page_limit, page_offset) do
-    query
-    |> maybe_limit(page_limit)
-    |> maybe_offset(page_offset)
-  end
+  defp group_order_expression(:images),
+    do: dynamic([f], fragment("count(distinct ?)", f.image_id))
+
+  defp group_order_expression(:occurrences), do: dynamic([f], fragment("count(distinct ?)", f.id))
+  defp group_order_expression(:first_seen), do: dynamic([f], fragment("min(?)", f.first_seen))
+  defp group_order_expression(:cve), do: dynamic([f], f.cve)
 
   defp maybe_limit(query, nil), do: query
   defp maybe_limit(query, page_limit), do: limit(query, ^page_limit)
-
-  defp maybe_offset(query, nil), do: query
-  defp maybe_offset(query, page_offset), do: offset(query, ^page_offset)
 
   defp normalize_group_sort(nil), do: @default_group_sort
 
@@ -316,26 +345,39 @@ defmodule Triage.Inventory do
           "unsupported group sort #{inspect(sort)}; expected one of #{inspect(@group_sorts)}"
   end
 
-  defp normalize_paging(nil, _name), do: nil
-
   # A page size is bounded so one request cannot pull the whole inventory.
-  defp normalize_paging(value, :limit)
+  defp normalize_group_limit(nil), do: nil
+
+  defp normalize_group_limit(value)
        when is_integer(value) and value >= 0 and value <= @max_group_limit,
        do: value
 
-  # An offset is not bounded by the page-size limit: a later page of a large
-  # inventory is a legitimate cursor position, and callers reach it only after
-  # clamping the page number against the real total.
-  defp normalize_paging(value, :offset) when is_integer(value) and value >= 0, do: value
-
-  defp normalize_paging(value, :limit) do
+  defp normalize_group_limit(value) do
     raise ArgumentError,
           "invalid limit #{inspect(value)}; expected an integer from 0 to #{@max_group_limit}"
   end
 
-  defp normalize_paging(value, :offset) do
+  # A position is accepted only when this exact order could have produced it:
+  # the encoder is the validator, so there is one definition of what a cursor
+  # may contain rather than a second restatement here.
+  defp normalize_group_cursor(_sort, nil), do: nil
+
+  defp normalize_group_cursor(sort, before) when is_map(before) and not is_struct(before) do
+    expected = Enum.map(GroupCursor.keys(sort), fn {name, _direction, _type} -> name end)
+
+    unless Enum.sort(Map.keys(before)) == Enum.sort(expected) do
+      raise ArgumentError,
+            "invalid before cursor #{inspect(Map.keys(before))}; expected exactly #{inspect(expected)}"
+    end
+
+    _encoded = GroupCursor.encode(sort, before)
+    before
+  end
+
+  defp normalize_group_cursor(sort, before) do
     raise ArgumentError,
-          "invalid offset #{inspect(value)}; expected a non-negative integer"
+          "invalid before cursor #{inspect(before)} for sort #{inspect(sort)}; " <>
+            "expected nil or a position parsed by Triage.Inventory.GroupCursor.parse/2"
   end
 
   def teams do
