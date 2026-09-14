@@ -2,6 +2,8 @@ defmodule Triage.InventoryTest do
   use Triage.DataCase, async: true
 
   import Ecto.Query
+  import Triage.Fixtures
+
   alias Triage.{Inventory, Repo, Seeds}
   alias Triage.Inventory.{Finding, FindingEvent, ImagePlacement}
 
@@ -39,6 +41,21 @@ defmodule Triage.InventoryTest do
     assert alpha_1001.occurrences == 2
     assert beta_1001.occurrences == 3
     assert alpha_1001.teams == 1
+  end
+
+  test "the last_seen order is most-recently-observed first" do
+    image = image!("last-seen-order")
+    placement!(image, "alpha", "prod-cluster-1")
+    finding!(image, "CVE-2098-7001", last_seen: at(0))
+    finding!(image, "CVE-2098-7002", last_seen: at(30))
+
+    ids = Inventory.list_groups(sort: "last_seen") |> Enum.map(& &1.cve)
+
+    assert Enum.find_index(ids, &(&1 == "CVE-2098-7001")) <
+             Enum.find_index(ids, &(&1 == "CVE-2098-7002"))
+
+    assert [newest | _] = Inventory.active_now_cve_groups(1)
+    assert newest.cve == "CVE-2098-7001"
   end
 
   test "unknown team yields an empty list, not everything" do

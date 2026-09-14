@@ -1,44 +1,29 @@
 defmodule TriageWeb.PageController do
   use TriageWeb, :controller
 
-  alias Triage.{Cases, Intel, Inventory}
+  alias Triage.Inventory
 
-  # Rows shown per overview table. Each list also reads its unpaged total, so a
-  # capped table never claims to show the whole inventory.
-  @overview_rows 10
+  # Rows shown per overview rail. Each rail also reads the unpaged total, so a
+  # capped rail never claims to show the whole inventory.
+  @rail_rows 5
 
+  # Posture and two bounded rails, nothing else: the critical work list is the
+  # Triage page's job, case history belongs to the case pages, and public
+  # intelligence lives under Data tools · Intel.
   def home(conn, _params) do
     counts = read_overview(fn -> {:ok, Inventory.cve_summary_counts()} end)
     occurrences = read_overview(fn -> {:ok, Inventory.summary_counts()} end)
-    newest = read_overview(fn -> {:ok, Inventory.newest_cve_groups(@overview_rows)} end)
-    newest_total = read_overview(fn -> {:ok, Inventory.count_groups([])} end)
-
-    critical =
-      read_overview(fn ->
-        {:ok,
-         Inventory.list_groups(severity: "CRITICAL", sort: "severity", limit: @overview_rows)}
-      end)
-
-    critical_total = read_overview(fn -> {:ok, Inventory.count_groups(severity: "CRITICAL")} end)
-    cases = read_overview(fn -> Cases.list_cases() end)
-    news = read_overview(fn -> {:ok, Intel.list_cached_news(10)} end)
-    receipts = read_overview(fn -> Intel.latest_receipts() end)
+    active_now = read_overview(fn -> {:ok, Inventory.active_now_cve_groups(@rail_rows)} end)
+    newest = read_overview(fn -> {:ok, Inventory.newest_cve_groups(@rail_rows)} end)
+    advisory_total = read_overview(fn -> {:ok, Inventory.count_groups([])} end)
 
     render(conn, :home,
       page_title: "Overview",
       summary: counts,
       occurrence_counts: occurrences,
+      active_now: shape_group_rows(active_now),
       newest: shape_group_rows(newest),
-      newest_total: shape_total(newest_total),
-      critical: shape_group_rows(critical),
-      critical_total: shape_total(critical_total),
-      news: shape_news(news),
-      news_receipts: shape_receipts(receipts),
-      recent_cases:
-        case cases do
-          {:ok, %{rows: rows}} -> {:ok, Enum.take(rows, 5)}
-          _ -> :unavailable
-        end
+      advisory_total: shape_total(advisory_total)
     )
   end
 
@@ -54,8 +39,8 @@ defmodule TriageWeb.PageController do
 
   defp shape_group_rows(_other), do: :unavailable
 
-  # nil means "the total could not be read", which the template renders by
-  # falling back to the rows it actually has instead of inventing a count.
+  # nil means "the total could not be read", which the template renders as an
+  # explicit unknown instead of inventing a count.
   defp shape_total({:ok, total}) when is_integer(total), do: total
   defp shape_total(_other), do: nil
 
@@ -63,37 +48,6 @@ defmodule TriageWeb.PageController do
     do: names |> Enum.uniq() |> Enum.sort() |> Enum.join(", ")
 
   defp shape_team_list(_), do: nil
-
-  defp shape_news({:ok, rows}) when is_list(rows) do
-    {:ok,
-     Enum.map(rows, fn n ->
-       Map.merge(n, %{
-         source: n.source |> to_string(),
-         link: if(Triage.Intel.safe_link?(n.link), do: n.link, else: nil)
-       })
-     end)}
-  end
-
-  defp shape_news(_other), do: :unavailable
-
-  defp shape_receipts({:ok, receipts}) when is_list(receipts) do
-    Enum.map(receipts, fn receipt ->
-      receipt
-      |> Map.from_struct()
-      |> Map.merge(%{attempted_at_label: relative_receipt_label(receipt)})
-    end)
-  end
-
-  defp shape_receipts(_other), do: []
-
-  defp relative_receipt_label(%{attempted_at: nil}), do: "never"
-
-  defp relative_receipt_label(%{attempted_at: at}) do
-    case TriageWeb.UIComponents.relative_time(at) do
-      nil -> "unknown"
-      label -> label
-    end
-  end
 
   defp read_overview(reader) do
     reader.()
