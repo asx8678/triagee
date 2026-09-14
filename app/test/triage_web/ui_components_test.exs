@@ -148,7 +148,7 @@ defmodule TriageWeb.UIComponentsTest do
     assert count(doc, "nav[aria-label='Primary'] a") == 8
     assert count(doc, "#nav-home[aria-current='page']") == 1
     assert text(doc, "#nav-home") == "Overview"
-    assert text(doc, "#nav-whats-new") == "Activity"
+    assert text(doc, "#nav-triage") == "Triage"
     assert text(doc, "#nav-timeline") == "Timeline"
     assert count(doc, "#environment-notice") == 1
     assert count(doc, "#environment-notice .environment-summary") == 1

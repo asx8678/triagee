@@ -13,12 +13,13 @@ defmodule TriageWeb.PageControllerTest do
     # The workflow links live in the persistent top navigation; the overview
     # itself carries no page header.
     for {key, path} <- [
+          {"triage", "/triage"},
           {"findings", "/findings"},
-          {"cases", "/cases"},
-          {"whats-new", "/whats-new"},
+          {"timeline", "/timeline"},
           {"replay", "/replay"},
           {"replay-history", "/replay/history"},
-          {"imports", "/imports"}
+          {"imports", "/imports"},
+          {"intel", "/intel"}
         ] do
       assert document |> LazyHTML.query("#nav-#{key}[href='#{path}']") |> Enum.count() == 1
     end

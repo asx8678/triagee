@@ -3,13 +3,13 @@ defmodule TriageWeb.NavigationTest do
 
   @links [
     {"home", "/"},
+    {"triage", "/triage"},
     {"findings", "/findings"},
-    {"cases", "/cases"},
-    {"whats-new", "/whats-new"},
     {"timeline", "/timeline"},
+    {"imports", "/imports"},
     {"replay", "/replay"},
     {"replay-history", "/replay/history"},
-    {"imports", "/imports"}
+    {"intel", "/intel"}
   ]
 
   # Read-only mounts: no seed or fixture writes are needed for navigation.
@@ -23,7 +23,7 @@ defmodule TriageWeb.NavigationTest do
   test "detail error states retain their section navigation", %{conn: conn} do
     for {path, active} <- [
           {"/findings/1?owner[]=invalid", "findings"},
-          {"/cases/invalid", "cases"}
+          {"/cases/invalid", "triage"}
         ] do
       {:ok, view, html} = live(conn, path)
       assert has_element?(view, "#nav-#{active}[aria-current='page']")
@@ -38,8 +38,8 @@ defmodule TriageWeb.NavigationTest do
     assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 8
     assert LazyHTML.query(document, "#nav-home") |> LazyHTML.text() |> String.trim() == "Overview"
 
-    assert LazyHTML.query(document, "#nav-whats-new") |> LazyHTML.text() |> String.trim() ==
-             "Activity"
+    assert LazyHTML.query(document, "#nav-triage") |> LazyHTML.text() |> String.trim() ==
+             "Triage"
 
     assert LazyHTML.query(document, "#nav-timeline") |> LazyHTML.text() |> String.trim() ==
              "Timeline"

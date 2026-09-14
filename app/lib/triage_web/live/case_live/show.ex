@@ -588,7 +588,7 @@ defmodule TriageWeb.CaseLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} active_page="cases">
+    <Layouts.app flash={@flash} active_page="triage">
       <.retained_draft_notice retained_draft={@retained_draft} />
 
       <.discard_confirm discard_confirm?={@discard_confirm?} retained_draft={@retained_draft} />

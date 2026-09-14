@@ -199,7 +199,7 @@ defmodule TriageWeb.CaseLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} active_page="cases">
+    <Layouts.app flash={@flash} active_page="triage">
       <.page_header
         title="Review Queue"
         subtitle="Saved review cases · newest opened first (case ID descending)"

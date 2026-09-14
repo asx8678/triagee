@@ -107,16 +107,16 @@ defmodule TriageWeb.Layouts do
       {"Workspace",
        [
          {"home", "Overview", ~p"/"},
+         {"triage", "Triage", ~p"/triage"},
          {"findings", "Findings", ~p"/findings"},
-         {"cases", "Review Queue", ~p"/cases"},
-         {"whats-new", "Activity", ~p"/whats-new"},
          {"timeline", "Timeline", ~p"/timeline"}
        ]},
       {"Data tools",
        [
          {"imports", "Imports", ~p"/imports"},
          {"replay", "Replay", ~p"/replay"},
-         {"replay-history", "Replay History", ~p"/replay/history"}
+         {"replay-history", "Replay History", ~p"/replay/history"},
+         {"intel", "Intel", ~p"/intel"}
        ]}
     ]
   end

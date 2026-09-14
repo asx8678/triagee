@@ -19,6 +19,9 @@ defmodule TriageWeb.Router do
 
     get "/", PageController, :home
 
+    live "/triage", TriageLive
+    live "/intel", IntelLive
+
     live "/cves/:id", CveLive.Show
 
     live "/findings", FindingLive.Index
