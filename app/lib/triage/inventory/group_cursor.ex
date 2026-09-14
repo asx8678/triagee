@@ -20,6 +20,7 @@ defmodule Triage.Inventory.GroupCursor do
 
       severity     "4~12~CVE-2024-1001"     rank, distinct images, advisory id
       newest       "2026-09-10T12:00:00Z~CVE-2024-1001"
+      last_seen    "2026-09-14T06:00:00Z~CVE-2024-1001"
       occurrences  "12~CVE-2024-1001"
       cve          "CVE-2024-1001"
 
@@ -43,7 +44,7 @@ defmodule Triage.Inventory.GroupCursor do
   @canonical_integer ~r/\A(0|[1-9][0-9]{0,18})\z/
 
   @typedoc "A compared field of a published result order."
-  @type name :: :severity_rank | :images | :occurrences | :first_seen | :cve
+  @type name :: :severity_rank | :images | :occurrences | :first_seen | :last_seen | :cve
 
   @typedoc "How one compared field is written into a cursor."
   @type field_type :: :rank | :count | :timestamp | :text
@@ -137,6 +138,9 @@ defmodule Triage.Inventory.GroupCursor do
 
         "newest" ->
           [{:first_seen, :desc, :timestamp}, {:cve, :asc, :text}]
+
+        "last_seen" ->
+          [{:last_seen, :desc, :timestamp}, {:cve, :asc, :text}]
 
         "occurrences" ->
           [{:occurrences, :desc, :count}, {:cve, :asc, :text}]

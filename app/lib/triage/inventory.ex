@@ -160,7 +160,7 @@ defmodule Triage.Inventory do
   # selected column and the default ordering so the two cannot drift.
   @severity_rank_sql "max(case ? when 'CRITICAL' then 4 when 'HIGH' then 3 when 'MEDIUM' then 2 when 'LOW' then 1 else 0 end)"
 
-  @group_sorts ~w(severity newest occurrences cve)
+  @group_sorts ~w(severity newest last_seen occurrences cve)
   @default_group_sort "severity"
   @max_group_limit 200
 
@@ -324,6 +324,7 @@ defmodule Triage.Inventory do
 
   defp group_order_expression(:occurrences), do: dynamic([f], fragment("count(distinct ?)", f.id))
   defp group_order_expression(:first_seen), do: dynamic([f], fragment("min(?)", f.first_seen))
+  defp group_order_expression(:last_seen), do: dynamic([f], fragment("max(?)", f.last_seen))
   defp group_order_expression(:cve), do: dynamic([f], f.cve)
 
   defp maybe_limit(query, nil), do: query
@@ -449,6 +450,18 @@ defmodule Triage.Inventory do
   publication time.
   """
   def newest_cve_groups(limit \\ 10), do: list_groups(sort: "newest", limit: limit)
+
+  @doc """
+  Most recently observed CVE groups: the newest `last_seen` in the group first,
+  stable tie-break on CVE id. Same predicates as `list_groups/1`, implemented as
+  its `sort: "last_seen"` order so the overview's "Active now" rail and the
+  findings list cannot drift apart.
+
+  This is *local observation recency* — the newest moment this advisory was seen
+  by an eligible collection — never a claim that the affected software is
+  currently deployed or internet-facing.
+  """
+  def active_now_cve_groups(limit \\ 5), do: list_groups(sort: "last_seen", limit: limit)
 
   @doc """
   CVE-centric aggregate: every current occurrence of the advisory across all

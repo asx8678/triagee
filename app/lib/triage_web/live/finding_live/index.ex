@@ -20,6 +20,7 @@ defmodule TriageWeb.FindingLive.Index do
   @sort_labels %{
     "severity" => "Severity (highest first)",
     "newest" => "Newest first observed",
+    "last_seen" => "Most recently observed",
     "occurrences" => "Most occurrences",
     "cve" => "Advisory id (A–Z)"
   }
@@ -174,6 +175,10 @@ defmodule TriageWeb.FindingLive.Index do
 
   defp sort_note("newest") do
     "Sorted by first local observation, newest first — first seen is local observation time, not CVE publication time — then advisory id (A–Z)."
+  end
+
+  defp sort_note("last_seen") do
+    "Sorted by the newest local observation in the group, most recent first — last seen is when an eligible collection last reported it, not proof it is currently deployed — then advisory id (A–Z)."
   end
 
   defp sort_note("occurrences") do

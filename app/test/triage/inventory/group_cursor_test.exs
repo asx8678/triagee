@@ -13,6 +13,7 @@ defmodule Triage.Inventory.GroupCursorTest do
   @rows %{
     "severity" => %{severity_rank: 4, images: 12, cve: "CVE-2024-1001"},
     "newest" => %{first_seen: ~U[2026-09-10 12:00:00Z], cve: "CVE-2024-1001"},
+    "last_seen" => %{last_seen: ~U[2026-09-14 06:00:00Z], cve: "CVE-2024-1001"},
     "occurrences" => %{occurrences: 7, cve: "CVE-2024-1001"},
     "cve" => %{cve: "CVE-2024-1001"}
   }
