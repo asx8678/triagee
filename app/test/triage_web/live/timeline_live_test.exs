@@ -18,6 +18,11 @@ defmodule TriageWeb.TimelineLiveTest do
     :ok
   end
 
+  # The window ends today and is Monday-aligned, so its newest week is partial:
+  # it holds whole weeks back plus today's weekday. That is 56 days only on a
+  # Sunday, which is why these assertions must not hard-code 56.
+  defp window_days(weeks), do: 7 * (weeks - 1) + Date.day_of_week(today(), :monday)
+
   describe "a window with recorded observations" do
     setup do
       image = image!("live-bands")
@@ -47,7 +52,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-chart")
 
       # One band per day of the window: empty days are rendered explicitly.
-      assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() == 56
+      assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() == window_days(8)
 
       # Both wide tables live in their own scroll region, so the page itself
       # never scrolls horizontally at a narrow viewport (WCAG 2.2 SC 1.4.10).
@@ -177,7 +182,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert html
              |> LazyHTML.from_document()
              |> LazyHTML.query("#tl-band-list > li")
-             |> Enum.count() == 56
+             |> Enum.count() == window_days(8)
 
       view
       |> form("#timeline-form", %{"weeks" => "4"})
@@ -188,7 +193,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert render(view)
              |> LazyHTML.from_document()
              |> LazyHTML.query("#tl-band-list > li")
-             |> Enum.count() == 28
+             |> Enum.count() == window_days(4)
     end
 
     test "a scope with no matching placement is empty without claiming a clean estate", %{
@@ -269,7 +274,8 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-track-CVE-2026-5202")
 
       # The axis labels every day, every week start and today, at the window's size.
-      assert document |> LazyHTML.query("#tl-chart .tl-c-weekday") |> Enum.count() == 56
+      assert document |> LazyHTML.query("#tl-chart .tl-c-weekday") |> Enum.count() ==
+               window_days(8)
 
       # Eight week starts plus the gutter's own CVE label.
       assert document |> LazyHTML.query("#tl-chart .tl-c-week-label") |> Enum.count() == 9

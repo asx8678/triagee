@@ -17,6 +17,11 @@ defmodule Triage.TimelineTest do
     :ok
   end
 
+  # The window ends today and is Monday-aligned, so its newest week is partial:
+  # it holds whole weeks back plus today's weekday. That is 56 days only on a
+  # Sunday, which is why these assertions must not hard-code 56.
+  defp window_days(weeks), do: 7 * (weeks - 1) + Date.day_of_week(today(), :monday)
+
   describe "request validation" do
     test "rejects every unrecognized request shape" do
       for bad <- [
@@ -87,7 +92,7 @@ defmodule Triage.TimelineTest do
     test "defaults to eight Monday-aligned weeks ending today" do
       assert {:ok, view} = Timeline.list_timeline()
       assert view.window.weeks == 8
-      assert length(view.days) == 56
+      assert length(view.days) == window_days(8)
       assert Date.day_of_week(view.window.from) == 1
       assert view.window.to == today()
       assert view.days |> hd() |> Map.fetch!(:date) == today()
@@ -98,7 +103,7 @@ defmodule Triage.TimelineTest do
     test "honours the 4 and 12 week windows" do
       for weeks <- [4, 12] do
         assert {:ok, view} = Timeline.list_timeline(weeks: weeks)
-        assert length(view.days) == weeks * 7
+        assert length(view.days) == window_days(weeks)
         assert length(view.grid.weeks) == weeks
         assert view.window.weeks == weeks
       end
@@ -108,7 +113,7 @@ defmodule Triage.TimelineTest do
       assert {:ok, view} = Timeline.list_timeline()
       assert view.summary.events == 0
       assert view.summary.observed_days == 0
-      assert view.summary.empty_days == 56
+      assert view.summary.empty_days == window_days(8)
       assert view.lanes.total == 0
       assert view.lanes.rows == []
       assert Enum.all?(view.days, &(&1.observed? == false))
@@ -141,7 +146,7 @@ defmodule Triage.TimelineTest do
       refute two_days_ago.observed?
       assert two_days_ago.rows == []
       assert view.summary.observed_days == 2
-      assert view.summary.empty_days == 54
+      assert view.summary.empty_days == window_days(8) - 2
     end
 
     test "adjacent observations are joined by a connector in both directions" do
