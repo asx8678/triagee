@@ -3,8 +3,9 @@ defmodule TriageWeb.CveLiveTest do
 
   import Ecto.Query
   import Phoenix.LiveViewTest
+  import Triage.Fixtures
 
-  alias Triage.{Intel, Repo, Seeds}
+  alias Triage.{Exposure, Intel, Repo, Seeds}
 
   setup do
     Triage.DataCase.reset_inventory!()
@@ -32,6 +33,33 @@ defmodule TriageWeb.CveLiveTest do
     # image_a placement is internet_exposed per seeds
     assert html =~ "internet_exposed"
     assert html =~ "critical"
+  end
+
+  test "a retired placement never raises the headline priority", %{conn: conn} do
+    image = image!("retired-scope")
+    retired = placement!(image, "alpha", "prod", false)
+    active = placement!(image, "alpha", "staging")
+    finding!(image, "CVE-2099-700001", severity: "HIGH")
+
+    {:ok, _} = Exposure.record(retired.id, "internet_exposed", "operator", at(0))
+
+    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2099-700001")
+
+    # The retired placement stays visible and labelled, with its own row priority.
+    assert has_element?(view, "#cve-placement-#{retired.id}", "No")
+    assert has_element?(view, "#cve-placement-#{retired.id}", "critical")
+
+    # The headline aggregate follows the active placement only.
+    assert has_element?(view, "#cve-placement-#{active.id}", "high")
+    refute has_element?(view, "#cve-priority", "critical")
+
+    refute has_element?(
+             view,
+             "#cve-priority-reasons",
+             "Internet-exposed placement with HIGH severity"
+           )
+
+    assert has_element?(view, "#cve-priority-reasons", "HIGH severity; exposure not verified")
   end
 
   test "internal placement shows labelled evidence", %{conn: conn} do

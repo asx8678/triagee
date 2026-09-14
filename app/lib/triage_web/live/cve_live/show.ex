@@ -80,8 +80,11 @@ defmodule TriageWeb.CveLive.Show do
   # advisory. Pairing the advisory's worst severity with an unrelated placement's
   # exposure would fabricate a combination the evidence never showed, and leaving
   # KEV out would make the policy's escalation branch unreachable.
-  defp plc_risks(%{placements: []}, _known_exploited?), do: nil
-
+  #
+  # The headline aggregate is derived only from placements that are active now.
+  # A retired placement keeps its own row priority below, but it must not raise
+  # the CVE's current review attention: the CVE list, the review queue and case
+  # opening all require an active placement too.
   defp plc_risks(detail, known_exploited?) do
     details =
       Enum.map(detail.placements, fn %{placement: p, exposure: exposure} ->
@@ -93,13 +96,15 @@ defmodule TriageWeb.CveLive.Show do
           "known_exploited" => known_exploited?,
           "fix_available" => any_fix_available?(occurrences)
         })
-        |> Map.merge(%{placement_id: p.id, owner: p.owner, namespace: p.namespace})
+        |> Map.merge(%{
+          placement_id: p.id,
+          owner: p.owner,
+          namespace: p.namespace,
+          active: p.active
+        })
       end)
 
-    case Risk.aggregate(details) do
-      nil -> nil
-      agg -> %{aggregate: agg, details: details}
-    end
+    %{aggregate: Risk.aggregate(Enum.filter(details, & &1.active)), details: details}
   end
 
   defp max_severity(occurrences) do
@@ -196,7 +201,7 @@ defmodule TriageWeb.CveLive.Show do
               Scanner severity is never downgraded. Exposure and exploitation evidence only
               raise review attention. Unknown exposure is never treated as safe.
             </p>
-            <%= if @risk do %>
+            <%= if @risk.aggregate do %>
               <div>
                 <.status_badge label={@risk.aggregate.priority} kind="severity" />
                 <span class="supporting">
@@ -208,7 +213,12 @@ defmodule TriageWeb.CveLive.Show do
               </ul>
             <% else %>
               <.notice id="cve-priority-empty" kind="info">
-                No placement-level evidence in this scope, so no priority can be derived.
+                No placement-level evidence in this scope is currently active, so no current priority
+                can be derived.
+                <%= if Enum.any?(@risk.details, &(!&1.active)) do %>
+                  The retired placement below is shown as history only and never raises this headline
+                  priority.
+                <% end %>
               </.notice>
             <% end %>
           </section>
@@ -297,7 +307,8 @@ defmodule TriageWeb.CveLive.Show do
             <p class="supporting">
               Exposure is operator-declared evidence. Missing evidence stays unknown — never safe.
               Each row's priority uses that image's own occurrences and this placement's exposure,
-              and escalates when the advisory has a cached KEV entry.
+              and escalates when the advisory has a cached KEV entry. A retired placement keeps its
+              own row priority; only active placements set the headline above.
             </p>
           </section>
 
