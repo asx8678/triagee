@@ -13,6 +13,16 @@ defmodule TriageWeb.UIComponents do
     end
   end
 
+  # Formats a count with a pluralised noun ("1 package", "3 packages"). Table
+  # cells used to carry a nested conditional per count, which forced each one onto
+  # its own line and made rows three lines taller than the data warranted.
+  # Returning the whole phrase keeps a cell to one line and one expression.
+  # Defined above the attr/component declarations below, and without @doc,
+  # because this module is a Phoenix.Component: attributes bind to the next
+  # definition, and only arity-1 components may be documented.
+  def count_label(1, word), do: "1 " <> word
+  def count_label(n, word), do: "#{n} " <> word <> "s"
+
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil
   attr :eyebrow, :string, default: nil
@@ -38,7 +48,7 @@ defmodule TriageWeb.UIComponents do
   def status_badge(assigns) do
     kind = to_string(assigns.kind)
     kind = if kind == "severity", do: String.downcase(assigns.label), else: kind
-    kind = if kind in ~w(critical high medium low warning), do: kind, else: "neutral"
+    kind = if kind in ~w(critical high medium low warning state), do: kind, else: "neutral"
     assigns = assign(assigns, :badge_kind, kind)
 
     ~H"""
@@ -165,6 +175,28 @@ defmodule TriageWeb.UIComponents do
     """
   end
 
+  attr :id, :string, required: true
+  attr :summary, :string, required: true
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  @doc """
+  Reading definitions, one interaction away from the rows they qualify.
+
+  The summary states the claim a reader must not miss; the body holds the
+  definitions and caveats that would otherwise sit between the reader and the
+  data. Collapsed content stays in the document, so assistive technology and
+  in-page assertions still read it.
+  """
+  def explain(assigns) do
+    ~H"""
+    <details id={@id} class={["disclosure", @class]}>
+      <summary>{@summary}</summary>
+      <div class="stack supporting">{render_slot(@inner_block)}</div>
+    </details>
+    """
+  end
+
   attr :title, :string, required: true
   attr :description, :string, default: nil
   attr :id, :string, default: nil
@@ -247,6 +279,62 @@ defmodule TriageWeb.UIComponents do
     if String.length(value) > 64,
       do: String.slice(value, 0, 44) <> "…" <> String.slice(value, -16, 16),
       else: value
+  end
+
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :links, :list, required: true
+  attr :current, :atom, required: true
+
+  @doc """
+  Local navigation for a section that owns more than one route.
+
+  The global navigation keeps one entry per section, so a section's second route
+  does not claim a second tab: `aria-current` marks the open route here, while the
+  section's global entry stays marked on every one of its routes.
+  """
+  def page_subnav(assigns) do
+    ~H"""
+    <nav id={@id} class="page-subnav" aria-label={@label}>
+      <.link
+        :for={{key, text, href} <- @links}
+        id={"subnav-" <> Atom.to_string(key)}
+        navigate={href}
+        class={["page-subnav-link", key == @current && "is-current"]}
+        aria-current={key == @current && "page"}
+      >
+        {text}
+      </.link>
+    </nav>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :form, :any, required: true
+  attr :change, :string, default: "filter"
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+  slot :actions
+  slot :summary
+
+  @doc """
+  The frame every filter bar shares: controls, then the reset action, then the
+  result summary.
+
+  Each page keeps its own form parsing, validation and query — only the frame is
+  shared, so a control never changes width or position from one page to the next.
+  The summary slot renders as a direct child so the existing
+  `.filter-toolbar > .filter-summary` sizing applies, and renders nothing at all
+  when its own condition is false.
+  """
+  def filter_bar(assigns) do
+    ~H"""
+    <.form id={@id} for={@form} phx-change={@change} class={["filter-toolbar", @class]}>
+      {render_slot(@inner_block)}
+      <div :if={@actions != []} class="filter-bar-actions">{render_slot(@actions)}</div>
+      {render_slot(@summary)}
+    </.form>
+    """
   end
 
   defp timestamp_parts(nil), do: {"Not captured", nil}

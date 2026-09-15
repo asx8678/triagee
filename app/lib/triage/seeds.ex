@@ -87,6 +87,10 @@ defmodule Triage.Seeds do
       seed_exposure!(image_b, "web", "beta", @env, "internal", "seed:operator declared", now)
       # image_c placement intentionally has NO evidence → stays exposure `unknown`.
 
+      # Operator-declared business impact for one placement. Never inferred from
+      # severity, namespace or exposure.
+      seed_impact!(image_a, "web", "alpha", @env, "critical", "seed:operator declared", now)
+
       finding!(
         image_a,
         "CVE-2025-1001",
@@ -192,6 +196,26 @@ defmodule Triage.Seeds do
         events: [{"appeared", @appeared}, {"resolved", @resolved}]
       })
 
+      # Decision history: one live acceptance and one expired mitigation, so the
+      # demo shows a covered advisory and an advisory that came back.
+      seed_decision!(%{
+        cve: "CVE-2024-2002",
+        decision: "accepted_risk",
+        reason: "Synthetic demo: risk accepted while service A is replaced next quarter.",
+        actor: "local-operator",
+        decided_at: now,
+        expires_at: DateTime.add(now, 30, :day)
+      })
+
+      seed_decision!(%{
+        cve: "CVE-2025-1001",
+        decision: "mitigated",
+        reason: "Synthetic demo: temporary ingress rule, expired with the old ingress.",
+        actor: "local-operator",
+        decided_at: DateTime.add(now, -60, :day),
+        expires_at: DateTime.add(now, -30, :day)
+      })
+
       seed_intel!(now)
 
       {:ok, suppressed_count: Inventory.summary_counts().suppressed}
@@ -256,23 +280,44 @@ defmodule Triage.Seeds do
   end
 
   defp seed_exposure!(image, namespace, owner, environment, exposure, source, now) do
-    placement =
-      Repo.one!(
-        from(p in Inventory.ImagePlacement,
-          where:
-            p.image_id == ^image.id and p.namespace == ^namespace and p.owner == ^owner and
-              p.environment == ^environment
-        )
-      )
+    placement = placement_for!(image, namespace, owner, environment)
 
-    exists? =
-      Repo.exists?(from(e in Triage.Exposure.Evidence, where: e.placement_id == ^placement.id))
-
-    unless exists? do
+    unless Repo.exists?(
+             from(e in Triage.Exposure.Evidence, where: e.placement_id == ^placement.id)
+           ) do
       {:ok, _} = Triage.Exposure.record(placement.id, exposure, source, now)
     end
 
     :ok
+  end
+
+  # Impact and decisions are demo history: seeded once, never rewritten.
+  defp seed_impact!(image, namespace, owner, environment, impact, source, now) do
+    placement = placement_for!(image, namespace, owner, environment)
+
+    unless Repo.exists?(from(e in Triage.Impact.Evidence, where: e.placement_id == ^placement.id)) do
+      {:ok, _} = Triage.Impact.record(placement.id, impact, source, now)
+    end
+
+    :ok
+  end
+
+  defp seed_decision!(attrs) do
+    unless Repo.exists?(from(d in Triage.Decisions.Decision, where: d.cve == ^attrs.cve)) do
+      {:ok, _} = Triage.Decisions.record(Map.put_new(attrs, :placement_id, nil))
+    end
+
+    :ok
+  end
+
+  defp placement_for!(image, namespace, owner, environment) do
+    Repo.one!(
+      from(p in Inventory.ImagePlacement,
+        where:
+          p.image_id == ^image.id and p.namespace == ^namespace and p.owner == ^owner and
+            p.environment == ^environment
+      )
+    )
   end
 
   # Demo-only intel cache: a few synthetic news notices, never network-sourced.

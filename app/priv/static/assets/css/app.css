@@ -113,24 +113,34 @@ button, a, summary { touch-action: manipulation; }
 .field-errors { margin-top: .25rem; }
 .field-errors p { display: flex; gap: .375rem; align-items: baseline; }
 .filter-toolbar, .triage-filters, .triage-queue-filters { display: flex; align-items: end; flex-wrap: wrap; gap: .375rem .625rem; min-width: 0; }
-.filter-toolbar > .fieldset, .triage-filters > .fieldset, .triage-queue-filters > .fieldset { flex: 1 1 9rem; margin-bottom: 0; }
+/* A lone filter control must not stretch to the page width: the whole row
+   flex-grows, so an uncapped fieldset turns one short select into a 100%
+   control whose longest possible value is ~30 characters. Fieldsets share the
+   row up to a readable cap; the free-text search keeps the extra room. */
+.filter-toolbar > .fieldset, .triage-filters > .fieldset, .triage-queue-filters > .fieldset { flex: 1 1 9rem; max-width: 24rem; margin-bottom: 0; }
 .filter-toolbar > form.cluster { align-items: end; flex: 1 1 24rem; }
 .filter-toolbar > form.cluster > .fieldset { flex: 1 1 10rem; margin-bottom: 0; }
 .filter-toolbar > a:not(.button):not(.btn) { padding-block: .375rem; }
-.filter-toolbar .fieldset:has(input[type="search"]) { flex-basis: 14rem; }
+.filter-toolbar .fieldset:has(input[type="search"]) { flex-basis: 14rem; max-width: none; }
 .filter-summary { display: flex; flex-wrap: wrap; gap: .25rem .75rem; color: var(--triage-muted); font-size: .75rem; }
 .filter-toolbar + .filter-summary { margin-top: .5rem; }
 .filter-toolbar > .filter-summary { flex: 1 1 20rem; align-self: center; margin: 0; }
+/* Reset and any further bar actions travel together, after the controls. */
+.filter-bar-actions { display: flex; align-items: end; gap: .375rem; }
 
 /* Tables remain genuinely two-dimensional inside their named keyboard regions. */
 .table-region, .triage-table-wrap { position: relative; max-width: 100%; min-width: 0; overflow-x: auto; background: #fff; border: 1px solid var(--triage-border); border-radius: var(--triage-radius); }
 .triage-content :is(.data-table, .table, .triage-preview-table) { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: .8125rem; line-height: 1.4; }
-.triage-content :is(.data-table, .table, .triage-preview-table) :is(th, td) { padding: .3125rem .5rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--triage-border); white-space: normal; overflow-wrap: anywhere; }
+.triage-content :is(.data-table, .table, .triage-preview-table) :is(th, td) { padding: .25rem .5rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--triage-border); white-space: normal; overflow-wrap: anywhere; }
 .triage-content :is(.data-table, .table, .triage-preview-table) th { color: #34465d; background: #edf1f6; font-size: .75rem; font-weight: 600; text-transform: none; letter-spacing: normal; }
 .triage-content :is(.data-table, .table) tbody tr:hover { background: #f6f8fc; }
 .triage-content :is(.data-table, .table) tr:last-child td { border-bottom: 0; }
 .triage-content :is(.data-table, .table) :is(.numeric, .text-right) { text-align: right; font-variant-numeric: tabular-nums; }
 .data-table :is(td, th) > .supporting, .data-table :is(td, th) > .muted { display: block; }
+/* Dense read-only tables: stacked meta lines tighten against one another so a
+   row stays scannable instead of growing a blank half-line between facts. */
+.triage-content .data-table :is(td, th) > :is(div, p) + :is(div, p) { margin-top: .0625rem; }
+.triage-content .data-table :is(td, th) .supporting { line-height: 1.3; }
 .triage-content .data-table tbody th { background: inherit; font-size: .8125rem; color: var(--triage-text); }
 .data-table th .cluster { margin-top: .25rem; }
 .data-table td code { overflow-wrap: anywhere; }
@@ -147,6 +157,12 @@ time { font-variant-numeric: tabular-nums; }
 .status-badge-high, .triage-sev-high { background: #ffe9dd; color: #6f2a0f; border: 2px solid #6f2a0f; }
 .status-badge-medium, .status-badge-warning, .triage-sev-medium, .triage-badge-warn { background: #fff5dc; color: #5c3d00; border: 2px dashed #5c3d00; }
 .status-badge-low, .triage-sev-low { background: #eaf1fb; color: #23406b; border: 2px dotted #23406b; }
+
+/* Workflow and assessment state are not severity levels, so they never borrow
+   the severity ramp's dashes, fill or weight. A dot marks a state, which keeps
+   "Not assessed" from reading as the Medium severity treatment. */
+.status-badge-state, .triage-content .status-badge-state { border: 1px solid #3b4c62; background: #fff; color: #2f4055; font-weight: 500; }
+.status-badge-state::before { content: ""; flex: 0 0 auto; width: .375rem; height: .375rem; border-radius: 50%; background: #6b86b4; }
 
 /* Evidence, technical disclosure, notices. */
 .evidence-grid, .triage-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: .5rem .75rem; min-width: 0; }
@@ -255,6 +271,12 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
 /* Overview dashboard: compact posture first, then the work surfaces it links to.
    The severity bar is a proportional rendering of the exact distinct-CVE counts
    printed beside it; it encodes no score, trend, or estimate. */
+/* Local navigation for a section with more than one route. The global
+   navigation keeps one entry per section; this marks which route is open. */
+.page-subnav { display: flex; flex-wrap: wrap; gap: .25rem; }
+.page-subnav-link { display: inline-flex; align-items: center; min-height: 1.75rem; padding: .25rem .625rem; border: 1px solid var(--triage-border); border-radius: var(--triage-radius); background: var(--triage-surface); color: var(--triage-text); font-size: .8125rem; font-weight: 600; text-decoration: none; }
+.page-subnav-link.is-current { border-color: var(--triage-accent); background: var(--triage-accent); color: #fff; }
+
 .ov-dashboard { gap: .5rem; }
 .ov-band { display: grid; grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr); align-items: center; gap: .375rem 1rem; }
 .ov-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr)); gap: .25rem; margin: 0; }
@@ -443,7 +465,10 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
 .tl-c-pin { stroke: var(--tl-c, #51606f); stroke-width: 2; }
 .tl-c-entry { stroke: var(--triage-control-border); stroke-width: 2; stroke-dasharray: 2 3; }
 .tl-chart-caption { margin: .375rem 0 0; }
-.tl-chart-legend { list-style: none; display: flex; flex-wrap: wrap; gap: .25rem .75rem; margin: .5rem 0 0; padding: 0; font-size: .75rem; color: var(--triage-muted); }
+.tl-chart-legend { list-style: none; display: flex; flex-wrap: wrap; gap: .25rem .75rem; margin: .25rem 0 0; padding: 0; font-size: .75rem; color: var(--triage-muted); }
+.tl-chart-legend-groups { display: grid; gap: .5rem .75rem; margin-top: .5rem; }
+.tl-chart-legend-group { min-width: 0; }
+.tl-chart-legend-title { margin: 0; font-size: .75rem; font-weight: 650; color: var(--triage-text); }
 .tl-chart-legend > li { display: inline-flex; align-items: center; gap: .25rem; }
 .tl-c-key { display: inline-block; width: .625rem; height: .625rem; border-radius: 50%; background: var(--tl-c, #51606f); }
 .tl-c-key-line { flex: 0 0 auto; width: 34px; height: 10px; }

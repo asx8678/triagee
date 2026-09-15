@@ -262,7 +262,7 @@ defmodule TriageWeb.FindingLive.Index do
         </p>
       </details>
 
-      <.form id="filter-form" for={@filter_form} phx-change="filter" class="filter-toolbar">
+      <.filter_bar id="filter-form" form={@filter_form} change="filter">
         <.input
           field={@filter_form[:owner]}
           type="select"
@@ -303,18 +303,24 @@ defmodule TriageWeb.FindingLive.Index do
           aria-describedby="findings-order"
         />
         <.input field={@filter_form[:suppressed]} type="checkbox" label="Include suppressed" />
-        <.link id="reset-findings" patch={~p"/findings"} class="button button-secondary">Reset</.link>
-        <div :if={@invalid_filters == []} id="findings-summary" class="filter-summary" role="status">
-          <strong>{@advisory_count} matching {if @advisory_count == 1,
-            do: "advisory",
-            else: "advisories"}</strong>
-          <span>· {@filters[:owner] || "All teams"} · {@filters[:environment] || "All environments"}</span>
-          <span :if={@filters[:search]}>· Search: “{@filters[:search]}”</span>
-          <span>· {if @filters[:include_suppressed],
-            do: "Including suppressed",
-            else: "Suppressed excluded"}</span>
-        </div>
-      </.form>
+        <:actions>
+          <.link id="reset-findings" patch={~p"/findings"} class="button button-secondary">
+            Reset
+          </.link>
+        </:actions>
+        <:summary>
+          <div :if={@invalid_filters == []} id="findings-summary" class="filter-summary" role="status">
+            <strong>{@advisory_count} matching {if @advisory_count == 1,
+              do: "advisory",
+              else: "advisories"}</strong>
+            <span>· {@filters[:owner] || "All teams"} · {@filters[:environment] || "All environments"}</span>
+            <span :if={@filters[:search]}>· Search: “{@filters[:search]}”</span>
+            <span>· {if @filters[:include_suppressed],
+              do: "Including suppressed",
+              else: "Suppressed excluded"}</span>
+          </div>
+        </:summary>
+      </.filter_bar>
       <p id="inventory-search-help" class="supporting">
         Package search matches the whole advisory group; other affected packages remain included.
       </p>
@@ -336,8 +342,17 @@ defmodule TriageWeb.FindingLive.Index do
         <.link patch={list_path(@filters, :start)}>Start from the newest slice</.link>
       </p>
       <p id="findings-order" class="supporting">
-        {@order_note} Counts in each row use the selected scope and active placements; teams can overlap. One page shows at most {@per_page} advisory groups in this order; the matching total is the unpaged count for this scope.
+        One page shows at most {@per_page} advisory groups in this order; the matching total is
+        the unpaged count for this scope.
       </p>
+
+      <details id="findings-order-details" class="disclosure">
+        <summary>How this list is ordered</summary>
+        <p>
+          Counts in each row use the selected scope and active placements; teams can overlap.
+        </p>
+        <p>{@order_note}</p>
+      </details>
 
       <div
         :if={@empty? and @invalid_filters == [] and not @beyond_end?}
@@ -365,7 +380,9 @@ defmodule TriageWeb.FindingLive.Index do
           <thead>
             <tr>
               <th scope="col">CVE</th>
-              <th scope="col">Scanner severity</th>
+              <th scope="col">
+                Scanner severity <span class="supporting">· highest in group</span>
+              </th>
               <th scope="col">Affected in scope</th>
               <th scope="col">Reported fix</th>
               <th scope="col">First seen</th>
@@ -393,17 +410,15 @@ defmodule TriageWeb.FindingLive.Index do
                   label={Inventory.severity_label(g.severity_rank)}
                   kind="severity"
                 />
-                <span class="supporting">Highest in group</span>
               </td>
               <td>
-                <div data-field="packages">
-                  {g.packages} {if g.packages == 1, do: "package", else: "packages"}
-                </div>
-                <div data-field="images">
-                  {g.images} {if g.images == 1, do: "image", else: "images"}
-                </div>
-                <div data-field="occurrences" class="supporting">
-                  {g.occurrences} {if g.occurrences == 1, do: "occurrence", else: "occurrences"}
+                <div data-field="packages">{count_label(g.packages, "package")}</div>
+                <div class="supporting">
+                  <span data-field="images">{count_label(g.images, "image")}</span>
+                  ·
+                  <span data-field="occurrences">
+                    {count_label(g.occurrences, "occurrence")}
+                  </span>
                 </div>
               </td>
               <td data-field="fix">
@@ -415,7 +430,7 @@ defmodule TriageWeb.FindingLive.Index do
                 <% end %>
               </td>
               <td><.timestamp value={g.first_seen} /></td>
-              <td data-field="teams">{g.teams} {if g.teams == 1, do: "team", else: "teams"}</td>
+              <td data-field="teams">{count_label(g.teams, "team")}</td>
             </tr>
           </tbody>
         </table>
@@ -435,7 +450,7 @@ defmodule TriageWeb.FindingLive.Index do
           Older advisories
         </.link>
         <span id="findings-page-status" class="supporting">
-          {@shown} of {@advisory_count} matching advisories · {@per_page} per page · {if @cursor,
+          Showing {@shown} in this slice · {@per_page} per page · {if @cursor,
             do: "later slice of this order",
             else: "newest slice of this order"}
         </span>

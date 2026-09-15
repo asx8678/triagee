@@ -23,6 +23,16 @@ defmodule TriageWeb.TimelineLiveTest do
   # Sunday, which is why these assertions must not hard-code 56.
   defp window_days(weeks), do: 7 * (weeks - 1) + Date.day_of_week(today(), :monday)
 
+  defp count(document, selector), do: document |> LazyHTML.query(selector) |> Enum.count()
+
+  defp svg_width(document) do
+    document
+    |> LazyHTML.query("#tl-chart svg.tl-chart")
+    |> LazyHTML.attribute("width")
+    |> List.first()
+    |> String.to_integer()
+  end
+
   describe "a window with recorded observations" do
     setup do
       image = image!("live-bands")
@@ -374,8 +384,79 @@ defmodule TriageWeb.TimelineLiveTest do
       assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-dot") |> Enum.count() == 12
       assert render(view) =~ "most severe lanes of 13"
 
+      # The cap is stated before the chart as well as after it: an operator who
+      # stops at the figure must not read the unplotted lanes as quiet ones.
+      assert has_element?(view, "#tl-chart-truncation")
+
+      truncation =
+        document |> LazyHTML.query("#tl-chart-truncation") |> LazyHTML.text()
+
+      assert truncation =~ "12 most severe"
+      assert truncation =~ "of the 13 CVEs"
+      assert truncation =~ "The other 1 is listed"
+      assert truncation =~ "not a quiet one"
+
+      assert document
+             |> LazyHTML.query("#tl-chart-truncation + .tl-chart-figure")
+             |> Enum.count() == 1
+
       # The bound hides nothing: the table still lists every lane.
       assert has_element?(view, "#tl-lane-CVE-2026-5413")
+    end
+
+    test "the scale control changes spacing without changing what is drawn", %{conn: conn} do
+      Triage.DataCase.reset_inventory!()
+
+      image = image!("live-chart-scale")
+      placement!(image, "alpha", "prod-cluster-1")
+
+      for index <- 1..3 do
+        cve = "CVE-2026-55" <> String.pad_leading(Integer.to_string(index), 2, "0")
+
+        image
+        |> finding!(cve)
+        |> event!("appeared", at(1))
+      end
+
+      {:ok, fit_view, fit_html} = live(conn, ~p"/timeline")
+      fit = LazyHTML.from_document(fit_html)
+
+      {:ok, detail_view, detail_html} = live(conn, ~p"/timeline?scale=detail")
+      detail = LazyHTML.from_document(detail_html)
+
+      # Same lanes and same marks in both modes: the control is a drawing scale,
+      # not a filter, so it can never hide an observation.
+      for selector <- [
+            "#tl-chart .tl-chart-track",
+            "#tl-chart svg.tl-chart .tl-c-dot",
+            "#tl-chart svg.tl-chart .tl-c-week-label"
+          ] do
+        assert count(fit, selector) == count(detail, selector),
+               "#{selector} differs between fit and detail"
+      end
+
+      assert count(fit, "#tl-chart .tl-chart-track") == 3
+
+      # It does change the drawing, and the control says which mode is in force.
+      assert svg_width(fit) < svg_width(detail)
+      assert has_element?(fit_view, "#timeline-form", "Fit window")
+      assert has_element?(detail_view, "#timeline-form", "Daily detail")
+    end
+
+    test "the scale contract rejects what it does not offer and keeps URLs clean" do
+      # The default is the absence of the parameter, so a default view never
+      # restates a choice nobody made.
+      assert TriageWeb.TimelineFilters.path(TriageWeb.TimelineFilters.defaults()) == "/timeline"
+
+      parsed = TriageWeb.TimelineFilters.parse(%{"scale" => "detail"})
+      assert parsed.scale == "detail"
+      assert parsed.invalid == []
+      assert TriageWeb.TimelineFilters.path(parsed) =~ "scale=detail"
+
+      # An unrecognized value is reported, never silently swapped for one of the
+      # offered scales.
+      assert TriageWeb.TimelineFilters.parse(%{"scale" => "huge"}).invalid == [:scale]
+      assert TriageWeb.TimelineFilters.parse(%{"scale" => "fit"}).scale == "fit"
     end
   end
 

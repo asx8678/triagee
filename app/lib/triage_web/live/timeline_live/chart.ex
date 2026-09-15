@@ -15,7 +15,15 @@ defmodule TriageWeb.TimelineLive.Chart do
 
   use TriageWeb, :html
 
-  @day_width 26
+  # Spacing is a display choice, so it is an input to the chart rather than a
+  # constant: "detail" keeps day-sized spacing and scrolls, "fit" narrows the
+  # tracks so the window the operator chose is visible without a nested scroll.
+  @detail_day_width 26
+  @min_fit_day_width 8
+  # The width the fit calculation aims at. The server cannot measure the browser,
+  # so it fits the window to a desktop content width and leaves the region
+  # scrollable at narrower viewports rather than guessing per request.
+  @assumed_viewport 1400
   @gutter 152
   @row_height 26
   @axis_height 44
@@ -24,9 +32,17 @@ defmodule TriageWeb.TimelineLive.Chart do
 
   attr :chart, :map, required: true
   attr :lanes, :map, required: true
+  attr :scale, :string, default: "fit"
 
   def lane_chart(assigns) do
-    assigns = assign(assigns, :layout, layout(assigns.chart))
+    hidden = max((assigns.chart.total || 0) - (assigns.chart.shown || 0), 0)
+
+    assigns =
+      assign(assigns,
+        layout: layout(assigns.chart, day_width(assigns.scale, length(assigns.chart.dates))),
+        hidden_lanes: hidden,
+        hidden_verb: if(hidden == 1, do: "is", else: "are")
+      )
 
     ~H"""
     <section id="tl-chart" class="tl-section" aria-labelledby="tl-chart-title">
@@ -34,12 +50,22 @@ defmodule TriageWeb.TimelineLive.Chart do
         <h2 id="tl-chart-title">Recorded observations across the window</h2>
         <p class="supporting">
           Oldest day on the left, newest on the right; one track per CVE, most severe
-          current scanner severity first. A solid line joins two adjacent days this CVE
-          was recorded on. A dashed line joins two recorded days with no recorded
-          observation in between. A line is not a claim that the CVE was present in
-          between, and a missing line is not a claim that nothing existed.
+          current scanner severity first.
         </p>
       </div>
+
+      <%!-- The lane cap is a property of the chart, not a footnote to it: an
+           operator who reads the chart without the paragraph after it must not
+           conclude that the unplotted lanes were quiet. --%>
+      <p
+        :if={@chart.total > @chart.shown}
+        id="tl-chart-truncation"
+        class="notice tl-chart-truncation"
+      >
+        This chart plots only the <strong>{@chart.shown} most severe</strong>
+        of the {@chart.total} CVEs recorded in this window.
+        The other {@hidden_lanes} {@hidden_verb} listed in full in the lane table and the day bands below — an unplotted lane is not a quiet one.
+      </p>
 
       <figure class="tl-chart-figure">
         <div
@@ -218,9 +244,8 @@ defmodule TriageWeb.TimelineLive.Chart do
         </div>
 
         <figcaption class="supporting tl-chart-caption">
-          This chart is hidden from screen readers because it carries no information the sections
-          below do not: every marker is a recorded observation, listed with its package, image,
-          state and time in the day bands, and counted per CVE in the lane table.
+          This chart is hidden from screen readers: every marker is a recorded observation, listed
+          in the day bands and counted per CVE in the lane table.
         </figcaption>
       </figure>
 
@@ -229,92 +254,117 @@ defmodule TriageWeb.TimelineLive.Chart do
         window; the lane table below lists {@lanes.shown} of them.
       </p>
 
-      <ul class="tl-chart-legend">
-        <li :for={{class, text} <- legend_marks()}>
-          <span class={["tl-c-key", class]} aria-hidden="true"></span>
-          {text}
-        </li>
-        <li>
-          <svg
-            class="tl-c-key-line"
-            width="34"
-            height="10"
-            viewBox="0 0 34 10"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <line
-              class="tl-c-seg tl-c-seg-solid tl-c-open"
-              x1="1"
-              y1="5"
-              x2="22"
-              y2="5"
-              marker-end="url(#tl-c-arrow-open)"
-            />
-          </svg>
-          recorded on two adjacent days
-        </li>
-        <li>
-          <svg
-            class="tl-c-key-line"
-            width="34"
-            height="10"
-            viewBox="0 0 34 10"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <line
-              class="tl-c-seg tl-c-seg-dashed tl-c-ended"
-              x1="1"
-              y1="5"
-              x2="22"
-              y2="5"
-              marker-end="url(#tl-c-arrow-ended)"
-            />
-          </svg>
-          recorded at both ends; nothing recorded in between
-        </li>
-        <li>
-          <svg
-            class="tl-c-key-line"
-            width="34"
-            height="10"
-            viewBox="0 0 34 10"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <line class="tl-c-entry" x1="1" y1="5" x2="30" y2="5" />
-          </svg>
-          also recorded before this window starts
-        </li>
-        <li>
-          <svg
-            class="tl-c-key-line"
-            width="34"
-            height="10"
-            viewBox="0 0 34 10"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <line class="tl-c-today" x1="16" y1="0" x2="16" y2="10" />
-          </svg>
-          today, where the window ends
-        </li>
-        <li>
-          <svg
-            class="tl-c-key-line"
-            width="34"
-            height="10"
-            viewBox="0 0 34 10"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <line class="tl-c-pin tl-c-open" x1="16" y1="1" x2="16" y2="7" />
-            <circle class="tl-c-dot tl-c-open" cx="16" cy="7" r="3.5" />
-          </svg>
-          a single recorded day, so no line is drawn
-        </li>
-      </ul>
+      <%!-- Marks and lines answer different questions, so the key is split: one
+           list is what a point means, the other is when a line is drawn at all.
+           The key is a definition, so it sits behind a disclosure the way the lane
+           notes do; the summary carries the claim a reader must not miss. --%>
+      <.explain
+        id="tl-chart-key"
+        summary="How to read this chart — a line joins two recorded days and is not a claim about the days it skips"
+      >
+        <p>
+          A solid line joins two adjacent days this CVE was recorded on. A dashed line joins two
+          recorded days with no recorded observation in between.
+          A line is not a claim that the CVE was present in between, and a missing line is not a claim that nothing existed.
+          The Scale control changes spacing only: the days drawn and the gaps between them do not change.
+        </p>
+        <div class="tl-chart-legend-groups">
+          <div class="tl-chart-legend-group">
+            <h3 class="tl-chart-legend-title">Markers — one per recorded observation</h3>
+            <ul class="tl-chart-legend">
+              <li :for={{class, text} <- legend_marks()}>
+                <span class={["tl-c-key", class]} aria-hidden="true"></span>
+                {text}
+              </li>
+            </ul>
+          </div>
+          <div class="tl-chart-legend-group">
+            <h3 class="tl-chart-legend-title">Lines — drawn only between two recorded days</h3>
+            <ul class="tl-chart-legend">
+              <li>
+                <svg
+                  class="tl-c-key-line"
+                  width="34"
+                  height="10"
+                  viewBox="0 0 34 10"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <line
+                    class="tl-c-seg tl-c-seg-solid tl-c-open"
+                    x1="1"
+                    y1="5"
+                    x2="22"
+                    y2="5"
+                    marker-end="url(#tl-c-arrow-open)"
+                  />
+                </svg>
+                recorded on two adjacent days
+              </li>
+              <li>
+                <svg
+                  class="tl-c-key-line"
+                  width="34"
+                  height="10"
+                  viewBox="0 0 34 10"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <line
+                    class="tl-c-seg tl-c-seg-dashed tl-c-ended"
+                    x1="1"
+                    y1="5"
+                    x2="22"
+                    y2="5"
+                    marker-end="url(#tl-c-arrow-ended)"
+                  />
+                </svg>
+                recorded at both ends; nothing recorded in between
+              </li>
+              <li>
+                <svg
+                  class="tl-c-key-line"
+                  width="34"
+                  height="10"
+                  viewBox="0 0 34 10"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <line class="tl-c-entry" x1="1" y1="5" x2="30" y2="5" />
+                </svg>
+                also recorded before this window starts
+              </li>
+              <li>
+                <svg
+                  class="tl-c-key-line"
+                  width="34"
+                  height="10"
+                  viewBox="0 0 34 10"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <line class="tl-c-today" x1="16" y1="0" x2="16" y2="10" />
+                </svg>
+                today, where the window ends
+              </li>
+              <li>
+                <svg
+                  class="tl-c-key-line"
+                  width="34"
+                  height="10"
+                  viewBox="0 0 34 10"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <line class="tl-c-pin tl-c-open" x1="16" y1="1" x2="16" y2="7" />
+                  <circle class="tl-c-dot tl-c-open" cx="16" cy="7" r="3.5" />
+                </svg>
+                a single recorded day, so no line is drawn
+              </li>
+            </ul>
+          </div>
+        </div>
+      </.explain>
     </section>
     """
   end
@@ -330,14 +380,24 @@ defmodule TriageWeb.TimelineLive.Chart do
 
   ## Layout
 
-  defp layout(chart) do
+  # Fit never widens a short window past day-sized spacing, and a day is never
+  # drawn narrower than the floor. The control changes scale, not the window: the
+  # days drawn and the gaps between them are the same in both modes.
+  defp day_width("detail", _days), do: @detail_day_width
+
+  defp day_width(_fit, days) do
+    per_day = div(max(@assumed_viewport - @gutter, 0), max(days, 1))
+    per_day |> min(@detail_day_width) |> max(@min_fit_day_width)
+  end
+
+  defp layout(chart, day_width) do
     xs =
       chart.dates
       |> Enum.with_index()
       |> Map.new(fn {date, index} ->
         %{
-          x: @gutter + index * @day_width + div(@day_width, 2),
-          left: @gutter + index * @day_width
+          x: @gutter + index * day_width + div(day_width, 2),
+          left: @gutter + index * day_width
         }
         |> then(&{date.iso_date, &1})
       end)
@@ -348,7 +408,7 @@ defmodule TriageWeb.TimelineLive.Chart do
       |> Enum.map(fn {track, index} -> track_layout(track, index, xs) end)
 
     %{
-      width: @gutter + length(chart.dates) * @day_width + 8,
+      width: @gutter + length(chart.dates) * day_width + 8,
       height: @axis_height + length(tracks) * @row_height + 4,
       gutter: @gutter,
       row_height: @row_height,
@@ -357,7 +417,7 @@ defmodule TriageWeb.TimelineLive.Chart do
       week_tick_top: @axis_height - 23,
       weekday_y: @axis_height - 16,
       week_label_y: 17,
-      track_width: length(chart.dates) * @day_width + 4,
+      track_width: length(chart.dates) * day_width + 4,
       sev_x: 2,
       kinds: @kinds,
       dates: Enum.map(chart.dates, &date_layout(&1, xs)),

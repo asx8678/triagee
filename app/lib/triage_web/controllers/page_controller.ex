@@ -23,9 +23,21 @@ defmodule TriageWeb.PageController do
       occurrence_counts: occurrences,
       active_now: shape_group_rows(active_now),
       newest: shape_group_rows(newest),
-      advisory_total: shape_total(advisory_total)
+      advisory_total: shape_total(advisory_total),
+      rails_coincide: rails_coincide?(active_now, newest)
     )
   end
+
+  # Both rails are lenses on one inventory, so with data whose first and last
+  # observations fall on the same day the two orders coincide. Saying so is the
+  # difference between a coincidence the data explains and what reads as a
+  # duplicated list rendered twice by mistake.
+  defp rails_coincide?({:ok, active}, {:ok, newest})
+       when is_list(active) and active != [] and is_list(newest) do
+    Enum.map(active, & &1.cve) == Enum.map(newest, & &1.cve)
+  end
+
+  defp rails_coincide?(_active, _newest), do: false
 
   defp shape_group_rows({:ok, rows}) when is_list(rows) do
     {:ok,

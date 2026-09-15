@@ -302,11 +302,17 @@ defmodule TriageWeb.ReplayLive do
           title="Replay"
           eyebrow="Data tools"
           subtitle="Run a synthetic file in memory, then choose whether to save its summary."
-        >
-          <:actions>
-            <.link navigate="/replay/history" class="button button-secondary">Replay history</.link>
-          </:actions>
-        </.page_header>
+        />
+
+        <.page_subnav
+          id="replay-subnav"
+          label="Replay"
+          current={:run}
+          links={[
+            {:run, "Run replay", ~p"/replay"},
+            {:history, "History", ~p"/replay/history"}
+          ]}
+        />
         <p id="replay-safety" class="supporting">
           Synthetic, not live data; non-actionable. Inventory is unchanged. No external source calls are made. Uploads send your selected file only to this application.
         </p>

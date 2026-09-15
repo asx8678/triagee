@@ -37,6 +37,25 @@ defmodule TriageWeb.AssetsTest do
     end
   end
 
+  describe "shipped stylesheet" do
+    # A lone filter control used to stretch across the page because the whole
+    # filter row flex-grows, so one short select rendered 100% wide. There is no
+    # browser in this suite to measure a rendered width, so the guard pins the
+    # rule that caps it.
+    test "caps a filter fieldset so one select cannot span the page" do
+      css = File.read!("priv/static/assets/css/app.css")
+
+      [_, rule] =
+        Regex.run(~r/\.filter-toolbar > \.fieldset[^{]*\{([^}]*)\}/, css)
+
+      assert rule =~ "max-width: 24rem"
+
+      # The free-text search is the one control allowed the extra room.
+      assert css =~
+               ~r/\.filter-toolbar \.fieldset:has\(input\[type="search"\]\) \{[^}]*max-width: none/
+    end
+  end
+
   describe "root layout script wiring" do
     test "renders the CSRF meta tag used by the LiveSocket bootstrap" do
       csrf_tags =

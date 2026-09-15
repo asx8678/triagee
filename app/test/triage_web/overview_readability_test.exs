@@ -143,6 +143,45 @@ defmodule TriageWeb.OverviewReadabilityTest do
     assert bands > total, "the seeded estate records CVE-2024-4004 at two severities"
   end
 
+  test "coincident rails say so instead of reading as a duplicated render", %{conn: conn} do
+    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    rail = fn id ->
+      document |> LazyHTML.query("#{id} .ov-list-title") |> LazyHTML.text() |> String.trim()
+    end
+
+    note = LazyHTML.query(document, "#home-rails-coincide")
+
+    # The note is a property of the data, not of the layout: it appears exactly
+    # when the two orders coincide, so it can never claim a divergence that is
+    # not there, nor stay silent about one that is.
+    assert rail.("#home-active-list") == rail.("#home-newest-list") ==
+             (Enum.count(note) == 1)
+
+    if Enum.count(note) == 1 do
+      assert LazyHTML.text(note) =~ "first observed on the day it was last observed"
+    end
+  end
+
+  test "the severity mix names its band order and titles every band", %{conn: conn} do
+    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    # The four fills are a colour ramp; naming the order is the key that makes
+    # them readable, and each band carries its own count on hover.
+    caption =
+      document |> LazyHTML.query(".ov-sevbar-wrap > p.supporting") |> LazyHTML.text()
+
+    assert caption =~ "left to right"
+    assert caption =~ "critical, high, medium, low"
+
+    titles = document |> LazyHTML.query(".ov-sevbar-seg") |> LazyHTML.attribute("title")
+    assert length(titles) == 4
+
+    for {title, word} <- Enum.zip(titles, ~w(critical high medium low)) do
+      assert title =~ word
+    end
+  end
+
   test "the active rail shows five of the real total and links its own order", %{conn: conn} do
     add_recent_advisories!(12)
 

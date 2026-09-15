@@ -36,10 +36,16 @@ defmodule TriageWeb.FindingLive.PagingTest do
              Inventory.list_groups(sort: "cve", limit: @per_page) |> Enum.map(&"group-#{&1.cve}")
 
     status = LazyHTML.text(LazyHTML.query(LazyHTML.from_document(html), "#findings-page-status"))
+    summary = LazyHTML.text(LazyHTML.query(LazyHTML.from_document(html), "#findings-summary"))
 
-    assert status =~ "#{@per_page} of #{total} matching advisories"
+    assert status =~ "Showing #{@per_page} in this slice"
     assert status =~ "newest slice"
     assert status =~ "#{@per_page} per page"
+
+    # The matching total is stated exactly once, next to the filters that produce
+    # it; the slice status describes position only, so the two cannot disagree.
+    assert summary =~ "#{total} matching advisories"
+    refute status =~ "matching advisories"
 
     assert html =~ "older-advisories"
     refute html =~ "newest-advisories"

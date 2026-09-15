@@ -108,17 +108,23 @@ defmodule TriageWeb.ReplayHistoryLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} active_page="replay-history">
+    <Layouts.app flash={@flash} active_page="replay">
       <section id="replay-history-workspace" class="tool-layout stack">
         <.page_header
           title="Replay history"
           eyebrow="Data tools"
           subtitle="Browse summaries that were explicitly saved from synthetic replays."
-        >
-          <:actions>
-            <.link id="replay-history-new" navigate="/replay" class="button button-secondary">Open replay tool</.link>
-          </:actions>
-        </.page_header>
+        />
+
+        <.page_subnav
+          id="replay-subnav"
+          label="Replay"
+          current={:history}
+          links={[
+            {:run, "Run replay", ~p"/replay"},
+            {:history, "History", ~p"/replay/history"}
+          ]}
+        />
         <p id="replay-history-safety" class="supporting">
           Saved synthetic summaries, not live evidence. Non-actionable; inventory unchanged. Receipt times are local storage times, not source history. Browsing never reruns or saves a replay.
         </p>

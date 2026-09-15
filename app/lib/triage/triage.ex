@@ -1,7 +1,8 @@
 defmodule Triage.Triage do
   @moduledoc """
-  Read-only read model for the Triage page: which critical advisories still need
-  a human, and what a human has already recorded about each scope they affect.
+  Read model for the Triage page: which critical advisories still need a human,
+  what a human has already recorded about each scope they affect, and which
+  operator decisions currently cover them.
 
   ## What admits a row
 
@@ -10,14 +11,22 @@ defmodule Triage.Triage do
 
     * **Active** — the inventory's own predicate: unresolved
       (`resolved_at IS NULL`), unsuppressed, and at least one active placement.
-      Opening a case or saving a review never changes it.
+      Opening a case, saving a review or recording a decision never changes it.
     * **Assessed** — a `review_reviews` row exists for that `(finding, owner,
       environment)` scope. Opening a case is *not* an assessment, and neither
       `resolved_at` nor `suppressed` is a handling decision.
-    * **Impact recorded** — the latest review of that scope says
+    * **Applicability confirmed** — the latest review of that scope says
       `applicability = "affected"` *and* that review is still bound to the
-      case's current evidence snapshot. This schema has no impact field, so the
-      page labels the value applicability and never calls it impact.
+      case's current evidence snapshot. This is what a human wrote in the only
+      judgement field the schema has; it is labelled applicability and never
+      called impact.
+    * **Impact evidence** — an unexpired `placement_impact_evidences` row for the
+      placement the scope belongs to, with its source and observation time.
+      Absence is *not* "no impact": absence is silence.
+    * **Decision** — the governing `advisory_decisions` row for the advisory
+      (`Triage.Decisions`): the latest active decision, or the latest one of any
+      state when none is active. A decision removes the advisory from the work
+      list; it is not resolution and writes nothing to the finding.
 
   Scope assessment states:
 
@@ -28,16 +37,26 @@ defmodule Triage.Triage do
       by the case page from the canonical hash; this module never upgrades a
       superseded review to current just because a row exists.
 
-  ## Lane state and filters
+  ## Lane state, precedence and filters
 
-  `:state` is `:impact_confirmed` (at least one scope carries a current
-  `affected` review), `:assessed_no_impact` (every scope has a current review
-  and none says affected) or `:awaiting_assessment` (everything else —
-  including an advisory whose only review was superseded, because unfinished
-  judgement is never reported as handled).
+  `:state` is decided in one documented order:
+
+    1. `:assessed_no_impact` — every active scope has a current review and none
+       says affected. A human judgement is the strongest statement, so it wins.
+    2. `:decision_recorded` — an active decision covers the advisory and the
+       scopes are not fully cleared by review.
+    3. `:applicability_confirmed` — at least one scope carries a current
+       `affected` review.
+    4. `:awaiting_assessment` — everything else, including an advisory whose
+       only review was superseded, because unfinished judgement is never
+       reported as handled.
+
+  A decision is still *displayed* on rows in any state, so the stricter state
+  never hides the fact that a decision exists.
 
   The filters are exact complements and nothing can hide between them:
-  `"active"` is every state except `:assessed_no_impact`, `"handled"` is
+  `"active"` is `:applicability_confirmed` and `:awaiting_assessment`,
+  `"whitelisted"` is `:decision_recorded`, `"handled"` is
   `:assessed_no_impact`, and `"all"` is every critical active advisory.
   An unknown filter is rejected rather than silently treated as the default.
 
@@ -48,11 +67,13 @@ defmodule Triage.Triage do
   import Ecto.Query
 
   alias Triage.Cases.{Review, ReviewCase}
+  alias Triage.Decisions
+  alias Triage.Impact
   alias Triage.Inventory
   alias Triage.Inventory.{Finding, ImagePlacement}
   alias Triage.Repo
 
-  @filters ~w(active handled all)
+  @filters ~w(active whitelisted handled all)
   @default_filter "active"
 
   # One page of advisory rows, bounded by the inventory's own group limit. The
@@ -88,12 +109,14 @@ defmodule Triage.Triage do
   """
   def summarize(rows) when is_list(rows) do
     %{
-      impact_confirmed: Enum.count(rows, &(&1.state == :impact_confirmed)),
+      applicability_confirmed: Enum.count(rows, &(&1.state == :applicability_confirmed)),
+      decision_recorded: Enum.count(rows, &(&1.state == :decision_recorded)),
       awaiting_assessment: Enum.count(rows, &(&1.state == :awaiting_assessment)),
       assessed_no_impact: Enum.count(rows, &(&1.state == :assessed_no_impact)),
       scopes_total: Enum.sum(Enum.map(rows, & &1.scopes_total)),
       scopes_assessed: Enum.sum(Enum.map(rows, & &1.scopes_assessed)),
-      scopes_impacted: Enum.sum(Enum.map(rows, & &1.scopes_impacted))
+      scopes_applicable: Enum.sum(Enum.map(rows, & &1.scopes_applicable)),
+      scopes_with_impact: Enum.sum(Enum.map(rows, & &1.scopes_with_impact))
     }
   end
 
@@ -101,12 +124,15 @@ defmodule Triage.Triage do
     groups = Inventory.list_groups(severity: "CRITICAL", sort: "last_seen", limit: @row_limit)
     total = Inventory.count_groups(severity: "CRITICAL")
 
-    scopes = scopes_by_cve(Enum.map(groups, & &1.cve))
+    cves = Enum.map(groups, & &1.cve)
+    scopes = scopes_by_cve(cves)
     cases = cases_by_scope(finding_ids(scopes))
+    decisions = Decisions.latest_by_cve(cves)
+    impacts = impacts_by_placement(scopes)
 
     rows =
       groups
-      |> Enum.map(&build_row(&1, scopes, cases))
+      |> Enum.map(&build_row(&1, scopes, cases, decisions, impacts))
       |> Enum.filter(&matches?(&1, filter))
 
     {:ok, %{filter: filter, rows: rows, total: total, truncated?: total > length(groups)}}
@@ -132,8 +158,9 @@ defmodule Triage.Triage do
   defp normalize_filter(_other), do: {:error, :invalid_filter}
 
   # Active-scope work items for the page's advisories: one row per
-  # (finding, owner, environment) the advisory currently affects. Scope comes
-  # from active placements only, exactly like `list_groups/1`, so a retired
+  # (finding, owner, environment) the advisory currently affects, with the
+  # placement that carries its exposure and impact evidence. Scope comes from
+  # active placements only, exactly like `list_groups/1`, so a retired
   # placement is not open work.
   defp scopes_by_cve([]), do: %{}
 
@@ -148,6 +175,7 @@ defmodule Triage.Triage do
       select: %{
         cve: f.cve,
         finding_id: f.id,
+        placement_id: p.id,
         owner: p.owner,
         environment: p.environment,
         package_name: f.package_name,
@@ -166,6 +194,20 @@ defmodule Triage.Triage do
     |> List.flatten()
     |> Enum.map(& &1.finding_id)
     |> Enum.uniq()
+  end
+
+  defp impacts_by_placement(scopes) do
+    ids =
+      scopes
+      |> Map.values()
+      |> List.flatten()
+      |> Enum.map(& &1.placement_id)
+      |> Enum.uniq()
+
+    case ids do
+      [] -> %{}
+      ids -> Impact.current_by_placement(ids)
+    end
   end
 
   # One SELECT hydrates the saved case for a scope together with its LATEST
@@ -203,19 +245,24 @@ defmodule Triage.Triage do
     |> Map.new(fn row -> {{row.finding_id, row.owner, row.environment}, row} end)
   end
 
-  defp build_row(group, scopes, cases) do
+  defp build_row(group, scopes, cases, decisions, impacts) do
     work_items =
       scopes
       |> Map.get(group.cve, [])
-      |> Enum.map(&work_item(&1, cases))
+      |> Enum.map(&work_item(&1, cases, impacts))
       |> Enum.sort_by(&{&1.owner, &1.environment, &1.finding_id})
 
     assessed = Enum.count(work_items, &(&1.assessment == :assessed))
 
-    impacted =
+    applicable =
       Enum.count(work_items, &(&1.assessment == :assessed and &1.applicability == "affected"))
 
     reviewed = Enum.count(work_items, &(&1.assessment != :awaiting_assessment))
+
+    with_impact =
+      Enum.count(work_items, &(&1.impact != nil and &1.impact.state == :active))
+
+    decision = Map.get(decisions, group.cve)
 
     %{
       cve: group.cve,
@@ -232,44 +279,58 @@ defmodule Triage.Triage do
       scopes_total: length(work_items),
       scopes_assessed: assessed,
       scopes_reviewed: reviewed,
-      scopes_impacted: impacted,
-      state: lane_state(assessed, impacted, length(work_items)),
+      scopes_applicable: applicable,
+      scopes_with_impact: with_impact,
+      decision: decision,
+      state: lane_state(assessed, applicable, length(work_items), decision),
       work_items: work_items
     }
   end
 
-  defp lane_state(_assessed, impacted, _total) when impacted > 0, do: :impact_confirmed
+  # Precedence is documented in the moduledoc: a completed human review wins,
+  # then a live decision, then a partial applicability judgement, then nothing.
+  defp lane_state(assessed, applicable, total, _decision)
+       when total > 0 and assessed == total and applicable == 0,
+       do: :assessed_no_impact
 
-  defp lane_state(assessed, _impacted, total) when total > 0 and assessed == total,
-    do: :assessed_no_impact
+  defp lane_state(_assessed, _applicable, _total, %{state: :active}), do: :decision_recorded
 
-  defp lane_state(_assessed, _impacted, _total), do: :awaiting_assessment
+  defp lane_state(_assessed, applicable, _total, _decision) when applicable > 0,
+    do: :applicability_confirmed
+
+  defp lane_state(_assessed, _applicable, _total, _decision), do: :awaiting_assessment
 
   # A scope with no saved case is still open work: the page links to the
   # finding, which is the only place a case can be opened.
-  defp work_item(scope, cases) do
+  defp work_item(scope, cases, impacts) do
+    base = %{
+      impact: Map.get(impacts, scope.placement_id),
+      assessment: :awaiting_assessment,
+      case_id: nil,
+      revision: nil,
+      applicability: nil,
+      priority: nil,
+      next_action: nil,
+      reviewed_at: nil
+    }
+
     case Map.get(cases, {scope.finding_id, scope.owner, scope.environment}) do
       nil ->
-        Map.merge(scope, %{
-          case_id: nil,
-          revision: nil,
-          assessment: :awaiting_assessment,
-          applicability: nil,
-          priority: nil,
-          next_action: nil,
-          reviewed_at: nil
-        })
+        Map.merge(scope, base)
 
       saved ->
-        Map.merge(scope, %{
-          case_id: saved.case_id,
-          revision: saved.revision,
-          assessment: assessment(saved),
-          applicability: saved.applicability,
-          priority: saved.priority,
-          next_action: saved.next_action,
-          reviewed_at: saved.reviewed_at
-        })
+        Map.merge(
+          scope,
+          Map.merge(base, %{
+            case_id: saved.case_id,
+            revision: saved.revision,
+            assessment: assessment(saved),
+            applicability: saved.applicability,
+            priority: saved.priority,
+            next_action: saved.next_action,
+            reviewed_at: saved.reviewed_at
+          })
+        )
     end
   end
 
@@ -284,6 +345,12 @@ defmodule Triage.Triage do
   defp matches?(_row, "all"), do: true
   defp matches?(%{state: :assessed_no_impact}, "handled"), do: true
   defp matches?(_row, "handled"), do: false
-  defp matches?(%{state: :assessed_no_impact}, "active"), do: false
+  defp matches?(%{state: :decision_recorded}, "whitelisted"), do: true
+  defp matches?(_row, "whitelisted"), do: false
+
+  defp matches?(%{state: state}, "active")
+       when state in [:assessed_no_impact, :decision_recorded],
+       do: false
+
   defp matches?(_row, "active"), do: true
 end

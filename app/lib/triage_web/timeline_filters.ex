@@ -21,7 +21,8 @@ defmodule TriageWeb.TimelineFilters do
   alias Triage.Timeline
   alias TriageWeb.FindingFilters
 
-  @recognized ~w(owner environment weeks cve)
+  @recognized ~w(owner environment weeks cve scale)
+  @scales ~w(fit detail)
   @weeks_digits ~r/\A[0-9]{1,2}\z/
   @unsafe_text ~r/[\x00-\x1F\x7F]/
 
@@ -31,12 +32,13 @@ defmodule TriageWeb.TimelineFilters do
           environment: String.t() | nil,
           weeks: pos_integer() | nil,
           cve: String.t() | nil,
+          scale: String.t() | nil,
           invalid: [atom()]
         }
 
   @doc "The intentional All/default state: no scope restriction, default window."
   @spec defaults() :: filters()
-  def defaults, do: %{owner: nil, environment: nil, weeks: nil, cve: nil, invalid: []}
+  def defaults, do: %{owner: nil, environment: nil, weeks: nil, cve: nil, scale: nil, invalid: []}
 
   @doc """
   Parses raw string-keyed URL params. Only the four recognized fields are
@@ -53,6 +55,7 @@ defmodule TriageWeb.TimelineFilters do
       |> put_value(:environment, Map.get(params, "environment"), &FindingFilters.scope_value/1)
       |> put_value(:weeks, Map.get(params, "weeks"), &weeks_value/1)
       |> put_value(:cve, Map.get(params, "cve"), &cve_value/1)
+      |> put_value(:scale, Map.get(params, "scale"), &scale_value/1)
     end
   end
 
@@ -88,12 +91,13 @@ defmodule TriageWeb.TimelineFilters do
   an invalid value is never written into a URL that would then reject it.
   """
   @spec query_params(term()) :: map()
-  def query_params(%{owner: owner, environment: environment, weeks: weeks, cve: cve}) do
+  def query_params(%{owner: owner, environment: environment, weeks: weeks, cve: cve} = filters) do
     %{
       owner: emit_scope(owner),
       environment: emit_scope(environment),
       weeks: emit_weeks(weeks),
-      cve: emit_scope(cve)
+      cve: emit_scope(cve),
+      scale: emit_scale(Map.get(filters, :scale))
     }
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Map.new()
@@ -127,6 +131,7 @@ defmodule TriageWeb.TimelineFilters do
   def field_label(:environment), do: "environment"
   def field_label(:weeks), do: "window"
   def field_label(:cve), do: "CVE"
+  def field_label(:scale), do: "scale"
   def field_label(:filters), do: "filters wrapper"
   def field_label(other), do: to_string(other)
 
@@ -155,6 +160,17 @@ defmodule TriageWeb.TimelineFilters do
 
   defp weeks_value(_other), do: {:error, :weeks}
 
+  # The drawing scale of the chart. Absent means the fit default; anything else
+  # is a closed set, so an unrecognized value is reported rather than ignored.
+  defp scale_value(nil), do: {:ok, nil}
+  defp scale_value(""), do: {:ok, nil}
+
+  defp scale_value(value) when is_binary(value) do
+    if value in @scales, do: {:ok, value}, else: {:error, :scale}
+  end
+
+  defp scale_value(_other), do: {:error, :scale}
+
   # A blank CVE is not a selection: unlike a scope, there is no All choice.
   defp cve_value(nil), do: {:ok, nil}
   defp cve_value(""), do: {:ok, nil}
@@ -182,6 +198,11 @@ defmodule TriageWeb.TimelineFilters do
   end
 
   defp emit_weeks(_other), do: nil
+
+  # Only the non-default is written, so the common view keeps a clean URL and the
+  # default is never restated as if it had been chosen.
+  defp emit_scale("detail"), do: "detail"
+  defp emit_scale(_other), do: nil
 
   defp blank_flat_fields?(flat) when flat == %{}, do: true
 

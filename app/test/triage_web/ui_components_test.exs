@@ -140,12 +140,14 @@ defmodule TriageWeb.UIComponentsTest do
     assert count(doc, "#empty .page-actions a[href='/findings']") == 1
   end
 
-  test "shell has one persistent notice, native mobile disclosure and all eight stable URLs" do
+  test "shell has one persistent notice, native mobile disclosure and all seven stable URLs" do
     doc = component(&shell/1, %{})
     assert count(doc, "a[href='#main-content']") == 1
     assert count(doc, "main#main-content[tabindex='-1']") == 1
     assert count(doc, "#navigation-menu > summary[aria-controls='primary-navigation']") == 1
-    assert count(doc, "nav[aria-label='Primary'] a") == 8
+    # Replay History is not a second tab: the replay section carries one global
+    # entry and distinguishes its own routes with a local subnavigation.
+    assert count(doc, "nav[aria-label='Primary'] a") == 7
     assert count(doc, "#nav-home[aria-current='page']") == 1
     assert text(doc, "#nav-home") == "Overview"
     assert text(doc, "#nav-triage") == "Triage"

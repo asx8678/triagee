@@ -200,7 +200,7 @@ defmodule TriageWeb.WhatsNewLive do
         </:actions>
       </.page_header>
 
-      <.form id="whats-new-form" for={@filter_form} phx-change="filter" class="filter-toolbar">
+      <.filter_bar id="whats-new-form" form={@filter_form} change="filter">
         <.input
           field={@filter_form[:owner]}
           type="select"
@@ -219,8 +219,12 @@ defmodule TriageWeb.WhatsNewLive do
             )
           }
         />
-        <.link id="reset-activity" patch={~p"/whats-new"} class="button button-secondary">Reset</.link>
-      </.form>
+        <:actions>
+          <.link id="reset-activity" patch={~p"/whats-new"} class="button button-secondary">
+            Reset
+          </.link>
+        </:actions>
+      </.filter_bar>
 
       <.notice id="feed-banner" kind="info">
         Filters match a recorded placement on the same image, including inactive placements — not historical event ownership.

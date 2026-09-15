@@ -40,6 +40,36 @@ defmodule Triage.DataCase do
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
+  # Row-level deletes, children first, in one fixed order.
+  #
+  # `TRUNCATE` takes ACCESS EXCLUSIVE locks on the inventory tables, which
+  # deadlocks against the windowed reads other tests run concurrently: a reset
+  # holding ACCESS EXCLUSIVE on one table and waiting for another deadlocks with
+  # a read that holds the first and wants the second. DELETE takes only row
+  # locks, which never conflict with a reader, and a fixed delete order stops two
+  # concurrent resets from locking rows in opposite orders.
+  #
+  # `review_cases` and `review_evidence_snapshots` reference each other, so the
+  # cycle is broken first: clearing `current_snapshot_id` lets the snapshots be
+  # deleted before the cases that own them. A self-referencing
+  # `advisory_decisions` needs no such help: its foreign key is an AFTER trigger
+  # checked at the end of the statement, so deleting the whole table at once is
+  # valid.
+  @reset_statements [
+    "DELETE FROM review_case_events",
+    "UPDATE review_cases SET current_snapshot_id = NULL",
+    "DELETE FROM review_reviews",
+    "DELETE FROM review_evidence_snapshots",
+    "DELETE FROM review_cases",
+    "DELETE FROM advisory_decisions",
+    "DELETE FROM placement_impact_evidences",
+    "DELETE FROM exposure_evidences",
+    "DELETE FROM finding_events",
+    "DELETE FROM image_placements",
+    "DELETE FROM findings",
+    "DELETE FROM images"
+  ]
+
   @doc """
   Empties the inventory tables inside the caller's sandbox transaction.
 
@@ -48,14 +78,12 @@ defmodule Triage.DataCase do
   sandbox rolls back writes made by tests. A database seeded before
   `ecto.setup` stopped chaining `run priv/repo/seeds.exs` (or a development
   database reused as a test database) would otherwise break count- and
-  ordering-dependent assertions with unrelated data. `CASCADE` also clears the
-  case tables that reference findings with `on_delete: :restrict`; the sandbox
+  ordering-dependent assertions with unrelated data. Case tables that reference
+  findings with `on_delete: :restrict` are cleared first; the sandbox
   transaction restores everything when the test finishes.
   """
   def reset_inventory! do
-    Triage.Repo.query!(
-      "TRUNCATE TABLE images, findings, finding_events, image_placements CASCADE"
-    )
+    Enum.each(@reset_statements, &Triage.Repo.query!/1)
   end
 
   @doc """

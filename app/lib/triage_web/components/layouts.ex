@@ -17,13 +17,13 @@ defmodule TriageWeb.Layouts do
     <div class="app-shell">
       <header class="triage-topbar">
         <div class="topbar-inner">
-          <a href="/" class="triage-brand" aria-label="Triage overview">
+          <a href="/" class="triage-brand" aria-label="PTV Triage overview">
             <img
               src={~p"/images/triage-wordmark-v2.png"}
-              width="900"
-              height="270"
+              width="1280"
+              height="187"
               class="triage-brand-logo"
-              alt="Triage"
+              alt="PTV Triage"
             />
           </a>
           <details
@@ -115,7 +115,6 @@ defmodule TriageWeb.Layouts do
        [
          {"imports", "Imports", ~p"/imports"},
          {"replay", "Replay", ~p"/replay"},
-         {"replay-history", "Replay History", ~p"/replay/history"},
          {"intel", "Intel", ~p"/intel"}
        ]}
     ]

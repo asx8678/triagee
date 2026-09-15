@@ -56,14 +56,32 @@
                 role="img"
                 aria-label={"Severity mix of #{s.total} distinct CVEs: #{s.critical} critical, #{s.high} high, #{s.medium} medium, #{s.low} low. A CVE recorded at more than one severity appears in each band."}
               >
-                <span class="ov-sevbar-seg ov-sevbar-critical" style={"flex: #{s.critical} 1 0"}></span>
-                <span class="ov-sevbar-seg ov-sevbar-high" style={"flex: #{s.high} 1 0"}></span>
-                <span class="ov-sevbar-seg ov-sevbar-medium" style={"flex: #{s.medium} 1 0"}></span>
-                <span class="ov-sevbar-seg ov-sevbar-low" style={"flex: #{s.low} 1 0"}></span>
+                <span
+                  class="ov-sevbar-seg ov-sevbar-critical"
+                  style={"flex: #{s.critical} 1 0"}
+                  title={"#{s.critical} critical"}
+                ></span>
+                <span
+                  class="ov-sevbar-seg ov-sevbar-high"
+                  style={"flex: #{s.high} 1 0"}
+                  title={"#{s.high} high"}
+                ></span>
+                <span
+                  class="ov-sevbar-seg ov-sevbar-medium"
+                  style={"flex: #{s.medium} 1 0"}
+                  title={"#{s.medium} medium"}
+                ></span>
+                <span
+                  class="ov-sevbar-seg ov-sevbar-low"
+                  style={"flex: #{s.low} 1 0"}
+                  title={"#{s.low} low"}
+                ></span>
               </span>
+              <%!-- Naming the band order is the key the bar needs: without it the
+                   four fills are an unlabelled colour ramp. Counts stay in the
+                   tiles above, so the key never restates a number. --%>
               <p class="supporting">
-                Severity mix · {s.total} distinct CVEs · a CVE recorded at more than one severity
-                appears in each band
+                Severity mix, left to right: <strong>critical</strong>, high, medium, low · {s.total} distinct CVEs · a CVE recorded at more than one severity appears in each band
               </p>
             </div>
           </div>
@@ -205,6 +223,13 @@
           <% end %>
         </section>
       </div>
+
+      <p :if={@rails_coincide} id="home-rails-coincide" class="supporting">
+        Both rails list the same advisories in the same order: in local inventory each of these
+        was first observed on the day it was last observed, so the two orders have not diverged
+        yet. They separate as soon as local observations span more than one day — neither rail
+        is a duplicate of the other, and both always read the same inventory.
+      </p>
 
       <p id="home-scope-note" class="supporting">
         Both rails read the same active inventory as every other view: unresolved, unsuppressed and

@@ -89,7 +89,8 @@ defmodule TriageWeb.TimelineLive do
     %{
       "owner" => parsed.owner || "",
       "environment" => parsed.environment || "",
-      "weeks" => Integer.to_string(timeline.window.weeks)
+      "weeks" => Integer.to_string(timeline.window.weeks),
+      "scale" => parsed.scale || "fit"
     }
   end
 
@@ -110,7 +111,8 @@ defmodule TriageWeb.TimelineLive do
     %{
       "owner" => "",
       "environment" => "",
-      "weeks" => Integer.to_string(Timeline.default_weeks())
+      "weeks" => Integer.to_string(Timeline.default_weeks()),
+      "scale" => "fit"
     }
   end
 
@@ -172,6 +174,12 @@ defmodule TriageWeb.TimelineLive do
     end)
   end
 
+  # The drawing scale of the chart, not a filter: it changes the spacing of the
+  # tracks, never which days or observations are drawn.
+  defp scale_options do
+    [{"Fit window", "fit"}, {"Daily detail", "detail"}]
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -179,15 +187,9 @@ defmodule TriageWeb.TimelineLive do
       <.page_header
         title="Timeline"
         subtitle="Recorded local observations over time. Days stack newest first; a CVE reads across the days it was recorded on."
-      >
-        <:actions>
-          <.link id="timeline-reset" patch={~p"/timeline"} class="button button-secondary">
-            Reset view
-          </.link>
-        </:actions>
-      </.page_header>
+      />
 
-      <.form id="timeline-form" for={@filter_form} phx-change="filter" class="filter-toolbar">
+      <.filter_bar id="timeline-form" form={@filter_form} change="filter">
         <.input
           field={@filter_form[:owner]}
           type="select"
@@ -212,13 +214,34 @@ defmodule TriageWeb.TimelineLive do
           label="Window"
           options={window_select_options()}
         />
-      </.form>
+        <.input
+          field={@filter_form[:scale]}
+          type="select"
+          label="Scale"
+          options={scale_options()}
+        />
+        <:actions>
+          <.link id="timeline-reset" patch={~p"/timeline"} class="button button-secondary">
+            Reset view
+          </.link>
+        </:actions>
+      </.filter_bar>
 
-      <.notice id="timeline-banner" kind="info">
-        Every row is a recorded local observation: not a scan completion time, a CVE publication date, a verified fix or an approval. "No longer observed" means the occurrence disappeared from an eligible local collection — it is not remediation. Suppression is an imported scanner flag with no recorded date or author. A day with no row is a day with no recorded observation, not a clean day. Local cases are written by the unauthenticated
-        <code>local-operator</code>
-        identity.
-      </.notice>
+      <.explain
+        id="timeline-banner"
+        summary="Every row is a recorded local observation — not remediation, a scan time, a verified fix or an approval"
+      >
+        <p>
+          A row is not a scan completion time, a CVE publication date, or an approval.
+          "No longer observed" means the occurrence disappeared from an eligible local
+          collection — it is not remediation.
+        </p>
+        <p>
+          Suppression is an imported scanner flag with no recorded date or author. A day
+          with no row is a day with no recorded observation, not a clean day. Local cases
+          are written by the unauthenticated <code>local-operator</code> identity.
+        </p>
+      </.explain>
 
       <div :if={@view_error} id="timeline-error" class="notice" role="alert">
         <h2>Timeline could not be loaded</h2>
@@ -295,6 +318,7 @@ defmodule TriageWeb.TimelineLive do
 
         <Chart.lane_chart
           :if={@timeline.chart.tracks != []}
+          scale={@filters.scale || "fit"}
           chart={@timeline.chart}
           lanes={@timeline.lanes}
         />

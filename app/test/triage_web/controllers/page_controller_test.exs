@@ -17,7 +17,6 @@ defmodule TriageWeb.PageControllerTest do
           {"findings", "/findings"},
           {"timeline", "/timeline"},
           {"replay", "/replay"},
-          {"replay-history", "/replay/history"},
           {"imports", "/imports"},
           {"intel", "/intel"}
         ] do

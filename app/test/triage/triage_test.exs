@@ -63,7 +63,7 @@ defmodule Triage.TriageTest do
     assert row.scopes_total == 1
     assert row.scopes_assessed == 0
     assert row.scopes_reviewed == 0
-    assert row.scopes_impacted == 0
+    assert row.scopes_applicable == 0
     # The row carries the group metrics the page renders, so a template can
     # never reach for a field the read model does not publish.
     assert row.reopened == 0
@@ -78,7 +78,7 @@ defmodule Triage.TriageTest do
     assert item.assessment == :awaiting_assessment
   end
 
-  test "a current affected review is the only thing that confirms impact" do
+  test "a current affected review is the only thing that confirms applicability" do
     image = image!("triage-impact")
     placement!(image, "alpha", "prod-cluster-1")
     finding = finding!(image, "CVE-2026-1002", severity: "CRITICAL")
@@ -86,10 +86,12 @@ defmodule Triage.TriageTest do
     {cse, _snapshot} = assess!(finding, "alpha", "prod-cluster-1", review_attrs())
 
     row = row!("CVE-2026-1002")
-    assert row.state == :impact_confirmed
+    assert row.state == :applicability_confirmed
     assert row.scopes_assessed == 1
     assert row.scopes_reviewed == 1
-    assert row.scopes_impacted == 1
+    assert row.scopes_applicable == 1
+    assert row.scopes_with_impact == 0
+    assert row.decision == nil
 
     assert [item] = row.work_items
     assert item.assessment == :assessed
@@ -116,7 +118,7 @@ defmodule Triage.TriageTest do
     assert row.state == :awaiting_assessment
     assert row.scopes_reviewed == 1
     assert row.scopes_assessed == 0
-    assert row.scopes_impacted == 0
+    assert row.scopes_applicable == 0
 
     assert [item] = row.work_items
     assert item.assessment == :assessment_superseded
@@ -137,11 +139,11 @@ defmodule Triage.TriageTest do
     assert row.scopes_total == 2
     assert row.scopes_assessed == 1
     assert row.scopes_reviewed == 1
-    assert row.scopes_impacted == 1
-    # One confirmed scope is enough to place the advisory in the impact lane; it
-    # still reports partial coverage, and the unjudged beta scope keeps it out of
-    # the handled filter entirely.
-    assert row.state == :impact_confirmed
+    assert row.scopes_applicable == 1
+    # One confirmed scope is enough to place the advisory in the applicability
+    # lane; it still reports partial coverage, and the unjudged beta scope keeps
+    # it out of the handled filter entirely.
+    assert row.state == :applicability_confirmed
     assert board("handled").rows == []
     assert Enum.map(row.work_items, & &1.owner) == ["alpha", "beta"]
     assert Enum.map(row.work_items, & &1.assessment) == [:assessed, :awaiting_assessment]
@@ -206,5 +208,158 @@ defmodule Triage.TriageTest do
     Repo.update!(Ecto.Changeset.change(finding, suppressed: true))
 
     assert board("all").rows == []
+  end
+
+  test "an active decision moves the advisory out of active and says why" do
+    image = image!("triage-decision")
+    placement!(image, "alpha", "prod-cluster-1")
+    finding!(image, "CVE-2026-5001", severity: "CRITICAL")
+
+    assert {:ok, decision} =
+             Triage.Decisions.record(%{
+               cve: "CVE-2026-5001",
+               decision: "accepted_risk",
+               reason: "Synthetic acceptance with an end date.",
+               actor: "test-operator",
+               decided_at: at(0),
+               expires_at: DateTime.add(at(0), 30, :day)
+             })
+
+    row = row!("CVE-2026-5001", "whitelisted")
+    assert row.state == :decision_recorded
+    assert row.decision.id == decision.id
+    assert row.decision.label == "Accepted risk"
+    assert row.decision.state == :active
+    assert row.decision.actor == "test-operator"
+
+    assert board("active").rows == []
+    assert board("handled").rows == []
+    assert Enum.map(board("all").rows, & &1.cve) == ["CVE-2026-5001"]
+    assert Triage.Triage.summarize(board("all").rows).decision_recorded == 1
+  end
+
+  test "an expired decision puts the advisory back into the active work list" do
+    image = image!("triage-expired-decision")
+    placement!(image, "alpha", "prod-cluster-1")
+    finding!(image, "CVE-2026-5002", severity: "CRITICAL")
+
+    assert {:ok, _} =
+             Triage.Decisions.record(%{
+               cve: "CVE-2026-5002",
+               decision: "mitigated",
+               reason: "Synthetic mitigation that already lapsed.",
+               actor: "test-operator",
+               decided_at: at(60),
+               expires_at: at(30)
+             })
+
+    row = row!("CVE-2026-5002", "active")
+    assert row.state == :awaiting_assessment
+    assert row.decision.decision == "mitigated"
+    assert row.decision.state == :expired
+    assert board("whitelisted").rows == []
+  end
+
+  test "the three filters are disjoint and together cover every critical advisory" do
+    handled_image = image!("triage-filter-handled")
+    placement!(handled_image, "alpha", "prod-cluster-1")
+    handled = finding!(handled_image, "CVE-2026-5101", severity: "CRITICAL")
+    assess!(handled, "alpha", "prod-cluster-1", not_affected_attrs())
+
+    decided_image = image!("triage-filter-decided")
+    placement!(decided_image, "alpha", "prod-cluster-1")
+    finding!(decided_image, "CVE-2026-5102", severity: "CRITICAL")
+
+    assert {:ok, _} =
+             Triage.Decisions.record(%{
+               cve: "CVE-2026-5102",
+               decision: "not_affected",
+               reason: "Synthetic: the vulnerable entry point is not deployed.",
+               actor: "test-operator",
+               decided_at: at(0)
+             })
+
+    open_image = image!("triage-filter-open")
+    placement!(open_image, "alpha", "prod-cluster-1")
+    finding!(open_image, "CVE-2026-5103", severity: "CRITICAL")
+
+    cves = fn filter -> board(filter).rows |> Enum.map(& &1.cve) |> Enum.sort() end
+
+    active = cves.("active")
+    whitelisted = cves.("whitelisted")
+    handled_rows = cves.("handled")
+    all = cves.("all")
+
+    assert active == ["CVE-2026-5103"]
+    assert whitelisted == ["CVE-2026-5102"]
+    assert handled_rows == ["CVE-2026-5101"]
+    assert Enum.sort(active ++ whitelisted ++ handled_rows) == all
+
+    summary = Triage.Triage.summarize(board("all").rows)
+    assert summary.awaiting_assessment == 1
+    assert summary.decision_recorded == 1
+    assert summary.assessed_no_impact == 1
+  end
+
+  test "a completed human review outranks a decision, and the decision is still shown" do
+    image = image!("triage-review-over-decision")
+    placement!(image, "alpha", "prod-cluster-1")
+    finding = finding!(image, "CVE-2026-5201", severity: "CRITICAL")
+    assess!(finding, "alpha", "prod-cluster-1", not_affected_attrs())
+
+    assert {:ok, _} =
+             Triage.Decisions.record(%{
+               cve: "CVE-2026-5201",
+               decision: "accepted_risk",
+               reason: "Synthetic acceptance recorded after the review.",
+               actor: "test-operator",
+               decided_at: at(0),
+               expires_at: DateTime.add(at(0), 10, :day)
+             })
+
+    row = row!("CVE-2026-5201", "handled")
+    assert row.state == :assessed_no_impact
+    assert row.decision.state == :active
+    assert board("whitelisted").rows == []
+  end
+
+  test "impact evidence is per scope, carries its source, and absence is not no-impact" do
+    image = image!("triage-impact-evidence")
+    placement_a = placement!(image, "alpha", "prod-cluster-1")
+    placement!(image, "beta", "prod-cluster-1")
+    finding!(image, "CVE-2026-5301", severity: "CRITICAL")
+
+    assert {:ok, _} =
+             Triage.Impact.record(placement_a.id, "critical", "test:operator declared", at(0))
+
+    row = row!("CVE-2026-5301")
+    assert row.scopes_total == 2
+    assert row.scopes_with_impact == 1
+    assert Triage.Triage.summarize([row]).scopes_with_impact == 1
+    # Impact evidence is not applicability: no review exists, so the row is still
+    # open work and the lane state is unchanged.
+    assert row.state == :awaiting_assessment
+
+    with_impact = Enum.find(row.work_items, &(&1.impact != nil))
+    without_impact = Enum.find(row.work_items, &is_nil(&1.impact))
+    assert with_impact.impact.label == "Critical"
+    assert with_impact.impact.source == "test:operator declared"
+    assert with_impact.impact.state == :active
+    assert without_impact.impact == nil
+  end
+
+  test "expired impact evidence is reported as expired, never as an impact" do
+    image = image!("triage-expired-impact")
+    placement = placement!(image, "alpha", "prod-cluster-1")
+    finding!(image, "CVE-2026-5401", severity: "CRITICAL")
+
+    assert {:ok, _} = Triage.Impact.record(placement.id, "none", "test:lapsed", at(30), at(10))
+
+    row = row!("CVE-2026-5401")
+    assert row.scopes_with_impact == 0
+    assert [item] = row.work_items
+    assert item.impact.state == :expired
+    assert item.impact.impact == nil
+    assert item.impact.source == "test:lapsed"
   end
 end

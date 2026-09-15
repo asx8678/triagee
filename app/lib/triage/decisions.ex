@@ -1,0 +1,236 @@
+defmodule Triage.Decisions do
+  @moduledoc """
+  Operator decisions that take an advisory out of the triage work list without
+  rewriting the inventory.
+
+  A decision is an auditable claim: it names an actor, carries a reason, and an
+  `accepted_risk` decision must carry an expiry — an accepted risk without an
+  end date is forever, and forever is not a triage state. History is
+  append-only: recording a new decision for the same scope links the previous
+  one through `supersedes_id` and keeps both rows.
+
+  A decision is deliberately **not** any of these:
+
+    * not resolution — `findings.resolved_at` is untouched;
+    * not scanner suppression — `findings.suppressed` is untouched;
+    * not a human assessment — no `review_reviews` row is written.
+
+  The finding keeps its severity, keeps its place in Findings, on `/cves/:id`
+  and in the lifecycle events. Only Triage changes, and it says which decision
+  removed the row and when that decision expires.
+
+  An expired decision covers nothing: the advisory returns to the work list with
+  the expiry shown, never silently.
+
+  The scope is the whole advisory by default. A decision may name one placement
+  (`placement_id`), which makes the claim narrower and never stronger: it does
+  not cover that placement's siblings.
+  """
+
+  import Ecto.Query
+
+  alias Triage.Inventory.Finding
+  alias Triage.Inventory.ImagePlacement
+  alias Triage.Repo
+
+  @decisions ~w(accepted_risk not_affected mitigated)
+  @expiry_required ~w(accepted_risk)
+
+  @labels %{
+    "accepted_risk" => "Accepted risk",
+    "not_affected" => "Not affected",
+    "mitigated" => "Mitigated by a control"
+  }
+
+  defmodule Decision do
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    schema "advisory_decisions" do
+      field :cve, :string
+      field :decision, :string
+      field :reason, :string
+      field :actor, :string
+      field :decided_at, :utc_datetime
+      field :expires_at, :utc_datetime
+      belongs_to :placement, ImagePlacement
+      belongs_to :supersedes, __MODULE__
+
+      timestamps(type: :utc_datetime)
+    end
+
+    @type t :: %__MODULE__{}
+
+    def changeset(decision, attrs) do
+      decision
+      |> cast(attrs, [:cve, :placement_id, :decision, :reason, :actor, :decided_at, :expires_at])
+      |> validate_required([:cve, :decision, :reason, :actor, :decided_at])
+      |> validate_length(:reason, min: 3)
+      |> validate_inclusion(:decision, Triage.Decisions.decisions())
+      |> validate_expiry()
+    end
+
+    # An accepted risk without an end date never expires, so it is refused at
+    # write time rather than becoming permanent by omission.
+    defp validate_expiry(changeset) do
+      if get_field(changeset, :decision) in Triage.Decisions.expiry_required() do
+        validate_required(changeset, [:expires_at],
+          message:
+            "is required for accepted risk: an acceptance without an end date never expires"
+        )
+      else
+        changeset
+      end
+    end
+  end
+
+  @doc "The decision vocabulary."
+  @spec decisions() :: [String.t()]
+  def decisions, do: @decisions
+
+  @doc "The decisions that must carry an expiry."
+  @spec expiry_required() :: [String.t()]
+  def expiry_required, do: @expiry_required
+
+  @doc "Human label for a decision value."
+  @spec label(String.t()) :: String.t()
+  def label(decision), do: Map.get(@labels, decision, "Unknown decision")
+
+  @doc """
+  Records a decision. `:decided_at` defaults to the current time; pass it
+  explicitly to record a retrospective decision.
+
+  Returns `{:ok, Decision.t()}`, `{:error, changeset}`, or
+  `{:error, :unknown_cve}` when no finding in this estate carries that CVE — a
+  decision for an advisory nothing recorded is a typo, not a risk acceptance.
+  """
+  @spec record(map()) :: {:ok, Decision.t()} | {:error, Ecto.Changeset.t() | :unknown_cve}
+  def record(attrs) when is_map(attrs) do
+    attrs =
+      attrs
+      |> Map.put_new(:decided_at, DateTime.utc_now())
+      |> Map.put_new(:placement_id, nil)
+
+    with {:ok, cve} <- normalize_cve(Map.get(attrs, :cve)),
+         :ok <- ensure_cve_known(cve) do
+      previous = latest_for_scope(cve, attrs.placement_id)
+
+      %Decision{supersedes_id: previous && previous.id}
+      |> Decision.changeset(Map.put(attrs, :cve, cve))
+      |> Repo.insert()
+    end
+  end
+
+  def record(_other), do: {:error, :invalid_decision}
+
+  @doc """
+  The governing decision per CVE, as `%{cve => decision map}`.
+
+  An active decision always outranks an expired one, so a newer expired row
+  never hides an older valid acceptance. Only `state: :active` covers the
+  advisory; `state: :expired` is why the advisory is back in the work list.
+  The reduction runs in PostgreSQL with `DISTINCT ON`, one row per CVE.
+  """
+  @spec latest_by_cve([String.t()], DateTime.t()) :: %{optional(String.t()) => map()}
+  def latest_by_cve(cves, now \\ DateTime.utc_now())
+
+  def latest_by_cve([], _now), do: %{}
+
+  def latest_by_cve(cves, now) when is_list(cves) do
+    from(d in Decision,
+      where: d.cve in ^cves,
+      distinct: d.cve,
+      order_by: [
+        asc: d.cve,
+        desc: fragment("(? IS NULL OR ? >= ?)", d.expires_at, d.expires_at, ^now),
+        desc: d.decided_at,
+        desc: d.id
+      ]
+    )
+    |> Repo.all()
+    |> Map.new(&{&1.cve, decorate(&1, now)})
+  end
+
+  @doc "Append-only decision history for one advisory, newest first."
+  @spec history_for_cve(String.t(), DateTime.t()) :: [map()]
+  def history_for_cve(cve, now \\ DateTime.utc_now()) when is_binary(cve) do
+    from(d in Decision, where: d.cve == ^cve, order_by: [desc: d.decided_at, desc: d.id])
+    |> Repo.all()
+    |> Enum.map(&decorate(&1, now))
+  end
+
+  @doc "Every decision decided in `[from, to)`, newest first."
+  @spec list_between(DateTime.t(), DateTime.t()) :: [map()]
+  def list_between(from, to) when is_struct(from, DateTime) and is_struct(to, DateTime) do
+    from(d in Decision,
+      where: d.decided_at >= ^from and d.decided_at < ^to,
+      order_by: [desc: d.decided_at, desc: d.id]
+    )
+    |> Repo.all()
+    |> Enum.map(&decorate(&1, DateTime.utc_now()))
+  end
+
+  @doc "`true` only when the decision still covers its advisory."
+  @spec active?(map()) :: boolean()
+  def active?(%{state: :active}), do: true
+  def active?(_other), do: false
+
+  @doc "State of a decision at `now`: `:active` or `:expired`."
+  @spec state(Decision.t(), DateTime.t()) :: :active | :expired
+  def state(%Decision{expires_at: nil}, _now), do: :active
+
+  def state(%Decision{expires_at: expires_at}, now) do
+    if DateTime.compare(expires_at, now) == :lt, do: :expired, else: :active
+  end
+
+  defp decorate(decision, now) do
+    %{
+      id: decision.id,
+      cve: decision.cve,
+      decision: decision.decision,
+      label: label(decision.decision),
+      state: state(decision, now),
+      reason: decision.reason,
+      actor: decision.actor,
+      decided_at: decision.decided_at,
+      expires_at: decision.expires_at,
+      placement_id: decision.placement_id,
+      supersedes_id: decision.supersedes_id
+    }
+  end
+
+  defp normalize_cve(cve) when is_binary(cve) do
+    case cve |> String.trim() |> String.upcase() do
+      "" -> {:error, :invalid_decision}
+      normalized -> {:ok, normalized}
+    end
+  end
+
+  defp normalize_cve(_other), do: {:error, :invalid_decision}
+
+  defp ensure_cve_known(cve) do
+    if Repo.exists?(from(f in Finding, where: f.cve == ^cve)),
+      do: :ok,
+      else: {:error, :unknown_cve}
+  end
+
+  defp latest_for_scope(cve, nil) do
+    Repo.one(
+      from(d in Decision,
+        where: d.cve == ^cve and is_nil(d.placement_id),
+        order_by: [desc: d.decided_at, desc: d.id],
+        limit: 1
+      )
+    )
+  end
+
+  defp latest_for_scope(cve, placement_id) do
+    Repo.one(
+      from(d in Decision,
+        where: d.cve == ^cve and d.placement_id == ^placement_id,
+        order_by: [desc: d.decided_at, desc: d.id],
+        limit: 1
+      )
+    )
+  end
+end

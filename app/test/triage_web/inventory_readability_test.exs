@@ -75,7 +75,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
     assert has_element?(view, "#group-CVE-2024-4004", "Reopened")
     assert has_element?(view, "#group-CVE-2025-3003", "1 suppressed")
     assert has_element?(view, "#group-CVE-2025-3003 [data-field='fix']", "Not reported")
-    assert has_element?(view, "#findings-order", "affected image count")
+    assert has_element?(view, "#findings-order-details", "affected image count")
     refute has_element?(view, "#group-CVE-2023-5005")
   end
 
