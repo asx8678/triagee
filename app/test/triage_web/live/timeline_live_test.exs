@@ -12,10 +12,86 @@ defmodule TriageWeb.TimelineLiveTest do
   import Triage.Fixtures
 
   alias Triage.Cases
+  alias Triage.Intel
 
   setup do
     Triage.DataCase.reset_inventory!()
     :ok
+  end
+
+  test "same-day lifecycle events have distinct row and action identities", %{conn: conn} do
+    image = image!("same-day-events")
+    finding = finding!(image, "CVE-2026-7100")
+    appeared = event!(finding, "appeared", at(1))
+    resolved = event!(finding, "resolved", at(1, ~T[07:00:00]))
+    {:ok, view, html} = live(conn, ~p"/timeline")
+
+    for event <- [appeared, resolved] do
+      assert has_element?(view, "#tl-row-#{event.id}")
+      assert has_element?(view, "#tl-open-#{event.id}")
+      assert has_element?(view, "#tl-advisory-#{event.id}")
+    end
+
+    ids = html |> LazyHTML.from_document() |> LazyHTML.query("[id]") |> LazyHTML.attribute("id")
+    assert length(ids) == length(Enum.uniq(ids))
+  end
+
+  test "drawer event paging preserves scope and can return to the first page", %{conn: conn} do
+    image = image!("live-event-pages")
+    placement!(image, "alpha", "prod")
+    finding = finding!(image, "CVE-2026-7101")
+    events = for second <- 1..51, do: event!(finding, "appeared", DateTime.add(at(2), second))
+
+    {:ok, view, _} =
+      live(
+        conn,
+        ~p"/timeline?#{%{cve: finding.cve, owner: "alpha", environment: "prod", weeks: 4}}"
+      )
+
+    assert has_element?(view, "#tl-events-next")
+    refute has_element?(view, "#tl-events-first")
+    assert has_element?(view, "#tl-event-#{hd(events).id}")
+    view |> element("#tl-events-next") |> render_click()
+
+    assert_patch(
+      view,
+      ~p"/timeline?#{%{cve: finding.cve, owner: "alpha", environment: "prod", weeks: 4, events_after: Enum.at(events, 49).id}}"
+    )
+
+    assert has_element?(view, "#tl-event-#{List.last(events).id}")
+    refute has_element?(view, "#tl-event-#{hd(events).id}")
+    refute has_element?(view, "#tl-events-next")
+    view |> element("#tl-events-first") |> render_click()
+    assert has_element?(view, "#tl-event-#{hd(events).id}")
+    assert has_element?(view, "#tl-events-next")
+  end
+
+  test "drawer case paging reaches every saved case", %{conn: conn} do
+    image = image!("live-case-pages")
+    placement!(image, "alpha", "prod")
+
+    cases =
+      for index <- 1..11 do
+        finding = finding!(image, "CVE-2026-7102", package_name: "package-#{index}")
+        event!(finding, "appeared", at(1))
+
+        assert {:ok, %{case: cse}} =
+                 Cases.open_case(finding.id, owner: "alpha", environment: "prod")
+
+        cse
+      end
+
+    {:ok, view, _} =
+      live(conn, ~p"/timeline?#{%{cve: "CVE-2026-7102", owner: "alpha", environment: "prod"}}")
+
+    assert has_element?(view, "#tl-case-#{hd(cases).id}")
+    assert has_element?(view, "#tl-cases-next")
+    view |> element("#tl-cases-next") |> render_click()
+    assert has_element?(view, "#tl-case-#{List.last(cases).id}")
+    refute has_element?(view, "#tl-case-#{hd(cases).id}")
+    refute has_element?(view, "#tl-cases-next")
+    view |> element("#tl-cases-first") |> render_click()
+    assert has_element?(view, "#tl-case-#{hd(cases).id}")
   end
 
   describe "a window with recorded observations" do
@@ -25,14 +101,20 @@ defmodule TriageWeb.TimelineLiveTest do
 
       # Recorded yesterday and today: renders with a connector in both directions.
       continuing = finding!(image, "CVE-2026-5001", package_name: "openssl")
-      event!(continuing, "appeared", at(1, ~T[07:00:00]))
-      event!(continuing, "reopened", at(0, ~T[07:00:00]))
+      older_event = event!(continuing, "appeared", at(1, ~T[07:00:00]))
+      today_event = event!(continuing, "reopened", at(0, ~T[07:00:00]))
 
       # Recorded only today, and critical.
       single = finding!(image, "CVE-2026-5002", package_name: "libc", severity: "CRITICAL")
-      event!(single, "appeared", at(0, ~T[09:00:00]))
+      single_event = event!(single, "appeared", at(0, ~T[09:00:00]))
 
-      %{continuing: continuing, single: single}
+      %{
+        continuing: continuing,
+        single: single,
+        older_event: older_event,
+        today_event: today_event,
+        single_event: single_event
+      }
     end
 
     test "renders the bands, the grid, the summary, the lanes and the tab", %{conn: conn} do
@@ -47,7 +129,8 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-chart")
 
       # One band per day of the window: empty days are rendered explicitly.
-      assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() == 56
+      assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() ==
+               window_span(8).days
 
       # Both wide tables live in their own scroll region, so the page itself
       # never scrolls horizontally at a narrow viewport (WCAG 2.2 SC 1.4.10).
@@ -63,6 +146,12 @@ defmodule TriageWeb.TimelineLiveTest do
 
       for weekday <- ~w(Mon Tue Wed Thu Fri Sat Sun) do
         assert has_element?(view, "#tl-grid-#{weekday}")
+      end
+
+      # The current week's column still holds the days after today, and they say
+      # so: a day that has not happened is never presented as a quiet day.
+      for date <- future_days_in_current_week() do
+        assert html =~ "#{Calendar.strftime(date, "%d %b %Y")}: not yet observed"
       end
     end
 
@@ -83,12 +172,13 @@ defmodule TriageWeb.TimelineLiveTest do
 
     test "a CVE recorded on adjacent days is joined by connectors", %{
       conn: conn,
-      continuing: continuing,
-      single: single
+      today_event: today_event,
+      older_event: older_event,
+      single_event: single_event
     } do
       {:ok, view, _html} = live(conn, ~p"/timeline")
-      today_key = "#tl-row-#{continuing.id}-#{Date.to_iso8601(today())}"
-      older_key = "#tl-row-#{continuing.id}-#{Date.to_iso8601(Date.add(today(), -1))}"
+      today_key = "#tl-row-#{today_event.id}"
+      older_key = "#tl-row-#{older_event.id}"
 
       assert has_element?(view, "#{today_key} .tl-connector-down")
       assert has_element?(view, "#{older_key} .tl-connector-up")
@@ -99,7 +189,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert element(view, today_key) |> render() =~ "observed again locally"
 
       # A CVE recorded only today has no connector in either direction.
-      single_key = "#tl-row-#{single.id}-#{Date.to_iso8601(today())}"
+      single_key = "#tl-row-#{single_event.id}"
       assert has_element?(view, single_key)
       refute has_element?(view, "#{single_key} .tl-connector-up")
       refute has_element?(view, "#{single_key} .tl-connector-down")
@@ -124,6 +214,35 @@ defmodule TriageWeb.TimelineLiveTest do
              )
 
       assert element(view, "#tl-lane-CVE-2026-5001") |> render() =~ "Open in local inventory"
+
+      # A lane's CVE id reaches the advisory aggregate, matching the bands rows.
+      assert has_element?(view, "#tl-lane-cve-CVE-2026-5001[href='/cves/CVE-2026-5001']")
+    end
+
+    test "a cached KEV row marks its lane, and a missing row marks nothing", %{conn: conn} do
+      {:ok, plain, _html} = live(conn, ~p"/timeline")
+
+      # Nothing is cached: no lane carries a marker and the source note is absent,
+      # so the page makes no claim either way.
+      refute has_element?(plain, "[id^='tl-lane-kev-']")
+      refute has_element?(plain, "#tl-lanes-kev-note")
+
+      {:ok, _} =
+        Intel.replace_advisories("kev", [
+          %{
+            external_id: "CVE-2026-5001",
+            summary: "kev entry",
+            published_at: ~U[2026-09-12 10:00:00Z]
+          }
+        ])
+
+      {:ok, view, _html} = live(conn, ~p"/timeline")
+
+      assert has_element?(view, "#tl-lane-kev-CVE-2026-5001", "Known exploited (KEV cache)")
+      assert has_element?(view, "#tl-lanes-kev-note")
+
+      # The other lane has no cached row: absence renders as no marker at all.
+      refute has_element?(view, "#tl-lane-kev-CVE-2026-5002")
     end
 
     test "clicking a lane opens the drawer, which then closes", %{conn: conn} do
@@ -177,7 +296,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert html
              |> LazyHTML.from_document()
              |> LazyHTML.query("#tl-band-list > li")
-             |> Enum.count() == 56
+             |> Enum.count() == window_span(8).days
 
       view
       |> form("#timeline-form", %{"weeks" => "4"})
@@ -188,7 +307,7 @@ defmodule TriageWeb.TimelineLiveTest do
       assert render(view)
              |> LazyHTML.from_document()
              |> LazyHTML.query("#tl-band-list > li")
-             |> Enum.count() == 28
+             |> Enum.count() == window_span(4).days
     end
 
     test "a scope with no matching placement is empty without claiming a clean estate", %{
@@ -269,7 +388,8 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-track-CVE-2026-5202")
 
       # The axis labels every day, every week start and today, at the window's size.
-      assert document |> LazyHTML.query("#tl-chart .tl-c-weekday") |> Enum.count() == 56
+      assert document |> LazyHTML.query("#tl-chart .tl-c-weekday") |> Enum.count() ==
+               window_span(8).days
 
       # Eight week starts plus the gutter's own CVE label.
       assert document |> LazyHTML.query("#tl-chart .tl-c-week-label") |> Enum.count() == 9
@@ -421,6 +541,23 @@ defmodule TriageWeb.TimelineLiveTest do
                view,
                "a#tl-case-open-#{review_case.id}[href='/cases/#{review_case.id}']"
              )
+
+      # The drawer's own advisory link, unscoped here because this visit is.
+      assert has_element?(view, "#tl-drawer-advisory[href='/cves/CVE-2026-5100']")
+
+      # Under a scope, the advisory opens on the same team and environment the
+      # drawer is describing, and the expectation is built the same way the page
+      # builds it so the two cannot drift.
+      {:ok, scoped, _html} =
+        live(conn, ~p"/timeline?cve=CVE-2026-5100&owner=alpha&environment=prod-cluster-1")
+
+      expected = ~p"/cves/CVE-2026-5100?#{%{owner: "alpha", environment: "prod-cluster-1"}}"
+      assert has_element?(scoped, "#tl-drawer-advisory[href='#{expected}']")
+
+      # The same rule on every other advisory link the timeline renders: the lanes
+      # table's CVE cell and the bands rows' own "Advisory page" button.
+      assert has_element?(scoped, "#tl-lane-cve-CVE-2026-5100[href='#{expected}']")
+      assert has_element?(scoped, "[id^='tl-advisory-'][href='#{expected}']")
     end
 
     test "a suppression flag is described as imported state, not an action", %{conn: conn} do
@@ -452,5 +589,16 @@ defmodule TriageWeb.TimelineLiveTest do
 
     assert render(view) =~ "No recorded observation on this day"
     assert render(view) =~ "not evidence of a clean estate"
+  end
+
+  # The days after today that the current week's grid column still renders. The
+  # list is empty on a Sunday, when today closes its own week.
+  defp future_days_in_current_week do
+    today = today()
+
+    today
+    |> Date.beginning_of_week(:monday)
+    |> Date.range(Date.add(today, 7 - Date.day_of_week(today)))
+    |> Enum.filter(&(Date.compare(&1, today) == :gt))
   end
 end

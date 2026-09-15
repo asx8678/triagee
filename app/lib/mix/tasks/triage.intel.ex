@@ -68,7 +68,7 @@ defmodule Mix.Tasks.Triage.Intel do
 
     failures =
       if Keyword.get(opts, :kev, false) do
-        run_source(:kev) + failures
+        refresh(:kev) + failures
       else
         failures
       end
@@ -77,7 +77,7 @@ defmodule Mix.Tasks.Triage.Intel do
       case Keyword.get(opts, :nvd) do
         nil -> failures
         "" -> failures + 1
-        cve_id -> run_nvd(cve_id) + failures
+        cve_id -> refresh({:nvd, cve_id}) + failures
       end
 
     if Keyword.get(opts, :receipts, false) do
@@ -89,78 +89,54 @@ defmodule Mix.Tasks.Triage.Intel do
     end
   end
 
-  defp run_source(:kev) do
-    if Intel.Config.source_allowed?(:kev) do
-      fetch_kev()
+  defp refresh(request) do
+    {kind, source, label} = source_details(request)
+
+    if Intel.Config.source_allowed?(kind) do
+      # app.config loads dependencies; it does not start Req's Finch supervisor.
+      {:ok, _} = Application.ensure_all_started(:req)
+
+      case Client.fetch(request) do
+        {:ok, rows} ->
+          {:ok, count} = Intel.replace_advisories(source, rows)
+          {:ok, _} = Intel.record_receipt(source, true, count)
+          suffix = if kind == :kev, do: " (#{length(rows)} rows)", else: ""
+          Mix.shell().info("  #{label}: #{count} advisories cached#{suffix}")
+          0
+
+        {:error, reason} ->
+          message = safe_error(reason)
+          {:ok, _} = Intel.record_receipt(source, false, nil, message)
+          Mix.shell().error("  #{label}: FAILED — #{message}")
+          1
+      end
     else
-      refuse(:kev)
+      # No request or receipt for an unapproved source.
+      Mix.shell().error(
+        "  #{kind}: not allowed — add it to :triage, :intel, sources: [...] to approve it"
+      )
+
+      1
     end
   end
 
-  # Refused before any request: an unapproved source never reaches the transport and
-  # records no receipt, because no refresh was attempted.
-  defp refuse(source) do
-    Mix.shell().error(
-      "  #{source}: not allowed — add it to :triage, :intel, sources: [...] to approve it"
-    )
+  defp source_details(:kev), do: {:kev, "kev", "kev"}
 
-    1
-  end
-
-  defp fetch_kev do
-    case Client.fetch(:kev) do
-      {:ok, rows} ->
-        {:ok, count} = Intel.replace_advisories("kev", rows)
-        {:ok, _} = Intel.record_receipt("kev", true, count)
-        Mix.shell().info("  kev: #{count} advisories cached (#{length(rows)} rows)")
-        0
-
-      {:error, reason} ->
-        message = safe_error(reason)
-        {:ok, _} = Intel.record_receipt("kev", false, nil, message)
-        Mix.shell().error("  kev: FAILED — #{message}")
-        1
-    end
-  end
-
-  defp run_nvd(cve_id) do
-    if Intel.Config.source_allowed?(:nvd) do
-      fetch_nvd(cve_id)
-    else
-      refuse(:nvd)
-    end
-  end
-
-  defp fetch_nvd(cve_id) do
-    source = Intel.nvd_source(cve_id)
-
-    case Client.fetch({:nvd, cve_id}) do
-      {:ok, rows} ->
-        {:ok, count} = Intel.replace_advisories(source, rows)
-        {:ok, _} = Intel.record_receipt(source, true, count)
-        Mix.shell().info("  nvd(#{cve_id}): #{count} advisories cached")
-        0
-
-      {:error, reason} ->
-        message = safe_error(reason)
-        # Same canonical key as the success path: a failure is recorded against the
-        # source it protects, not a differently cased spelling of it.
-        {:ok, _} = Intel.record_receipt(source, false, nil, message)
-        Mix.shell().error("  nvd(#{cve_id}): FAILED — #{message}")
-        1
-    end
-  end
+  defp source_details({:nvd, cve_id}),
+    do: {:nvd, Intel.nvd_source(cve_id), "nvd(#{cve_id})"}
 
   defp print_receipts do
     Mix.shell().info("Receipts:")
 
-    for receipt <- Intel.latest_receipts() do
+    receipts = Intel.latest_receipts()
+
+    for receipt <- receipts do
       status = if receipt.succeeded, do: "ok    ", else: "FAILED"
       note = if(receipt.message, do: " — " <> receipt.message, else: "")
       Mix.shell().info("  #{receipt.source}: #{status} #{receipt.attempted_at}#{note}")
     end
 
-    if Intel.latest_receipts() == [], do: Mix.shell().info("  (no receipts yet)")
+    if receipts == [], do: Mix.shell().info("  (no receipts yet)")
   end
 
   defp safe_error(:kev_parse_failed), do: "KEV payload parse failed"

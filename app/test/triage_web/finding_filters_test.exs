@@ -183,6 +183,36 @@ defmodule TriageWeb.FindingFiltersTest do
       assert parsed.owner == nil
     end
 
+    test "every nonneutral flat field conflicts with a wrapper, including severity" do
+      for {field, value} <- [
+            {"owner", "beta"},
+            {"environment", "prod"},
+            {"q", "curl"},
+            {"severity", "CRITICAL"},
+            {"suppressed", "true"},
+            {"sort", "newest"},
+            {"before", "not-a-cursor"}
+          ] do
+        parsed = FindingFilters.parse_event(%{"filters" => %{"owner" => "alpha"}, field => value})
+        assert parsed.invalid == [:filters]
+        assert parsed.owner == nil
+      end
+    end
+
+    test "blank severity and the serialized default sort stay neutral beside a wrapper" do
+      parsed =
+        FindingFilters.parse_event(%{
+          "filters" => %{"owner" => "alpha", "severity" => "HIGH"},
+          "severity" => " ",
+          "sort" => "severity",
+          "suppressed" => "false"
+        })
+
+      assert parsed.invalid == []
+      assert parsed.owner == "alpha"
+      assert parsed.severity == "HIGH"
+    end
+
     test "a wrapper alongside the form's serialized blank fields still parses" do
       # The real filter form serializes its own fields with the event: empty
       # selects/inputs and the unchecked checkbox are neutral and must not

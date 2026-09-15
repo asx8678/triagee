@@ -10,10 +10,12 @@ defmodule TriageWeb.TimelineLive.Lanes do
 
   use TriageWeb, :html
 
+  alias TriageWeb.FindingFilters
   alias TriageWeb.TimelineFilters
 
   attr :lanes, :map, required: true
   attr :filters, :map, required: true
+  attr :kev, :map, default: %{}
 
   def lane_table(assigns) do
     ~H"""
@@ -52,7 +54,15 @@ defmodule TriageWeb.TimelineLive.Lanes do
           </thead>
           <tbody>
             <tr :for={lane <- @lanes.rows} id={"tl-lane-" <> lane.cve}>
-              <th scope="row">{lane.cve}</th>
+              <th scope="row">
+                <.link
+                  id={"tl-lane-cve-" <> lane.cve}
+                  navigate={FindingFilters.advisory_path(lane.cve, @filters)}
+                >
+                  {lane.cve}
+                </.link>
+                <.kev_marker id={"tl-lane-kev-" <> lane.cve} kev={@kev[lane.cve]} />
+              </th>
               <td><.status_badge label={display_value(lane.severity)} kind="severity" /></td>
               <td>
                 {lane.occurrence_count}
@@ -79,6 +89,8 @@ defmodule TriageWeb.TimelineLive.Lanes do
           </tbody>
         </table>
       </div>
+
+      <.kev_note id="tl-lanes-kev-note" present?={map_size(@kev) > 0} />
 
       <p :if={@lanes.truncated_count > 0} class="supporting">
         {@lanes.truncated_count} further CVE(s) in this window are not shown.

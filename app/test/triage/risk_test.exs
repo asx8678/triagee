@@ -58,6 +58,32 @@ defmodule Triage.RiskTest do
       assert "Severity not reported; treating as needing review" in result.reasons
     end
 
+    test "atom and string keys agree for true, false and unknown boolean inputs" do
+      for flag <- [true, false, nil] do
+        atom = %{
+          severity: "HIGH",
+          exposure: "internal",
+          known_exploited: flag,
+          fix_available: flag
+        }
+
+        string = Map.new(atom, fn {key, value} -> {Atom.to_string(key), value} end)
+        assert Risk.classify(atom) == Risk.classify(string)
+      end
+
+      assert Enum.any?(
+               Risk.classify(%{severity: "HIGH", known_exploited: false}).reasons,
+               &String.contains?(&1, "absence is not evidence")
+             )
+    end
+
+    test "an explicitly present atom key wins even when false or nil" do
+      for value <- [false, nil] do
+        mixed = %{"known_exploited" => true, severity: "HIGH", known_exploited: value}
+        assert Risk.classify(mixed).priority == "high"
+      end
+    end
+
     test "policy_version is stable" do
       assert Risk.policy_version() == 1
     end

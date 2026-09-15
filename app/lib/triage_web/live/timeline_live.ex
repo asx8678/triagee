@@ -16,6 +16,7 @@ defmodule TriageWeb.TimelineLive do
 
   use TriageWeb, :live_view
 
+  alias Triage.Intel
   alias Triage.Timeline
   alias TriageWeb.CaseLive
   alias TriageWeb.TimelineFilters
@@ -34,7 +35,8 @@ defmodule TriageWeb.TimelineLive do
      |> assign(:view_error, nil)
      |> assign(:detail, nil)
      |> assign(:selected_cve, nil)
-     |> assign(:detail_error, nil)}
+     |> assign(:detail_error, nil)
+     |> assign(:kev, %{})}
   end
 
   @impl true
@@ -75,6 +77,7 @@ defmodule TriageWeb.TimelineLive do
           |> assign(:filters, parsed)
           |> assign(:options, Timeline.filter_options())
           |> assign(:filter_form, to_form(filter_params(timeline, parsed)))
+          |> assign(:kev, Intel.kev_index(Enum.map(timeline.lanes.rows, & &1.cve)))
           |> load_detail(parsed)
 
         {:error, _reason} ->
@@ -130,7 +133,9 @@ defmodule TriageWeb.TimelineLive do
     case Timeline.cve_detail(cve,
            weeks: parsed.weeks,
            owner: parsed.owner,
-           environment: parsed.environment
+           environment: parsed.environment,
+           events_after: parsed.events_after,
+           cases_after: parsed.cases_after
          ) do
       {:ok, detail} ->
         socket
@@ -151,7 +156,12 @@ defmodule TriageWeb.TimelineLive do
   defp prepare_detail(detail) do
     rows =
       Enum.map(detail.cases.rows, fn %{id: id, data: data} ->
-        %{id: id, case: data.case, entries: CaseLive.Format.timeline_entries(data)}
+        %{
+          id: id,
+          case: data.case,
+          entries: CaseLive.Format.timeline_entries(data),
+          history_truncated?: data.history_truncated?
+        }
       end)
 
     %{detail | cases: %{detail.cases | rows: rows}}
@@ -162,6 +172,10 @@ defmodule TriageWeb.TimelineLive do
 
   defp detail_error_text(:invalid_cve),
     do: "The CVE in the address is not a valid value."
+
+  defp detail_error_text(:invalid_cursor),
+    do:
+      "This history position is not in the selected scope. Open the CVE again to start at the first page."
 
   defp detail_error_text(_other),
     do: "The selection could not be loaded. Nothing from a previous selection is shown."
@@ -301,7 +315,7 @@ defmodule TriageWeb.TimelineLive do
 
         <Bands.waterfall days={@timeline.days} filters={@filters} />
         <Grid.weekday_grid grid={@timeline.grid} />
-        <Lanes.lane_table lanes={@timeline.lanes} filters={@filters} />
+        <Lanes.lane_table lanes={@timeline.lanes} filters={@filters} kev={@kev} />
       </div>
     </Layouts.app>
     """

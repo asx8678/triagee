@@ -6,7 +6,7 @@ defmodule Triage.ImportFlow do
   """
   alias Triage.{Import, Repo}
   @max_bytes 1_000_000
-  @lock 7_433_921_021_337
+  @lock Triage.Import.Contract.lock_key()
 
   def max_bytes, do: @max_bytes
 

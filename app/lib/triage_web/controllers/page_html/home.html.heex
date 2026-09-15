@@ -138,6 +138,7 @@
                     <tr :for={row <- Enum.take(rows, 10)} id={"home-critical-#{row.cve}"}>
                       <td class="triage-cve">
                         <.link href={~p"/cves/#{row.cve}"}>{row.cve}</.link>
+                        <.kev_marker id={"home-critical-kev-#{row.cve}"} kev={@kev[row.cve]} />
                       </td>
                       <td>{display_value(row.team_list, "No team named")}</td>
                       <td>{row.images}</td>
@@ -147,6 +148,8 @@
                   </tbody>
                 </table>
               </div>
+              <.kev_note id="home-critical-kev-note" present?={map_size(@kev) > 0} />
+
               <p class="cluster">
                 <.link id="home-critical-all" href={~p"/findings?severity=CRITICAL"}>
                   See all {overview_total(@critical_total, rows)} critical advisories

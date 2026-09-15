@@ -19,7 +19,7 @@ defmodule Triage.Inventory do
   alias Triage.Inventory.GroupCursor
   alias Triage.Repo
 
-  @severity_order ~w(CRITICAL HIGH MEDIUM LOW)
+  @severity_order Triage.Severity.order()
   @unsafe_text ~r/[\x00-\x1F\x7F]/
 
   defmodule Image do
@@ -158,7 +158,7 @@ defmodule Triage.Inventory do
 
   # Highest scanner severity present in a group, as a rank. Shared by the
   # selected column and the default ordering so the two cannot drift.
-  @severity_rank_sql "max(case ? when 'CRITICAL' then 4 when 'HIGH' then 3 when 'MEDIUM' then 2 when 'LOW' then 1 else 0 end)"
+  @severity_rank_sql Triage.Severity.sql_max_rank()
 
   @group_sorts ~w(severity newest occurrences cve)
   @default_group_sort "severity"
@@ -480,6 +480,7 @@ defmodule Triage.Inventory do
             where: p.image_id in ^image_ids,
             order_by: [asc: p.owner, asc: p.namespace, asc: p.environment, asc: p.id]
           )
+          |> apply_placement_scope(owner, environment)
           |> Repo.all()
 
         exposure_map =
@@ -845,10 +846,8 @@ defmodule Triage.Inventory do
     raise ArgumentError, "scope values must be strings or nil, got: " <> inspect(value)
   end
 
-  @severity_labels %{4 => "CRITICAL", 3 => "HIGH", 2 => "MEDIUM", 1 => "LOW", 0 => "UNKNOWN"}
-
   @doc "Maps an internal severity rank to its label for display."
-  def severity_label(rank), do: Map.get(@severity_labels, rank, "UNKNOWN")
+  defdelegate severity_label(rank), to: Triage.Severity, as: :label
 
   def severity_order, do: @severity_order
 end

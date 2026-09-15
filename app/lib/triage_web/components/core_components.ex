@@ -8,12 +8,13 @@ defmodule TriageWeb.CoreComponents do
   with doc strings and declarative assigns. You may customize and style
   them in any way you want, based on your application growth and needs.
 
-  The foundation for styling is Tailwind CSS, a utility-first CSS framework,
-  augmented with daisyUI, a Tailwind CSS plugin that provides UI components
-  and themes. Here are useful references:
-
-    * [daisyUI](https://daisyui.com/docs/intro/) - a good place to get
-      started and see the available components.
+  The foundation for styling is Tailwind CSS. The utilities come from the
+  generated build: "assets/css/tailwind.css" is compiled by `mix assets.setup`
+  into "priv/static/assets/css/tailwind.css". The visual identity - colour,
+  spacing, and the look of each component - lives in this application's own
+  "priv/static/assets/css/app.css", which loads after the generated sheet and
+  is therefore authoritative. There is no daisyUI, no bundler and no runtime
+  CSS dependency. Here are useful references:
 
     * [Tailwind CSS](https://tailwindcss.com) - the foundational framework
       we build on. You will use it for layout, sizing, flexbox, grid, and
@@ -218,7 +219,7 @@ defmodule TriageWeb.CoreComponents do
             checked={@checked}
             aria-invalid={@errors != [] && "true"}
             aria-errormessage={@errors != [] && "#{@id}-errors"}
-            class={@class || "checkbox checkbox-sm"}
+            class={@class}
             {@rest}
           />{@label}
         </span>
@@ -238,7 +239,7 @@ defmodule TriageWeb.CoreComponents do
         <select
           id={@id}
           name={@name}
-          class={[@class || "w-full select", @errors != [] && (@error_class || "select-error")]}
+          class={[@class || "w-full", @errors != [] && @error_class]}
           multiple={@multiple}
           aria-invalid={@errors != [] && "true"}
           aria-errormessage={@errors != [] && "#{@id}-errors"}
@@ -266,8 +267,8 @@ defmodule TriageWeb.CoreComponents do
           aria-invalid={@errors != [] && "true"}
           aria-errormessage={@errors != [] && "#{@id}-errors"}
           class={[
-            @class || "w-full textarea",
-            @errors != [] && (@error_class || "textarea-error")
+            @class || "w-full",
+            @errors != [] && @error_class
           ]}
           {@rest}
         >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -293,8 +294,8 @@ defmodule TriageWeb.CoreComponents do
           aria-invalid={@errors != [] && "true"}
           aria-errormessage={@errors != [] && "#{@id}-errors"}
           class={[
-            @class || "w-full input",
-            @errors != [] && (@error_class || "input-error")
+            @class || "w-full",
+            @errors != [] && @error_class
           ]}
           {@rest}
         />
@@ -421,9 +422,12 @@ defmodule TriageWeb.CoreComponents do
 
   def list(assigns) do
     ~H"""
-    <ul class="list">
-      <li :for={item <- @item} class="list-row">
-        <div class="list-col-grow">
+    <ul>
+      <li
+        :for={item <- @item}
+        class="flex items-start gap-2 border-b border-(--triage-border) py-1.5 last:border-b-0"
+      >
+        <div class="flex-auto min-w-0">
           <div class="font-bold">{item.title}</div>
           <div>{render_slot(item)}</div>
         </div>
@@ -442,8 +446,10 @@ defmodule TriageWeb.CoreComponents do
   You can customize the size and colors of the icons by setting
   width, height, and background color classes.
 
-  Icons are extracted from the `deps/heroicons` directory and bundled within
-  your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
+  Each name renders a `<span>` whose class is the icon name; the artwork
+  is a single-colour mask inlined in "priv/static/assets/css/app.css" (see the
+  `hero-*` rules there), so the glyph takes the `currentColor` of its context
+  and the `size-*` class the call site passes.
 
   ## Examples
 

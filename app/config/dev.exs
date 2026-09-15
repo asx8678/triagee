@@ -15,7 +15,8 @@ config :triage, Triage.Repo,
 #
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
-# to bundle .js and .css sources.
+# to bundle .js and .css sources. The Tailwind watcher rebuilds the stylesheet
+# on source changes; it installs the CLI only if _build does not have it.
 config :triage, TriageWeb.Endpoint,
   # runtime.exs enforces the TRIAGE_BIND loopback-only policy.
   http: [ip: {127, 0, 0, 1}, port: 4000],
@@ -23,7 +24,9 @@ config :triage, TriageWeb.Endpoint,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "hC4HG8qTPx98cDM7hNDMr99YeQiDagghonz1eg2a3fOjvc2Bba6nylEzo07tuORP",
-  watchers: []
+  watchers: [
+    tailwind: {Tailwind, :install_and_run, [:triage, ~w(--watch)]}
+  ]
 
 # ## SSL Support
 #

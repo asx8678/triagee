@@ -19,6 +19,7 @@ defmodule TriageWeb.WhatsNewLive do
 
   alias Triage.Activity
   alias TriageWeb.ActivityFilters
+  alias TriageWeb.FindingFilters
 
   @impl true
   def mount(_params, _session, socket) do
@@ -314,7 +315,13 @@ defmodule TriageWeb.WhatsNewLive do
               Joined from current local records, not captured facts about this event.
             </p>
             <p>
-              <strong>{row.finding.cve}</strong>
+              <%= if target = FindingFilters.advisory_path(row.finding.cve, @filters) do %>
+                <.link id={"event-cve-#{row.id}"} navigate={target}>
+                  <strong>{row.finding.cve}</strong>
+                </.link>
+              <% else %>
+                <strong>{row.finding.cve}</strong>
+              <% end %>
               · {row.finding.package_name} <code>{row.finding.package_version}</code>
             </p>
             <dl class="evidence-grid key-value">

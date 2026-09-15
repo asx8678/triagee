@@ -60,6 +60,10 @@ defmodule Triage.MixProject do
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5"},
 
+      # Compiles assets/css/tailwind.css into the served stylesheet. A build
+      # tool only: it ships no runtime code, and `mix assets.setup` drives it.
+      {:tailwind, "~> 0.5", runtime: false},
+
       # Static analysis, development and test only and never part of a release:
       # credo for consistency, dialyxir for the type and pattern analysis that
       # would have caught this codebase's dead-branch defect on its own.

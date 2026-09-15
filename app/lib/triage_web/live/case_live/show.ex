@@ -15,6 +15,7 @@ defmodule TriageWeb.CaseLive.Show do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Intel
   alias TriageWeb.{CaseFilters, FindingFilters}
 
   # The section components and the shared view-model formatting live in sibling
@@ -397,12 +398,16 @@ defmodule TriageWeb.CaseLive.Show do
     prior_rebind_required? =
       if restore?, do: retained.rebind_required?, else: socket.assigns.rebind_required?
 
+    evidence = evidence_view(data.snapshot && data.snapshot.payload)
+
     socket
     |> assign(:case_error, nil)
     |> assign(:case, review_case)
     |> assign(:snapshot, data.snapshot)
     |> assign(:latest_review, Enum.max_by(data.reviews, & &1.id, fn -> nil end))
-    |> assign(:evidence, evidence_view(data.snapshot && data.snapshot.payload))
+    |> assign(:evidence, evidence)
+    |> assign(:page_title, case_title(evidence.finding[:cve], review_case.id))
+    |> assign(:kev, Intel.kev_row(evidence.finding[:cve]))
     |> assign(:evidence_status, data.evidence_status)
     |> assign(:known_snapshot_ids, Enum.map(data.snapshots, & &1.id))
     |> assign(:expected_revision, revision)
@@ -562,6 +567,11 @@ defmodule TriageWeb.CaseLive.Show do
 
   defp valid_token(_other), do: :error
 
+  # Keep the advisory id in the tab title: a reviewer with several cases open can see which
+  # advisory each tab belongs to. A case without a captured id falls back to its own id.
+  defp case_title(cve, id) when is_binary(cve) and cve != "", do: "#{cve} · Case #{id}"
+  defp case_title(_cve, id), do: "Review case #{id}"
+
   defp notice_key(:conflict), do: :conflict
   defp notice_key(:evidence_stale), do: :evidence_stale
   defp notice_key(:token_reuse), do: :token_reuse
@@ -574,6 +584,13 @@ defmodule TriageWeb.CaseLive.Show do
   defp status_notice(:source_out_of_scope), do: :source_out_of_scope
   defp status_notice(:source_missing), do: :source_missing
   defp status_notice(_other), do: nil
+
+  # The advisory detail for this case, scoped to the case's SAVED scope and never
+  # to the URL scope — the case page's own rule. A mismatched query scope can
+  # therefore never widen or narrow the aggregate opened from this case.
+  defp cve_path(cve, review_case) do
+    ~p"/cves/#{cve}?#{%{owner: review_case.owner, environment: review_case.environment}}"
+  end
 
   defp back_path(filters, finding_id) do
     qs = FindingFilters.query_params(filters)
@@ -611,6 +628,12 @@ defmodule TriageWeb.CaseLive.Show do
             eyebrow={"Review case ##{@case.id} · Revision #{@case.revision}"}
           >
             <:actions>
+              <.link
+                :if={linkable?(@evidence.finding[:cve])}
+                id="case-cve-action"
+                navigate={cve_path(@evidence.finding[:cve], @case)}
+                class="button button-secondary"
+              >Advisory detail</.link>
               <.link id="back-to-finding" navigate={@back_path} class="button button-secondary">Finding detail</.link>
               <.link
                 id="back-to-cases"
@@ -630,6 +653,31 @@ defmodule TriageWeb.CaseLive.Show do
           <.notice :if={@scope_mismatch?} id="scope-mismatch" kind="warning">
             URL scope does not match this case. Evidence and assessment use the saved case scope only; the finding link uses that saved scope.
           </.notice>
+
+          <div :if={@kev} id="case-kev" class="stack">
+            <p class="cluster">
+              <.kev_marker id="case-kev-badge" kev={@kev} />
+              <span class="supporting">
+                Cached KEV feed, populated by an explicit operator refresh — current public
+                intelligence about this advisory, not saved case evidence. An advisory missing
+                from the cache may still be exploited.
+              </span>
+            </p>
+            <dl class="evidence-grid key-value">
+              <div :if={@kev.due_date}>
+                <dt>Recorded KEV due date</dt>
+                <dd><.timestamp value={@kev.due_date} /></dd>
+              </div>
+              <div :if={@kev.known_ransomware}>
+                <dt>Known ransomware campaign use</dt>
+                <dd>Recorded in the cached entry</dd>
+              </div>
+              <div :if={@kev.required_action}>
+                <dt>Recorded required action</dt>
+                <dd>{@kev.required_action}</dd>
+              </div>
+            </dl>
+          </div>
 
           <div id="case-workspace" class="case-workspace">
             <.evidence_snapshot

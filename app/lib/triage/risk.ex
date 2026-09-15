@@ -13,7 +13,6 @@ defmodule Triage.Risk do
 
   @policy_version 1
 
-  @severity_weight %{"CRITICAL" => 4, "HIGH" => 3, "MEDIUM" => 2, "LOW" => 1}
   @priorities ~w(critical high medium low)
 
   defstruct [:priority, :severity, :exposure, reasons: [], policy_version: @policy_version]
@@ -55,7 +54,7 @@ defmodule Triage.Risk do
     known_exploited = get(attrs, :known_exploited) == true
     fix_available = get(attrs, :fix_available) == true
 
-    base = Map.get(@severity_weight, severity, 0)
+    base = Triage.Severity.rank(severity)
 
     {level, reasons} =
       cond do
@@ -134,19 +133,12 @@ defmodule Triage.Risk do
   # order and this mapping from drifting apart.
   defp priority_for(level), do: Enum.at(@priorities, 4 - level)
 
-  defp normalize_severity(nil), do: nil
-
-  defp normalize_severity(s) when is_binary(s) do
-    case String.upcase(String.trim(s)) do
-      "CRITICAL" -> "CRITICAL"
-      "HIGH" -> "HIGH"
-      "MEDIUM" -> "MEDIUM"
-      "LOW" -> "LOW"
-      _ -> nil
-    end
-  end
+  defp normalize_severity(value), do: Triage.Severity.normalize(value)
 
   defp get(map, key) do
-    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+    case Map.fetch(map, key) do
+      {:ok, value} -> value
+      :error -> Map.get(map, Atom.to_string(key))
+    end
   end
 end

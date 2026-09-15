@@ -1,0 +1,33 @@
+/* Tailwind CSS entrypoint for Triage.
+ *
+ * This file is the *source*. `mix tailwind triage` compiles it into
+ * `priv/static/assets/css/tailwind.css`, which the root layout loads before
+ * `css/app.css`. `mix assets.setup` runs that build, so the shipped stylesheet
+ * is reproducible from a clean checkout instead of being a frozen artifact with
+ * no way to regenerate it.
+ *
+ * `source(none)` turns off Tailwind's automatic project-wide file scan, so the
+ * candidate set is exactly the application sources named below. Without it the
+ * scan walks up to the repository root and would also read `deps/`, `_build/`
+ * and the evidence notes.
+ */
+@import "tailwindcss" source(none);
+
+/* Utilities are emitted only for classes actually used under lib/. */
+@source "../../lib";
+
+/* Bridge the two scale names carried over from the generated Phoenix
+ * components onto this application's own tokens, so a utility can never
+ * introduce a colour the rest of the stylesheet does not already define. */
+@theme {
+  --color-base-content: #182539;
+  --color-error: #a02222;
+
+  /* The application's own type scale. app.css used to normalise the generated
+   * `text-xs` / `text-sm` utilities inside `.triage-content`; the scale lives
+   * here instead, so the utility itself carries the size and no rule shadows a
+   * Tailwind class name. The default v4 line-height ratios are left in place,
+   * which is exactly what those overrides left behind. */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.8125rem;
+}

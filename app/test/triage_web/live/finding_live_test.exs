@@ -2,6 +2,7 @@ defmodule TriageWeb.FindingLiveTest do
   use TriageWeb.ConnCase, async: true
 
   import Ecto.Query
+  alias Triage.Intel
   alias Triage.Inventory.Finding
   alias Triage.Repo
   alias Triage.Seeds
@@ -16,6 +17,25 @@ defmodule TriageWeb.FindingLiveTest do
 
     assert has_element?(view, "#groups", "CVE-2025-1001")
     refute has_element?(view, "#groups", "CVE-2023-5005")
+  end
+
+  test "a cached KEV row marks the advisory group on the inventory", %{conn: conn} do
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: "CVE-2025-1001",
+          summary: "kev entry",
+          published_at: ~U[2026-09-12 10:00:00Z]
+        }
+      ])
+
+    {:ok, view, _html} = live(conn, ~p"/findings")
+
+    assert has_element?(view, "#group-kev-CVE-2025-1001", "Known exploited (KEV cache)")
+    assert has_element?(view, "#inventory-kev-note")
+
+    # Every other group has no cached row, so no other marker is rendered.
+    refute has_element?(view, "#group-kev-CVE-2024-2002")
   end
 
   test "index honours the team filter from the URL", %{conn: conn} do
@@ -80,6 +100,40 @@ defmodule TriageWeb.FindingLiveTest do
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}?owner=alpha")
 
     assert has_element?(view, "a[href=\"/findings?owner=alpha\"]")
+
+    # The same scope reaches the advisory aggregate, so the detail cannot open a
+    # wider or narrower view than the occurrence it is describing.
+    assert has_element?(view, "#finding-cve-action[href='/cves/#{finding.cve}?owner=alpha']")
+
+    # The list's own search and order params never travel: the advisory route
+    # cannot apply them, so a link carrying them would claim a filter it ignores.
+    {:ok, scoped, _html} =
+      live(
+        conn,
+        ~p"/findings/#{finding.id}?owner=alpha&environment=prod-cluster-1&q=busybox&sort=newest"
+      )
+
+    expected = ~p"/cves/#{finding.cve}?#{%{owner: "alpha", environment: "prod-cluster-1"}}"
+    assert has_element?(scoped, "#finding-cve-action[href='#{expected}']")
+  end
+
+  test "the finding detail marks a cached KEV advisory and copies its exact id", %{conn: conn} do
+    finding = Repo.one!(from f in Finding, where: f.cve == "CVE-2024-2002")
+
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: finding.cve,
+          summary: "kev entry",
+          published_at: ~U[2026-09-12 10:00:00Z]
+        }
+      ])
+
+    {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}")
+
+    assert has_element?(view, "#finding-kev-badge", "Known exploited (KEV cache)")
+    assert has_element?(view, "#finding-cve-copy[aria-label='Copy exact advisory id']")
+    assert has_element?(view, "#finding-cve-copy[data-copy-value='#{finding.cve}']")
   end
 
   test "detail applies the selected team to placements and related occurrences", %{conn: conn} do

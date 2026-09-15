@@ -31,13 +31,27 @@ defmodule Triage.Intel do
       field :summary, :string
       field :published_at, :utc_datetime
       field :fetched_at, :utc_datetime
+      # KEV actionability, carried from the feed. Nil for NVD rows and for rows
+      # cached before these columns existed — displayed as "not captured".
+      field :required_action, :string
+      field :due_date, :utc_datetime
+      field :known_ransomware, :boolean
 
       timestamps(type: :utc_datetime)
     end
 
     def changeset(advisory, attrs) do
       advisory
-      |> cast(attrs, [:source, :external_id, :summary, :published_at, :fetched_at])
+      |> cast(attrs, [
+        :source,
+        :external_id,
+        :summary,
+        :published_at,
+        :fetched_at,
+        :required_action,
+        :due_date,
+        :known_ransomware
+      ])
       |> validate_required([:source, :external_id, :fetched_at])
       |> unique_constraint([:source, :external_id])
     end
@@ -132,6 +146,52 @@ defmodule Triage.Intel do
   def cached_kev(_other), do: []
 
   @doc """
+  Cached KEV rows for a set of advisory ids, keyed by id, for list views.
+
+  One batched read: calling `cached_kev/1` once per rendered row would be one query per
+  row. The predicate is deliberately the same as `cached_kev/1` — `source == "kev"` and an
+  exact `external_id` match — so the batched and the single read can never disagree about
+  whether an advisory is in the cache. Ids are deduplicated, and blank or non-binary ones
+  are dropped, so a row with no captured advisory id contributes no lookup.
+
+  A missing key means the cache holds no row for that id. That is never a statement that
+  the advisory is not exploited, and callers must render it as no marker at all.
+  """
+  @spec kev_index([String.t()] | term()) :: %{optional(String.t()) => map()}
+  def kev_index(cves) when is_list(cves) do
+    ids =
+      cves
+      |> Enum.filter(&is_binary/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+
+    if ids == [] do
+      %{}
+    else
+      from(a in Advisory,
+        where: a.source == "kev" and a.external_id in ^ids,
+        order_by: [desc: a.fetched_at, desc: a.id]
+      )
+      |> Repo.all()
+      |> Enum.reduce(%{}, fn row, acc -> Map.put_new(acc, row.external_id, row) end)
+    end
+  end
+
+  def kev_index(_other), do: %{}
+
+  @doc """
+  The newest cached KEV row for a single advisory id, or nil.
+
+  The detail pages read one advisory at a time, so they use this instead of the batched
+  `kev_index/1`: `cached_kev/1` already orders newest first, which makes this that read
+  without the list. Nil means the cache holds no row for the id — never that the advisory
+  is not exploited — and a blank or non-binary id performs no query at all.
+  """
+  @spec kev_row(term()) :: map() | nil
+  def kev_row(cve) when is_binary(cve) and cve != "", do: cve |> cached_kev() |> List.first()
+  def kev_row(_other), do: nil
+
+  @doc """
   Cached NVD advisories for one CVE.
 
   NVD refreshes are per CVE, so the source key carries the CVE
@@ -156,6 +216,13 @@ defmodule Triage.Intel do
   refresh ends up recorded under a differently cased source than the row it protects.
   """
   def nvd_source(cve) when is_binary(cve), do: "nvd:" <> String.upcase(String.trim(cve))
+
+  @doc "Current advisory rows for one source, independent of a per-CVE match or refresh receipt."
+  @spec cached_advisory_count(String.t()) :: non_neg_integer()
+  def cached_advisory_count(source) when is_binary(source) do
+    from(a in Advisory, where: a.source == ^source)
+    |> Repo.aggregate(:count)
+  end
 
   @doc "Latest refresh receipt per source (for stale-status display)."
   def latest_receipts do
@@ -191,32 +258,27 @@ defmodule Triage.Intel do
   is a valid outcome ("source reported nothing"), NOT a cache wipe order on
   error; errors are recorded as receipts instead and never reach this call.
   """
-  def replace_advisories(source, rows) when is_binary(source) and is_list(rows) do
-    fetched_at = DateTime.utc_now()
-
-    Repo.transaction(fn ->
-      from(a in Advisory, where: a.source == ^source) |> Repo.delete_all()
-
-      Enum.each(rows, fn row ->
-        %Advisory{}
-        |> Advisory.changeset(Map.merge(row, %{source: source, fetched_at: fetched_at}))
-        |> Repo.insert!()
-      end)
-
-      length(rows)
-    end)
-  end
+  def replace_advisories(source, rows) when is_binary(source) and is_list(rows),
+    do: replace_source(Advisory, source, rows)
 
   @doc "Replaces the cached news rows for one source. Same atomic semantics as advisories."
-  def replace_news(source, rows) when is_binary(source) and is_list(rows) do
+  def replace_news(source, rows) when is_binary(source) and is_list(rows),
+    do: replace_source(NewsItem, source, rows)
+
+  # The one replacement path for a cached source. Advisory and news rows differ only in
+  # their schema and their changeset, so both public functions share this body: one path
+  # to validate, and the two caches cannot drift into different failure behaviour. The
+  # replacement rows are inserted inside the deleting transaction, so a failure rolls the
+  # source back to its previous contents instead of returning it empty.
+  defp replace_source(schema, source, rows) do
     fetched_at = DateTime.utc_now()
 
     Repo.transaction(fn ->
-      from(n in NewsItem, where: n.source == ^source) |> Repo.delete_all()
+      from(r in schema, where: r.source == ^source) |> Repo.delete_all()
 
       Enum.each(rows, fn row ->
-        %NewsItem{}
-        |> NewsItem.changeset(Map.merge(row, %{source: source, fetched_at: fetched_at}))
+        struct(schema)
+        |> schema.changeset(Map.merge(row, %{source: source, fetched_at: fetched_at}))
         |> Repo.insert!()
       end)
 

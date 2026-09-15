@@ -9,6 +9,7 @@ defmodule TriageWeb.FindingLive.Show do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Intel
   alias Triage.Inventory
   alias TriageWeb.{ActivityFilters, FindingFilters}
 
@@ -67,7 +68,9 @@ defmodule TriageWeb.FindingLive.Show do
                socket
                |> assign(:invalid_scope, [])
                |> assign(:scope, scope)
-               |> assign(:data, data)}
+               |> assign(:data, data)
+               |> assign(:page_title, finding_title(data.finding.cve))
+               |> assign(:kev, Intel.kev_row(data.finding.cve))}
 
             {:error, :out_of_scope} ->
               {:noreply,
@@ -145,6 +148,15 @@ defmodule TriageWeb.FindingLive.Show do
           <.link id="back-to-findings" navigate={back_path(@scope)} class="button button-secondary">
             ← Back to inventory
           </.link>
+          <.link
+            :if={advisory_target(@data, @scope)}
+            id="finding-cve-action"
+            navigate={advisory_target(@data, @scope)}
+            class="button button-secondary"
+          >
+            Advisory page
+          </.link>
+          <.copy_value id="finding-cve-copy" label="advisory id" value={finding_cve(@data)} />
         </:actions>
       </.page_header>
 
@@ -158,6 +170,15 @@ defmodule TriageWeb.FindingLive.Show do
       </p>
 
       <%= if @data do %>
+        <p :if={@kev} id="finding-kev" class="cluster">
+          <.kev_marker id="finding-kev-badge" kev={@kev} />
+          <span class="supporting">
+            Cached KEV feed, populated by an explicit operator refresh — current public
+            intelligence about this advisory, not saved case evidence. No marker is shown for
+            an advisory the cache does not hold.
+          </span>
+        </p>
+
         <section id="finding-summary" class="stack" aria-labelledby="finding-summary-title">
           <div>
             <h2 id="finding-summary-title">
@@ -460,6 +481,24 @@ defmodule TriageWeb.FindingLive.Show do
   # The findings list query, including the result order and position. Distinct
   # from `scope_qs/1`, which is also used for /cases links and must stay
   # scope-only.
+  # The advisory aggregate for this occurrence, scoped to the display scope the
+  # finding was opened in. Only the two scope keys travel: the list's own q,
+  # severity, order and cursor params mean nothing to the advisory route, and
+  # sending them would be a link that claims a filter it cannot apply. Returns
+  # nil — no link at all — when the captured advisory id is blank.
+  # The tab title names the advisory, so several findings stay distinguishable in a tab
+  # strip. Before the occurrence loads there is no id to name.
+  defp finding_title(cve) when is_binary(cve) and cve != "", do: cve <> " · Finding"
+  defp finding_title(_cve), do: "Finding detail"
+
+  defp finding_cve(%{finding: %{cve: cve}}), do: cve
+  defp finding_cve(_data), do: nil
+
+  # The advisory aggregate for the loaded occurrence in this page's display scope, or nil
+  # when no captured id can address the route: absent data, a missing id and a blank id all
+  # render no link at all rather than a link to an empty route.
+  defp advisory_target(data, scope), do: FindingFilters.advisory_path(finding_cve(data), scope)
+
   defp findings_list_qs(scope) do
     FindingFilters.query_params(%{
       owner: scope.owner,

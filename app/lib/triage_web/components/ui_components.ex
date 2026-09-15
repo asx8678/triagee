@@ -46,6 +46,79 @@ defmodule TriageWeb.UIComponents do
     """
   end
 
+  @doc """
+  The marker for an advisory the cached KEV feed lists as exploited.
+
+  Rendered only when the cache holds a row: a missing row and an empty cache both render
+  nothing, so this can never be read as "not exploited". The label names the cache because
+  a cached feed is the only thing the product knows — an operator refresh populates it, and
+  callers disclose freshness separately.
+  """
+  attr :id, :string, required: true
+  attr :kev, :any, default: nil
+
+  def kev_marker(assigns) do
+    ~H"""
+    <span :if={@kev} id={@id} class="kev-flag">Known exploited (KEV cache)</span>
+    """
+  end
+
+  @doc """
+  The one-line source note for a view that renders KEV markers.
+
+  Shown only while at least one marker is present, so its absence is not a statement
+  either: no marker means nothing was claimed, never that nothing is exploited.
+  """
+  attr :id, :string, required: true
+  attr :present?, :boolean, required: true
+
+  def kev_note(assigns) do
+    ~H"""
+    <p :if={@present?} id={@id} class="supporting">
+      Known exploited is read from the cached KEV feed an operator refresh populates; an
+      advisory missing from it may still be exploited.
+    </p>
+    """
+  end
+
+  @doc """
+  Copy control for one exact short value that is also displayed as a heading or a link.
+
+  The shared `CopyValue` hook copies the value verbatim; the accessible name states what is
+  copied and the feedback region is announced politely. Nothing renders when the value is
+  missing, so an absent id never produces a control that copies nothing.
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :value, :any, default: nil
+
+  def copy_value(assigns) do
+    assigns = assign(assigns, :text, if(is_binary(assigns.value), do: assigns.value, else: nil))
+
+    ~H"""
+    <%= if @text do %>
+      <button
+        id={@id}
+        type="button"
+        class="button button-secondary"
+        phx-hook="CopyValue"
+        data-copy-value={@text}
+        data-copy-feedback={"#{@id}-feedback"}
+        aria-label={"Copy exact #{@label}"}
+      >
+        Copy {@label}
+      </button>
+      <span
+        id={"#{@id}-feedback"}
+        class="supporting"
+        role="status"
+        aria-live="polite"
+        phx-update="ignore"
+      ></span>
+    <% end %>
+    """
+  end
+
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :value, :any, required: true
@@ -56,77 +129,40 @@ defmodule TriageWeb.UIComponents do
     assigns = assign(assigns, value: value, available?: value not in [nil, ""])
 
     ~H"""
-    <%= if @variant == "compact" do %>
-      <div id={@id} class="technical-value technical-value-compact">
-        <span class="technical-label sr-only">{@label}</span>
-        <%= if @available? do %>
-          <details class="disclosure technical-compact">
-            <summary aria-label={"Show full #{@label}"}>
-              <span class="technical-preview">{technical_preview(@value)}</span>
-              <span class="supporting">Full value</span>
-            </summary>
-            <code id={"#{@id}-full"} class="technical-full">{@value}</code>
-            <div class="cluster">
-              <button
-                id={"#{@id}-copy"}
-                type="button"
-                class="button button-secondary"
-                phx-hook="CopyValue"
-                data-copy-value={@value}
-                data-copy-feedback={"#{@id}-feedback"}
-                aria-label={"Copy exact #{@label}"}
-              >
-                Copy value
-              </button>
-              <span
-                id={"#{@id}-feedback"}
-                class="supporting"
-                role="status"
-                aria-live="polite"
-                phx-update="ignore"
-              ></span>
-            </div>
-          </details>
-        <% else %>
-          <span class="muted">Not captured</span>
-        <% end %>
-      </div>
-    <% else %>
-      <div id={@id} class="technical-value">
-        <span class="technical-label">{@label}</span>
-        <%= if @available? do %>
-          <details class="disclosure">
-            <summary aria-label={"Show full #{@label}"}>
-              <span class="technical-preview">{technical_preview(@value)}</span>
-              <span class="supporting">Full value</span>
-            </summary>
-            <code id={"#{@id}-full"} class="technical-full">{@value}</code>
-            <div class="cluster">
-              <button
-                id={"#{@id}-copy"}
-                type="button"
-                class="button button-secondary"
-                phx-hook="CopyValue"
-                data-copy-value={@value}
-                data-copy-feedback={"#{@id}-feedback"}
-                aria-label={"Copy exact #{@label}"}
-              >
-                Copy value
-              </button>
-              <span
-                id={"#{@id}-feedback"}
-                class="supporting"
-                role="status"
-                aria-live="polite"
-                phx-update="ignore"
-              ></span>
-            </div>
-          </details>
-        <% else %>
-          <span class="muted">Not captured</span>
-        <% end %>
-      </div>
-    <% end %>
+    <div id={@id} class={["technical-value", @variant == "compact" && "technical-value-compact"]}>
+      <span class={["technical-label", @variant == "compact" && "sr-only"]}>{@label}</span>
+      <%= if @available? do %>
+        <details class={["disclosure", @variant == "compact" && "technical-compact"]}>
+          <summary aria-label={"Show full #{@label}"}>
+            <span class="technical-preview">{technical_preview(@value)}</span>
+            <span class="supporting">Full value</span>
+          </summary>
+          <code id={"#{@id}-full"} class="technical-full">{@value}</code>
+          <div class="cluster">
+            <button
+              id={"#{@id}-copy"}
+              type="button"
+              class="button button-secondary"
+              phx-hook="CopyValue"
+              data-copy-value={@value}
+              data-copy-feedback={"#{@id}-feedback"}
+              aria-label={"Copy exact #{@label}"}
+            >
+              Copy value
+            </button>
+            <span
+              id={"#{@id}-feedback"}
+              class="supporting"
+              role="status"
+              aria-live="polite"
+              phx-update="ignore"
+            ></span>
+          </div>
+        </details>
+      <% else %>
+        <span class="muted">Not captured</span>
+      <% end %>
+    </div>
     """
   end
 

@@ -23,6 +23,31 @@ defmodule TriageWeb.UIComponentsTest do
     assert count(doc, "script") == 0
   end
 
+  test "both technical variants preserve copy targets, hostile text and unique IDs" do
+    value = ~s(sha256:<script>&"copy-me")
+
+    for variant <- ["default", "compact"] do
+      doc =
+        component(&UIComponents.technical_value/1,
+          id: "technical",
+          label: "Digest",
+          value: value,
+          variant: variant
+        )
+
+      assert count(doc, "#technical") == 1
+      assert count(doc, "#technical-copy") == 1
+      assert count(doc, "#technical-feedback") == 1
+      assert attrs(doc, "#technical-copy", "data-copy-feedback") == ["technical-feedback"]
+      assert attrs(doc, "#technical-copy", "data-copy-value") == [value]
+      assert attrs(doc, "#technical-copy", "aria-label") == ["Copy exact Digest"]
+      assert count(doc, "#technical-feedback[phx-update='ignore'][aria-live='polite']") == 1
+      assert text(doc, "#technical-full") == value
+      assert count(doc, "script") == 0
+      assert count(doc, ".technical-label.sr-only") == if(variant == "compact", do: 1, else: 0)
+    end
+  end
+
   test "missing technical values do not offer a fake copy action" do
     for value <- [nil, ""] do
       doc =

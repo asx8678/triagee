@@ -16,7 +16,12 @@ defmodule TriageWeb.CaseLive.Index do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Intel
   alias TriageWeb.CaseFilters
+
+  # Only the route-id guard: `text/1` here is Phoenix.HTML's escaping helper,
+  # which the queue already uses for captured display values.
+  import TriageWeb.CaseLive.Format, only: [linkable?: 1]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -98,6 +103,7 @@ defmodule TriageWeb.CaseLive.Index do
           |> assign(:has_more?, has_more?)
           |> assign(:next_before_id, next_before_id)
           |> assign(:cursor, parsed.before_id)
+          |> assign(:kev, Intel.kev_index(Enum.map(rows, & &1.finding.cve)))
           |> stream(:cases, rows, reset: true)
 
         {:error, _reason} ->
@@ -118,6 +124,7 @@ defmodule TriageWeb.CaseLive.Index do
     |> assign(:has_more?, false)
     |> assign(:next_before_id, nil)
     |> assign(:cursor, nil)
+    |> assign(:kev, %{})
     |> stream(:cases, [], reset: true)
   end
 
@@ -142,6 +149,22 @@ defmodule TriageWeb.CaseLive.Index do
       |> Map.put(:before, next_before_id)
 
     ~p"/cases?#{qs}"
+  end
+
+  # The advisory detail for a queue row, carrying the queue's own scope so the
+  # advisory opens on the team and environment the row was read in. The id is the
+  # frozen captured one; a blank capture renders as text, never as a link.
+  defp cve_path(row, filters) do
+    qs =
+      %{owner: filters[:owner], environment: filters[:environment]}
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+      |> Map.new()
+
+    if map_size(qs) == 0 do
+      ~p"/cves/#{row.finding.cve}"
+    else
+      ~p"/cves/#{row.finding.cve}?#{qs}"
+    end
   end
 
   defp image_label(%{repository: repository, tag: tag})
@@ -270,6 +293,8 @@ defmodule TriageWeb.CaseLive.Index do
         </:actions>
       </.empty_state>
       <%!-- Empty/error messages stay outside the stream so patches cannot retain stale static rows. --%>
+      <.kev_note id="queue-kev-note" present?={map_size(@kev) > 0} />
+
       <div class="table-region" role="region" tabindex="0" aria-label="Saved review cases">
         <table id="queue-table" class="data-table">
           <thead>
@@ -284,12 +309,22 @@ defmodule TriageWeb.CaseLive.Index do
           <tbody id="case-queue" phx-update="stream">
             <tr :for={{id, row} <- @streams.cases} id={id}>
               <th scope="row">
-                <strong>{text(row.finding.cve)}</strong>
+                <.link
+                  :if={linkable?(row.finding.cve)}
+                  id={"case-cve-#{row.id}"}
+                  navigate={cve_path(row, @filters)}
+                >
+                  <strong>{text(row.finding.cve)}</strong>
+                </.link>
+                <strong :if={not linkable?(row.finding.cve)}>{text(row.finding.cve)}</strong>
                 <p>
                   {text(row.finding.package_name)} <code>{text(row.finding.package_version)}</code>
                 </p>
                 <p class="supporting">Case #{row.id} · Revision {row.revision}</p>
-                <.status_badge label={text(row.finding.severity)} kind="severity" />
+                <span class="cluster">
+                  <.status_badge label={text(row.finding.severity)} kind="severity" />
+                  <.kev_marker id={"case-kev-#{row.id}"} kev={@kev[row.finding.cve]} />
+                </span>
               </th>
               <td>
                 <.technical_value

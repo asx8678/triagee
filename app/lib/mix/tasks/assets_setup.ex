@@ -1,8 +1,10 @@
 defmodule Mix.Tasks.Assets.Setup do
-  @shortdoc "Copies the pinned Phoenix client scripts into priv/static/assets/vendor"
+  @shortdoc "Builds Tailwind CSS and copies the pinned Phoenix client scripts"
 
   @moduledoc """
-  Copies the shipped browser distributions of the mix.lock-pinned Hex packages
+  Produces the served browser assets: compiles `assets/css/tailwind.css` into
+  the served stylesheet with the Tailwind CLI, then copies the shipped browser
+  distributions of the mix.lock-pinned Hex packages
   `:phoenix`, `:phoenix_html` and `:phoenix_live_view` into
   `priv/static/assets/vendor/`, where the root layout loads them as
   same-origin scripts before the `assets/js/app.js` LiveSocket bootstrap.
@@ -26,6 +28,20 @@ defmodule Mix.Tasks.Assets.Setup do
 
   @impl Mix.Task
   def run(_args) do
+    build_tailwind()
+    copy_client_scripts()
+    :ok
+  end
+
+  # The Tailwind CLI is a standalone binary fetched once into `_build`;
+  # `--if-missing` keeps re-runs offline and cheap. The profile name matches the
+  # `:tailwind` config key in config/config.exs.
+  defp build_tailwind do
+    Mix.Task.run("tailwind.install", ["--if-missing"])
+    Mix.Task.run("tailwind", ["triage"])
+  end
+
+  defp copy_client_scripts do
     deps_path = Mix.Project.config()[:deps_path] || "deps"
     dest_dir = Path.join([File.cwd!(), "priv", "static", "assets", "vendor"])
     File.mkdir_p!(dest_dir)
@@ -44,7 +60,5 @@ defmodule Mix.Tasks.Assets.Setup do
       File.cp!(source, dest)
       Mix.shell().info("Copied #{source} -> #{dest}")
     end
-
-    :ok
   end
 end

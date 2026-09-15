@@ -20,6 +20,7 @@ defmodule TriageWeb.PageController do
       end)
 
     critical_total = read_overview(fn -> {:ok, Inventory.count_groups(severity: "CRITICAL")} end)
+    kev = read_overview(fn -> {:ok, Intel.kev_index(critical_rows_cves(critical))} end)
     cases = read_overview(fn -> Cases.list_cases() end)
     news = read_overview(fn -> {:ok, Intel.list_cached_news(10)} end)
     receipts = read_overview(fn -> Intel.latest_receipts() end)
@@ -32,6 +33,7 @@ defmodule TriageWeb.PageController do
       newest_total: shape_total(newest_total),
       critical: shape_group_rows(critical),
       critical_total: shape_total(critical_total),
+      kev: shape_kev(kev),
       news: shape_news(news),
       news_receipts: shape_receipts(receipts),
       recent_cases:
@@ -56,6 +58,16 @@ defmodule TriageWeb.PageController do
 
   # nil means "the total could not be read", which the template renders by
   # falling back to the rows it actually has instead of inventing a count.
+  # Only the ids actually rendered are looked up; an unreadable critical list looks up
+  # nothing instead of widening the read.
+  defp critical_rows_cves({:ok, rows}) when is_list(rows), do: Enum.map(rows, & &1.cve)
+  defp critical_rows_cves(_other), do: []
+
+  # A KEV read that failed, or returned nothing usable, degrades to no markers at all:
+  # the overview never renders a favourable claim out of a failed read.
+  defp shape_kev({:ok, map}) when is_map(map), do: map
+  defp shape_kev(_other), do: %{}
+
   defp shape_total({:ok, total}) when is_integer(total), do: total
   defp shape_total(_other), do: nil
 

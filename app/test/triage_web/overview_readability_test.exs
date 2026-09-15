@@ -3,7 +3,7 @@ defmodule TriageWeb.OverviewReadabilityTest do
 
   import Ecto.Query
 
-  alias Triage.{Cases, Repo, Seeds}
+  alias Triage.{Cases, Intel, Repo, Seeds}
   alias Triage.Inventory.Finding
 
   setup do
@@ -28,6 +28,32 @@ defmodule TriageWeb.OverviewReadabilityTest do
              "#suppressed-occurrence-count #overview-suppressed-link[href='/findings?suppressed=1']"
            )
            |> Enum.count() == 1
+  end
+
+  test "the overview marks a cached critical row and claims nothing without one", %{conn: conn} do
+    # Nothing cached yet: the critical table renders no marker and no source note.
+    before = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    assert LazyHTML.query(before, "[id^='home-critical-kev-']") |> Enum.count() == 0
+    assert LazyHTML.query(before, "#home-critical-kev-note") |> Enum.count() == 0
+
+    # CVE-2024-2002 is the seeds' one CRITICAL advisory in the overview table.
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: "CVE-2024-2002",
+          summary: "kev entry",
+          published_at: ~U[2026-09-12 10:00:00Z]
+        }
+      ])
+
+    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    assert document
+           |> LazyHTML.query("#home-critical-kev-CVE-2024-2002")
+           |> LazyHTML.text() == "Known exploited (KEV cache)"
+
+    assert LazyHTML.query(document, "#home-critical-kev-note") |> Enum.count() == 1
   end
 
   test "recent cases state whether an assessment exists using saved data", %{conn: conn} do

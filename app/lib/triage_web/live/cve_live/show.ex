@@ -16,6 +16,8 @@ defmodule TriageWeb.CveLive.Show do
   alias TriageWeb.FindingFilters
   alias TriageWeb.UIComponents
 
+  import TriageWeb.CaseLive.Format, only: [linkable?: 1]
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
@@ -27,7 +29,9 @@ defmodule TriageWeb.CveLive.Show do
      |> assign(:risk, nil)
      |> assign(:kev_advisories, [])
      |> assign(:nvd_advisories, [])
-     |> assign(:kev_matched?, false)}
+     |> assign(:kev_matched?, false)
+     |> assign(:kev_cache, empty_cache())
+     |> assign(:nvd_cache, empty_cache())}
   end
 
   @impl true
@@ -47,6 +51,7 @@ defmodule TriageWeb.CveLive.Show do
         {:ok, detail} ->
           kev = Intel.cached_kev(detail.cve)
           nvd = Intel.cached_nvd(detail.cve)
+          receipts = Intel.latest_receipts()
 
           {:noreply,
            socket
@@ -55,6 +60,14 @@ defmodule TriageWeb.CveLive.Show do
            |> assign(:scope, scope)
            |> assign(:detail, detail)
            |> assign_intel(kev, nvd)
+           |> assign(
+             :kev_cache,
+             cache_status(receipts, "kev", Intel.cached_advisory_count("kev"))
+           )
+           |> assign(
+             :nvd_cache,
+             cache_status(receipts, Intel.nvd_source(detail.cve), length(nvd))
+           )
            |> assign(:risk, plc_risks(detail, kev != []))}
 
         {:error, :invalid_cve} ->
@@ -108,11 +121,7 @@ defmodule TriageWeb.CveLive.Show do
     |> Enum.max_by(&severity_rank/1, fn -> nil end)
   end
 
-  defp severity_rank("CRITICAL"), do: 4
-  defp severity_rank("HIGH"), do: 3
-  defp severity_rank("MEDIUM"), do: 2
-  defp severity_rank("LOW"), do: 1
-  defp severity_rank(_other), do: 0
+  defp severity_rank(value), do: Triage.Severity.rank(value)
 
   defp any_fix_available?(occurrences),
     do: Enum.any?(occurrences, fn o -> o.fix not in [nil, ""] end)
@@ -133,6 +142,22 @@ defmodule TriageWeb.CveLive.Show do
     |> Enum.uniq()
     |> Enum.sort()
     |> Enum.join(", ")
+  end
+
+  # The advisory inventory, filtered by the same search contract the findings
+  # page already uses — `q` matches an advisory id or any affected package, so a
+  # package link cannot show a different advisory set than the search does — and
+  # scoped to the team and environment this advisory page was opened in.
+  defp inventory_path(scope, search) do
+    qs =
+      FindingFilters.query_params(%{
+        FindingFilters.defaults()
+        | owner: scope.owner,
+          environment: scope.environment,
+          q: search
+      })
+
+    if map_size(qs) == 0, do: ~p"/findings", else: ~p"/findings?#{qs}"
   end
 
   defp occurrence_state(o) do
@@ -166,6 +191,48 @@ defmodule TriageWeb.CveLive.Show do
     end
   end
 
+  # How much of a source is actually cached, plus the last refresh receipt for it.
+  # A receipt is the only evidence that a refresh was attempted, so "no cached
+  # entry" can be explained as "never refreshed" or "the last refresh failed"
+  # instead of reading as a statement about the advisory.
+  defp empty_cache, do: %{rows: 0, attempted_at: nil, succeeded: nil, message: nil}
+
+  defp cache_status(receipts, source, row_count) do
+    case Enum.find(receipts, &(&1.source == source)) do
+      nil ->
+        %{empty_cache() | rows: row_count}
+
+      receipt ->
+        %{
+          rows: row_count,
+          attempted_at: receipt.attempted_at,
+          succeeded: receipt.succeeded,
+          message: receipt.message
+        }
+    end
+  end
+
+  defp cache_text(%{rows: 0, attempted_at: nil}), do: "never refreshed, 0 rows stored"
+
+  defp cache_text(%{rows: rows, attempted_at: nil}),
+    do: "#{rows} #{plural(rows, "row", "rows")} stored, refresh time not recorded"
+
+  defp cache_text(%{rows: rows, attempted_at: at, succeeded: true}),
+    do: "#{rows} #{plural(rows, "row", "rows")} stored, refreshed #{relative_at(at)}"
+
+  defp cache_text(%{rows: rows, attempted_at: at, succeeded: false} = cache),
+    do:
+      "#{rows} #{plural(rows, "row", "rows")} stored, last refresh failed #{relative_at(at)}" <>
+        failure_detail(cache.message)
+
+  defp failure_detail(message) when is_binary(message) and message != "", do: " — #{message}"
+  defp failure_detail(_other), do: ""
+
+  # Same vocabulary as the overview's receipt labels: an unparseable time is
+  # "unknown". A missing attempt never reaches here — the clauses above report it as
+  # "never refreshed", because a receipt with no attempt time is not a thing.
+  defp relative_at(at), do: UIComponents.relative_time(at) || "unknown"
+
   defp cached_at(nil), do: "never fetched"
   defp cached_at(%{fetched_at: at}), do: UIComponents.relative_time(at) || "unknown"
 
@@ -186,7 +253,16 @@ defmodule TriageWeb.CveLive.Show do
             title={@detail.cve}
             eyebrow="Advisory"
             subtitle="Aggregate detail across all teams and images in scope — observation data, not proof of exploitability or remediation."
-          />
+          >
+            <:actions>
+              <.link
+                id="cve-inventory-link"
+                navigate={inventory_path(@scope, @detail.cve)}
+                class="button button-secondary"
+              >Show in advisory inventory</.link>
+              <.copy_value id="cve-copy" label="advisory id" value={@detail.cve} />
+            </:actions>
+          </.page_header>
 
           <section id="cve-priority" class="stack" aria-labelledby="cve-priority-title">
             <h2 id="cve-priority-title">
@@ -215,20 +291,51 @@ defmodule TriageWeb.CveLive.Show do
 
           <section id="cve-intel" class="stack" aria-labelledby="cve-intel-title">
             <h2 id="cve-intel-title">Public intelligence (operator-refreshed cache)</h2>
-            <.notice id="cve-intel-banner" kind="info">
-              Cached via an explicit run of <code>mix triage.intel</code>. KEV cache: {cached_at(
-                List.first(@kev_advisories)
-              )}; NVD cache: {cached_at(List.first(@nvd_advisories))}. Absence from the cache never means
-              "not known exploited".
+            <.notice id="cve-intel-banner" kind={if @kev_cache.rows > 0, do: "info", else: "warning"}>
+              Public intelligence is cached by an explicit, default-off run of <code>mix triage.intel</code>: this request downloads nothing. This advisory's KEV row was
+              fetched {cached_at(List.first(@kev_advisories))}; its NVD rows were fetched {cached_at(
+                List.first(@nvd_advisories)
+              )}. Absence from the cache never means "not known exploited".
             </.notice>
+            <dl class="evidence-grid key-value">
+              <div>
+                <dt>KEV cache</dt>
+                <dd id="cve-kev-cache-state">{cache_text(@kev_cache)}</dd>
+              </div>
+              <div>
+                <dt>NVD cache for this advisory</dt>
+                <dd id="cve-nvd-cache-state">{cache_text(@nvd_cache)}</dd>
+              </div>
+            </dl>
+            <p :if={@kev_cache.rows == 0} id="cve-kev-cache-empty" class="supporting">
+              No KEV advisories are currently cached. The receipt above describes any recorded
+              refresh attempt; a missing cache entry is not evidence that this advisory is unexploited.
+            </p>
+            <p
+              :if={@kev_cache.rows > 0 and @nvd_cache.rows == 0}
+              id="cve-intel-partial"
+              class="supporting"
+            >
+              KEV is cached as a whole feed; NVD is fetched one advisory at a time, so missing NVD rows
+              here mean "not fetched for this advisory", never "no public description exists".
+            </p>
             <p>
-              KEV cache match: {if @kev_matched?, do: "Yes", else: "No cached entry"} · NVD entries: {length(
+              KEV cache match: {if @kev_matched?, do: "Yes", else: "No cached KEV entry"} · NVD entries: {length(
                 @nvd_advisories
               )}
             </p>
             <ul :if={@kev_advisories != []} id="cve-kev-list">
               <li :for={a <- @kev_advisories}>
                 <.timestamp value={a.published_at} /> · {a.summary || "no summary cached"}
+                <p :if={a.required_action} id={"cve-kev-action-#{a.id}"}>
+                  Required action: {a.required_action}
+                </p>
+                <p :if={a.due_date} id={"cve-kev-due-#{a.id}"}>
+                  Remediation due <.timestamp value={a.due_date} />
+                </p>
+                <p :if={a.known_ransomware} id={"cve-kev-ransomware-#{a.id}"} class="supporting">
+                  CISA reports known ransomware campaign use.
+                </p>
               </li>
             </ul>
             <ul :if={@nvd_advisories != []} id="cve-nvd-list">
@@ -257,7 +364,16 @@ defmodule TriageWeb.CveLive.Show do
               </thead>
               <tbody id="cve-package-rows">
                 <tr :for={o <- @detail.occurrences} id={"cve-occurrence-#{o.id}"}>
-                  <td>{o.package_name}</td>
+                  <td>
+                    <%= if linkable?(o.package_name) do %>
+                      <.link
+                        id={"cve-package-link-#{o.id}"}
+                        navigate={inventory_path(@scope, o.package_name)}
+                      >{o.package_name}</.link>
+                    <% else %>
+                      <span>{o.package_name}</span>
+                    <% end %>
+                  </td>
                   <td><code>{o.package_version}</code></td>
                   <td>{o.fix || "Not reported"}</td>
                   <td>{o.severity || "Not reported"}</td>

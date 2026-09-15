@@ -9,6 +9,7 @@ defmodule TriageWeb.FindingLive.Index do
 
   use TriageWeb, :live_view
 
+  alias Triage.Intel
   alias Triage.Inventory
   alias Triage.Inventory.GroupCursor
   alias TriageWeb.FindingFilters
@@ -75,6 +76,10 @@ defmodule TriageWeb.FindingLive.Index do
         {groups, total, has_more?, next_before}
       end
 
+    # One batched cached-KEV read for the rows on this page. A marker is only ever
+    # rendered for an advisory the cache actually holds.
+    kev = Intel.kev_index(Enum.map(groups, & &1.cve))
+
     {:noreply,
      socket
      |> assign(
@@ -96,6 +101,7 @@ defmodule TriageWeb.FindingLive.Index do
      |> assign(:counts, Inventory.summary_counts())
      |> assign(:advisory_count, total)
      |> assign(:shown, length(groups))
+     |> assign(:kev, kev)
      |> assign(:per_page, @per_page)
      |> assign(:has_more?, has_more?)
      |> assign(:cursor, parsed.before)
@@ -138,6 +144,7 @@ defmodule TriageWeb.FindingLive.Index do
        |> assign(:next_before, nil)
        |> assign(:beyond_end?, false)
        |> assign(:empty?, true)
+       |> assign(:kev, %{})
        |> stream(:groups, [], reset: true)}
     end
   end
@@ -311,8 +318,10 @@ defmodule TriageWeb.FindingLive.Index do
         </div>
       </.form>
       <p id="inventory-search-help" class="supporting">
-        Package search matches the whole advisory group; other affected packages remain included.
+        Search accepts an advisory id — a partial id matches too — or a package name. A package
+        match keeps the whole advisory group, so other affected packages remain included.
       </p>
+      <.kev_note id="inventory-kev-note" present?={map_size(@kev) > 0} />
 
       <p :if={@invalid_filters != []} id="invalid-filters" class="notice" role="alert">
         Invalid filter value{if length(@invalid_filters) == 1, do: "", else: "s"} for
@@ -375,6 +384,7 @@ defmodule TriageWeb.FindingLive.Index do
                   <.link navigate={~p"/cves/#{g.cve}"}>All occurrences</.link>
                 </div>
                 <div class="cluster">
+                  <.kev_marker id={"group-kev-#{g.cve}"} kev={@kev[g.cve]} />
                   <.status_badge :if={g.reopened > 0} label="Reopened" />
                   <.status_badge
                     :if={g.suppressed_occurrences > 0}
