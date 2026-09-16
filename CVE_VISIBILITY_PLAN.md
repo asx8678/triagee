@@ -1,5 +1,20 @@
 # CVE visibility — review and plan
 
+> **Status (2026-09-16):** written 2026-09-15 against the then-current tree.
+> Baseline HEAD `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6` already includes
+> advisory cross-links and cached KEV markers on findings, Overview, queue, case
+> and Timeline surfaces. This session's **KEV freshness and small activity/finding
+Status: VERIFIED — implementation landed and passed the full gate (785 passed + 2 skipped on the owned cluster; see CLOSEOUT_EXECUTION.md). Phases 1–2 delivered; the rejected and phase-3 proposals below remain separately scoped options.
+> coordinator verification; no acceptance is claimed for that new work.
+> **Deferred (distinct contracts required):** 2.4
+> (KEV-only `kev=1` findings filter — a filter-contract/domain-query change), the
+> new review-queue assessment filters, and 3.3 (global navigation CVE lookup).
+> Phase 3.1–3.2 remain polish. Live collection, real exports, SSO/deployment and
+> ingestion/automation are out of scope for the closeout and stay gated per
+> `NEXT_STEPS_PLAN.md`. The review and plan below are retained verbatim as
+> analysis history.
+>
+
 Date: 2026-09-15. This is a review of the current UI against one question: **is the CVE
 itself the visible unit of the product?** No code was changed to produce it. Scope is
 UI/UX only: no new routes, no invented data, no colour-only signalling, and no claim that
