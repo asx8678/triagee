@@ -1,5 +1,25 @@
 # Prospective checkpoint review
 
+> **RESOLVED 2026-09-16 (commit-era supersession):** the checkpoint this document
+> proposed was committed at `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6` ("Improve
+> triage quality and simplify shared validation"). `app/` source is committed and
+> the working tree holds no app diff against that baseline. The "app untracked",
+> "staged/pending commit" and "staging for approval" claims below were accurate
+> when written — they do not describe the current tree.
+>
+> Note the enumeration history: the **197-path** staging was approved and committed;
+> the **224-path regeneration** below was a later *proposal* that also included the
+> then-staged-but-uncommitted Tailwind/KEV/quality delta, and was never executed as
+> a separate staging set. Commit `0b7fc1a` landed the approved checkpoint content
+> (see `git show --stat 0b7fc1a`: 80 files, +4433/-3335).
+> `architecture(3).md` was already tracked (initial commit `2612c56`), is unchanged
+> by any checkpoint, and was never "pending a decision" to remain in the tree. The
+> three tracked `.pi/` modifications and untracked evidence remain outside this
+> scope, as before.
+>
+> Everything below is retained verbatim as history.
+
+
 > **Superseded 2026-09-13 for inventory purposes** by the regenerated inventory
 > below. The A+B-era review further down is retained unchanged as history: its file
 > counts and pending-B wording describe the tree as of 2026-09-12.

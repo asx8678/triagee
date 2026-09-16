@@ -1,5 +1,20 @@
 # Timeline — scope of work
 
+> **Status (2026-09-16): implemented.** The Timeline shipped in commits
+> `0910ec0` ("Add the Timeline tab: recorded observations over time"),
+> `b61b4cf` ("Fix narrow-viewport reflow and reuse the house table region") and
+> `e753750` ("Add a connected, arrowed chart to the Timeline"). The document
+> below was the approved scope at commit `3ce3e92`; "nothing implemented" and the
+> phase plan are historical. Execution records live in `TIMELINE_EXECUTION.md`
+> and the KEV/Timeline sections of `CURRENT_STATUS.md`. §6 owner decisions were
+> taken as the defaults the implementation adopted (newest-first day bands, drawer
+> click-through, 8-week default window, saved-review "handled" meaning); §7
+> non-goals held (no new tables beyond the referenced migrations, no new runtime
+> dependency, no write-path changes).
+>
+> The plan below is retained verbatim as the historical scope record.
+
+
 Status: **scope only, nothing implemented.** Route, context, LiveView, CSS, migration and tests below are a plan in the order they would be built.
 
 Every concrete claim in this document was checked against the tree at commit `3ce3e92`; §8 lists what was verified.

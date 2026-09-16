@@ -1,5 +1,64 @@
 # Triage current status
 
+## Current summary (2026-09-16 — supersedes stale header claims)
+
+Baseline HEAD is `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6`
+("Improve triage quality and simplify shared validation"). It carries the committed
+Tailwind asset pipeline, the KEV/Timeline/UI work, and the code-quality passes. `app/`
+source is committed; there was no app diff against this baseline, and no commit,
+staging, push or deployment happened in this reconciliation session. The three
+tracked `.pi/` modifications and untracked `evidence/` trees are unrelated and remain
+untouched, as before.
+
+What is actually current on this baseline:
+
+- **Latest committed verification is OFFLINE and partial, not a full signoff.**
+  `evidence/code-quality-retry/REPORT.md`: **84 affected filter tests passed**,
+  **109,944** baseline/current parity comparisons passed, and static checks are
+  green (compile `--warnings-as-errors`, `format --check-formatted`, `credo
+  --strict`, `dialyzer` 0 errors). The guarded DB-backed full precommit is
+  **BLOCKED: exit 69, `verify-owned-db: psql unavailable`** in this environment,
+  so real-PostgreSQL integration and the full suite remain unverified here. See also
+  `evidence/code-quality-review/REPORT.md` and `evidence/code-quality-followup/REPORT.md`,
+  which record the same psql block and seven + ten DB-backed regressions that are
+  compile-only pending that environment. This is the state of evidence, not a defect
+  in the tree.
+- **The older "721 passed, 2 skipped" full-suite result is historical, not current
+  signoff.** It predates the code-quality follow-up/retry work (SQL/history and
+  filter-contract changes) and no longer describes this tree.
+**Closeout verified (latest):** KEV cache status, activity CVE identity and finding-header dedup landed; closeout modules 31/31, full suite 785 passed + 2 skipped, compile/format/credo / dialyzer exit 0 on an owned disposable cluster (CLOSEOUT_EXECUTION.md). The run is uncommitted.
+  improvements and the small activity/finding presentation changes (another worker
+  is implementing them). They are pending coordinator verification; no current
+  evidence for them exists in the tree, so they are not claimed as done anywhere in
+  these documents.
+- **Explicitly deferred (not authorized by the closeout request):** the KEV-only
+  findings filter, new review-queue domain filters, and a global navigation CVE
+  lookup (each requires a distinct input/navigation contract); live read-only
+  collection (work package D); historical real-export compatibility and import
+  (work package C); SSO, authorization and shared deployment (work package E); and
+  observation ingestion, scheduling and automation (work package F). C–F remain
+  gated exactly as written in [NEXT_STEPS_PLAN.md](NEXT_STEPS_PLAN.md).
+- **`architecture(3).md` is already tracked** (initial commit `2612c56`) and
+  unchanged; the "needs an explicit decision" wording in the historical sections
+  below referred only to whether the checkpoint would modify or enumerate it — no
+  decision was ever required to keep it. Its runtime recommendations are superseded
+  by the implemented Phoenix choice, stated at the top of
+  [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) ("Current implementation
+  decision: Phoenix..."); its integration findings and safety requirements remain
+  the referenced planning context.
+- Original historical-baseline proof remains unresolved; later results are new
+  bounded baselines, never a recovery of that missing record. The app has no
+  authentication or authorization and is loopback-only; no shared deployment is
+  approved or implied by any section of this document.
+
+---
+
+## Historical record (2026-09-11 .. 2026-09-15; superseded per section, retained verbatim)
+
+Failures, defects and limits below are preserved as written. Per-section verdicts
+were accurate when written; where later sessions changed the tree (commit
+`0b7fc1a`), the Current summary above governs.
+
 **Code review findings implemented (2026-09-13: `mix ci` exit 0 — `credo --strict`
 reports no issues, 634 passed / 2 skipped, `dialyzer` 0 errors).** The findings
 list pages by keyset position like the review queue; `credo` and `dialyzer` are

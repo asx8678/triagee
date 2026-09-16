@@ -1,17 +1,19 @@
 {
   "configVersion": 4,
-  "prewalk": {
-    "model": "zro/glm-5.3-flash",
-    "thinking": "high",
-    "mode": "trajectory",
-    "alwaysRearm": true
+  "executor": {
+    "kernel": "python",
+    "timeoutMs": 600000,
+    "shellHangMs": 600000,
+    "maxTimeoutMs": 3600000,
+    "memoryLimitBytes": 4294967296
   },
-  "compaction": {
-    "thresholds": {
-      "openai-codex/gpt-6-astra": 0.65
-    },
-    "tokenThresholds": {
-      "openai-codex/gpt-6-astra": null
-    }
+  "prewalk": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "xhigh",
+    "alwaysRearm": true,
+    "mode": "trajectory"
+  },
+  "agents": {
+    "maxDepth": 4
   }
 }

@@ -1,5 +1,24 @@
 # Next implementation plan
 
+> **Superseding status (2026-09-16):** work packages **A (checkpoint) and B (safe
+> local baseline) are complete and committed** at `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6`.
+> The §2 code finding "All `app/` is untracked / HEAD is `dc48431`" is historical —
+> it described the tree before the checkpoint. C–F remain gated and unimplemented,
+> and the following are **explicitly deferred** (not authorized by the closeout):
+> the KEV-only findings filter, new review-queue domain filters and a global
+> navigation CVE lookup (each needs a distinct input/navigation contract); live
+> read-only collection (D); historical real-export compatibility/import (C); SSO,
+> authorization and shared deployment (E); and observation ingestion, scheduling
+> and automation (F). This session's KEV cache-freshness and small activity/finding
+Closeout VERIFIED: fan-out work landed and passed static gates, closeout modules (31/31) and full suite (785 passed + 2 skipped) on an owned cluster (CLOSEOUT_EXECUTION.md). C–F remain gated.
+> coordinator verification — no current evidence for them exists in the tree.
+> Latest committed verification is offline (84 filter tests, 109,944 parity
+> comparisons, static green) with the DB-backed full precommit blocked
+> (`psql unavailable`); see [CURRENT_STATUS.md](CURRENT_STATUS.md).
+>
+> The roadmap below is retained verbatim as planning context and history.
+
+
 Status: A+B IMPLEMENTED — fresh bounded integration + independent Astra verification PASS.
 No staging/checkpoint commit performed. C–F remain gated and unimplemented here.
 See [CURRENT_STATUS.md](CURRENT_STATUS.md) and [A_B_EXECUTION.md](A_B_EXECUTION.md)
