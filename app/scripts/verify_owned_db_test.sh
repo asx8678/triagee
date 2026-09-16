@@ -14,6 +14,7 @@ case "$*" in
   *"mix run --no-start scripts/verify_owned_db.exs"*)
     [ "${MIX_ENV-}" = test ] && [ "${TRIAGE_BIND-}" = 127.0.0.1 ] && [ "${PORT-}" = 0 ] || exit 91
     [ -z "${PHX_SERVER+x}" ] && [ -z "${DNS_CLUSTER_QUERY+x}" ] && [ -z "${DATABASE_URL+x}" ] || exit 92
+    [ -z "${EXPECT_MISE_PORT:-}" ] || [ "${TRIAGE_OWNED_DB_PORT:-}" = "$EXPECT_MISE_PORT" ] || exit 95
     last=; for arg in "$@"; do last=$arg; done
     case "$last" in
       config) [ "${FAKE_CONFIG_FAIL:-0}" = 0 ] || exit 41;;
@@ -86,9 +87,40 @@ grep -F 'import_flow_test.exs' "$tmp/success.log" >/dev/null || fail "target lac
 grep -F 'inventory_scope_test.exs' "$tmp/success.log" >/dev/null || fail "target lacks navigation focus"
 grep -F 'replay_runs_test.exs' "$tmp/success.log" >/dev/null || fail "target lacks replay focus"
 
+run_case bad_port_alpha env TRIAGE_OWNED_DB_PORT=abc "$script" target
+[ "$CASE_STATUS" -eq 65 ] || fail "non-decimal port status=$CASE_STATUS"
+no_effects "$tmp/bad_port_alpha.log" || fail "non-decimal port performed effects"
+
+run_case bad_port_empty env TRIAGE_OWNED_DB_PORT= "$script" target
+[ "$CASE_STATUS" -eq 65 ] || fail "empty port status=$CASE_STATUS"
+no_effects "$tmp/bad_port_empty.log" || fail "empty port performed effects"
+
+run_case bad_port_low env TRIAGE_OWNED_DB_PORT=1023 "$script" target
+[ "$CASE_STATUS" -eq 65 ] || fail "low port status=$CASE_STATUS"
+no_effects "$tmp/bad_port_low.log" || fail "low port performed effects"
+
+run_case bad_port_high env TRIAGE_OWNED_DB_PORT=65536 "$script" target
+[ "$CASE_STATUS" -eq 65 ] || fail "high port status=$CASE_STATUS"
+no_effects "$tmp/bad_port_high.log" || fail "high port performed effects"
+
+run_case bad_port_overflow env TRIAGE_OWNED_DB_PORT=123456 "$script" target
+[ "$CASE_STATUS" -eq 65 ] || fail "overflow port status=$CASE_STATUS"
+no_effects "$tmp/bad_port_overflow.log" || fail "overflow port performed effects"
+
+run_case default_port env EXPECT_MISE_PORT=5432 "$script" target
+[ "$CASE_STATUS" -eq 0 ] || fail "default port status=$CASE_STATUS"
+grep -F -- "-p 5432" "$tmp/default_port.log" >/dev/null || fail "default port not passed to psql"
+
+run_case alt_port env TRIAGE_OWNED_DB_PORT=55432 EXPECT_MISE_PORT=55432 "$script" target
+[ "$CASE_STATUS" -eq 0 ] || fail "alternate port status=$CASE_STATUS"
+db=$(db_from_out "$tmp/alt_port.out"); [ -n "$db" ] || fail "missing generated DB log (alternate port)"
+grep -F -- "-p 55432" "$tmp/alt_port.log" >/dev/null || fail "alternate port not passed to psql"
+! grep -F -- "-p 5432" "$tmp/alt_port.log" >/dev/null || fail "alternate port run still used default port"
+[ "$(grep -c "DROP DATABASE $db" "$tmp/alt_port.log")" -eq 1 ] || fail "alternate port cleanup missing"
+
 run_case dropfail env FAKE_DROP_FAIL=1 "$script" target
 [ "$CASE_STATUS" -eq 74 ] || fail "cleanup failure status=$CASE_STATUS"
 grep -F 'cleanup failed (no FORCE or session termination attempted)' "$tmp/dropfail.out" >/dev/null || fail "cleanup failure diagnostic missing"
 ! grep -E 'FORCE|pg_terminate_backend|dropdb' "$tmp/dropfail.log" >/dev/null || fail "cleanup used force/termination"
 
-echo "ok - executable refusal, identity, population, target, and exact cleanup guards"
+echo "ok - executable refusal, identity, population, target, owned-port, and exact cleanup guards"

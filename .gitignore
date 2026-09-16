@@ -27,6 +27,9 @@ tmp/cve-collector/node_modules
 *.sql
 reports/
 
+# Local verification output (existing tracked reports remain tracked)
+/evidence/
+
 # Local agent harness journals (tracked harness configuration remains untouched)
 .pi/fabric/mesh/events.jsonl
 .pi/fabric/mesh/sequence

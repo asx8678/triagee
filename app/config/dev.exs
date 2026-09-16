@@ -2,9 +2,13 @@ import Config
 
 # Configure your database
 config :triage, Triage.Repo,
-  # Local PostgreSQL 18 (Homebrew) trusts the local `postgres` superuser; no password.
+  # Local PostgreSQL trusts the local `postgres` superuser; no password.
+  # TRIAGE_DB_PORT selects a non-default local instance, such as the
+  # Triage-owned development database from scripts/triage_dev_db.sh.
+  # Absent keeps the historic default port.
   username: "postgres",
   hostname: "localhost",
+  port: String.to_integer(System.get_env("TRIAGE_DB_PORT") || "5432"),
   database: "triage_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -15,7 +19,8 @@ config :triage, Triage.Repo,
 #
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
-# to bundle .js and .css sources.
+# to bundle .js and .css sources. The Tailwind watcher rebuilds the stylesheet
+# on source changes; it installs the CLI only if _build does not have it.
 config :triage, TriageWeb.Endpoint,
   # runtime.exs enforces the TRIAGE_BIND loopback-only policy.
   http: [ip: {127, 0, 0, 1}, port: 4000],
@@ -23,7 +28,9 @@ config :triage, TriageWeb.Endpoint,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "hC4HG8qTPx98cDM7hNDMr99YeQiDagghonz1eg2a3fOjvc2Bba6nylEzo07tuORP",
-  watchers: []
+  watchers: [
+    tailwind: {Tailwind, :install_and_run, [:triage, ~w(--watch)]}
+  ]
 
 # ## SSL Support
 #

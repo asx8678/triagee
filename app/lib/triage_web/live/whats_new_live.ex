@@ -19,13 +19,15 @@ defmodule TriageWeb.WhatsNewLive do
 
   alias Triage.Activity
   alias TriageWeb.ActivityFilters
+  alias TriageWeb.FilterAssigns
+  alias TriageWeb.FindingFilters
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "What’s New")
-     |> assign(:filter_form, to_form(%{}))
+     |> assign(:filter_form, FilterAssigns.filter_form(%{}))
      |> assign(:filters, %{owner: nil, environment: nil})
      |> assign(:options, %{owners: [], environments: []})
      |> assign(:feed_error, nil)
@@ -86,7 +88,7 @@ defmodule TriageWeb.WhatsNewLive do
           |> assign(:page_count, length(rows))
           |> assign(
             :filter_form,
-            to_form(%{"owner" => parsed.owner, "environment" => parsed.environment})
+            FilterAssigns.filter_form(parsed)
           )
           |> assign(:filters, %{owner: parsed.owner, environment: parsed.environment})
           |> assign(:options, Activity.event_filter_options())
@@ -107,11 +109,8 @@ defmodule TriageWeb.WhatsNewLive do
     socket
     |> assign(:feed_error, true)
     |> assign(:feed_empty?, false)
-    |> assign(:page_count, 0)
+    |> assign(FilterAssigns.cleared_page())
     |> assign(:filters, %{owner: owner, environment: environment})
-    |> assign(:has_more?, false)
-    |> assign(:next_before_id, nil)
-    |> assign(:cursor, nil)
     |> stream(:events, [], reset: true)
   end
 
@@ -301,6 +300,26 @@ defmodule TriageWeb.WhatsNewLive do
               <h2 id={"event-title-#{row.id}"}>{event_label(row.event)}</h2>
               <span class="supporting">Event #{row.id}</span>
             </div>
+            <div id={"event-current-advisory-#{row.id}"} class="stack">
+              <h3 class="supporting">Current local metadata</h3>
+              <strong>Advisory</strong>
+              <%!-- The recorded event stays the heading; the advisory shown here
+                   comes from the current finding joined to that event. --%>
+              <%= if target = FindingFilters.advisory_path(row.finding.cve, @filters) do %>
+                <.link id={"event-cve-#{row.id}"} navigate={target}>
+                  <strong>{row.finding.cve}</strong>
+                </.link>
+              <% else %>
+                <%= if is_binary(row.finding.cve) and row.finding.cve != "" do %>
+                  <strong>{row.finding.cve}</strong>
+                <% else %>
+                  <strong>No advisory id in current local records</strong>
+                <% end %>
+              <% end %>
+              <p id={"event-advisory-provenance-#{row.id}"} class="supporting">
+                Current local metadata — joined from current local records, not captured facts about this event.
+              </p>
+            </div>
             <p>
               Recorded observation time <.timestamp value={row.occurred_at} />
               <%= if relative = relative_time(row.occurred_at) do %>
@@ -321,7 +340,14 @@ defmodule TriageWeb.WhatsNewLive do
               Joined from current local records, not captured facts about this event.
             </p>
             <p>
-              <strong>{row.finding.cve}</strong>
+              <%= if target = FindingFilters.advisory_path(row.finding.cve, @filters) do %>
+                <.link id={"event-current-cve-#{row.id}"} navigate={target}>
+                  <strong>{row.finding.cve}</strong>
+                </.link>
+              <% else %>
+                <%!-- A missing id addresses no route: honest text, never a broken link. --%>
+                <strong>No advisory id in current local records</strong>
+              <% end %>
               · {row.finding.package_name} <code>{row.finding.package_version}</code>
             </p>
             <dl class="evidence-grid key-value">

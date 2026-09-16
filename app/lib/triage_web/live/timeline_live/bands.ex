@@ -11,6 +11,7 @@ defmodule TriageWeb.TimelineLive.Bands do
 
   use TriageWeb, :html
 
+  alias TriageWeb.FindingFilters
   alias TriageWeb.TimelineFilters
 
   attr :days, :list, required: true
@@ -85,7 +86,7 @@ defmodule TriageWeb.TimelineLive.Bands do
                   </.link>
                   <.link
                     id={"tl-advisory-" <> row_key(row, day)}
-                    navigate={~p"/cves/#{row.cve}"}
+                    navigate={FindingFilters.advisory_path(row.cve, @filters)}
                     class="button button-secondary"
                   >
                     CVE detail
@@ -104,7 +105,7 @@ defmodule TriageWeb.TimelineLive.Bands do
     """
   end
 
-  defp row_key(row, day), do: "#{row.finding_id}-#{day.iso_date}"
+  defp row_key(row, _day), do: Integer.to_string(row.event_id)
 
   defp band_class(%{observed?: true}), do: "tl-band-observed"
   defp band_class(%{observed?: false, judged_count: judged}) when judged > 0, do: "tl-band-judged"

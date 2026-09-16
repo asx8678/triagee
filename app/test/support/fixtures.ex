@@ -18,6 +18,22 @@ defmodule Triage.Fixtures do
   @doc "Today in UTC: the reference date for the relative helpers below."
   def today, do: Date.utc_today()
 
+  @doc """
+  The CVE timeline's window contract for `weeks`: `from` is the Monday of the
+  current week minus `7 * (weeks - 1)`, `to` is today, and the day bands and
+  chart dates are that inclusive span.
+
+  The span is a round `7 * weeks` days only when today is a Sunday — on a Tuesday
+  it is `49 + 2`. Window assertions must derive it from here rather than
+  hard-code a number that holds one day in seven.
+  """
+  def window_span(weeks) when is_integer(weeks) do
+    today = today()
+    from = today |> Date.beginning_of_week(:monday) |> Date.add(-7 * (weeks - 1))
+
+    %{weeks: weeks, from: from, to: today, days: Date.diff(today, from) + 1}
+  end
+
   @doc "The UTC timestamp `days_before` days before today, at `time` (default 06:00)."
   def at(days_before, time \\ ~T[06:00:00]),
     do: DateTime.new!(Date.add(today(), -days_before), time, "Etc/UTC")

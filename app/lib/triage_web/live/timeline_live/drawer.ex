@@ -1,7 +1,9 @@
 defmodule TriageWeb.TimelineLive.Drawer do
   @moduledoc """
   The per-CVE detail drawer: the lane across every recorded observation, the
-  lifecycle events, and each saved case with its assessment history.
+  paged lifecycle events, and saved cases with bounded assessment previews.
+  Aggregate totals are independent of the selected page; full case histories
+  remain reachable through the explicit Open case links.
 
   The case history is rendered from `TriageWeb.CaseLive.Format.timeline_entries/1`,
   the same ordering the case detail page uses, so the drawer and the case page
@@ -14,6 +16,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
 
   import TriageWeb.CaseLive.Format, only: [event_label: 1, label: 1]
 
+  alias TriageWeb.FindingFilters
   alias TriageWeb.TimelineFilters
 
   attr :detail, :map, required: true
@@ -21,6 +24,8 @@ defmodule TriageWeb.TimelineLive.Drawer do
   attr :filters, :map, required: true
 
   def cve_drawer(assigns) do
+    assigns = assign(assigns, :history_stream_limit, Triage.Cases.History.stream_limit())
+
     ~H"""
     <aside id="tl-drawer" class="tl-drawer" aria-labelledby="tl-drawer-title">
       <div class="section-header">
@@ -56,7 +61,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
         <div>
           <dt>Days observed in this window</dt>
           <dd>
-            {@detail.lane.window_observed_count} of {length(@detail.lane.observed_dates)} recorded day(s)
+            {@detail.lane.window_observed_count} of {@detail.lane.observed_day_count} recorded day(s)
           </dd>
         </div>
         <div>
@@ -91,8 +96,9 @@ defmodule TriageWeb.TimelineLive.Drawer do
           Advisory reference
         </.link>
         <.link
+          :if={is_binary(@selected_cve) and @selected_cve != ""}
           id="tl-drawer-advisory"
-          navigate={~p"/cves/#{@selected_cve}"}
+          navigate={FindingFilters.advisory_path(@selected_cve, @filters)}
           class="button button-secondary"
         >
           CVE detail
@@ -100,8 +106,14 @@ defmodule TriageWeb.TimelineLive.Drawer do
       </div>
 
       <section id="tl-drawer-events" aria-labelledby="tl-drawer-events-title">
-        <h3 id="tl-drawer-events-title">Lifecycle events (every recorded row)</h3>
-        <p :if={@detail.events == []} class="supporting">No recorded lifecycle event.</p>
+        <h3 id="tl-drawer-events-title">Lifecycle events ({@detail.event_page.total} recorded)</h3>
+        <.history_paging
+          id="tl-events"
+          page={@detail.event_page}
+          cursor_key={:events_after}
+          filters={@filters}
+        />
+        <p :if={@detail.event_page.total == 0} class="supporting">No recorded lifecycle event.</p>
         <ol :if={@detail.events != []} class="tl-history">
           <li :for={event <- @detail.events} id={"tl-event-" <> Integer.to_string(event.id)}>
             <span class="tl-arrow tl-arrow-history" aria-hidden="true">{event_glyph(event.kind)}</span>
@@ -123,8 +135,14 @@ defmodule TriageWeb.TimelineLive.Drawer do
           No case has been opened for this CVE in the selected scope. No case is not evidence that no risk exists.
         </p>
         <p :if={@detail.cases.truncated_count > 0} class="supporting">
-          {@detail.cases.truncated_count} further case(s) are not shown.
+          {@detail.cases.truncated_count} other case(s) are not shown on this page.
         </p>
+        <.history_paging
+          id="tl-cases"
+          page={@detail.cases}
+          cursor_key={:cases_after}
+          filters={@filters}
+        />
         <.notice id="tl-drawer-actor" kind="info">
           Every local case was written by the unauthenticated <code>local-operator</code> identity.
           It is a server-owned constant, not a verified person, so no attribution to an individual
@@ -147,7 +165,15 @@ defmodule TriageWeb.TimelineLive.Drawer do
             </.link>
           </div>
           <p class="supporting">
-            Case revision {case_entry.case.revision} · {length(case_entry.entries)} recorded a history entry/entries
+            Case revision {case_entry.case.revision} · {length(case_entry.entries)} history entries shown
+          </p>
+          <p
+            :if={case_entry.history_truncated?}
+            id={"tl-case-truncated-#{case_entry.id}"}
+            class="supporting"
+          >
+            Recent assessments and audit events are shown (up to {@history_stream_limit} of each).
+            Open case for the complete recorded history.
           </p>
           <ol class="tl-history">
             <li
@@ -181,6 +207,41 @@ defmodule TriageWeb.TimelineLive.Drawer do
         </p>
       </section>
     </aside>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :page, :map, required: true
+  attr :cursor_key, :atom, required: true
+  attr :filters, :map, required: true
+
+  defp history_paging(assigns) do
+    ~H"""
+    <nav
+      id={@id <> "-paging"}
+      class="cluster"
+      aria-label={
+        if(@cursor_key == :events_after, do: "Lifecycle event pages", else: "Saved case pages")
+      }
+    >
+      <span class="supporting">Showing {@page.shown} of {@page.total} recorded rows</span>
+      <.link
+        :if={@page.cursor}
+        id={@id <> "-first"}
+        patch={TimelineFilters.path(@filters, %{@cursor_key => nil})}
+        class="button button-secondary"
+      >
+        First page
+      </.link>
+      <.link
+        :if={@page.has_more?}
+        id={@id <> "-next"}
+        patch={TimelineFilters.path(@filters, %{@cursor_key => @page.next_after})}
+        class="button button-secondary"
+      >
+        Next page
+      </.link>
+    </nav>
     """
   end
 

@@ -9,8 +9,11 @@ defmodule TriageWeb.FindingLive.Show do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Exceptions
+  alias Triage.Intel
   alias Triage.Inventory
   alias TriageWeb.{ActivityFilters, FindingFilters}
+  import TriageWeb.ReferenceComponents, only: [reference_notice: 1]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -67,7 +70,10 @@ defmodule TriageWeb.FindingLive.Show do
                socket
                |> assign(:invalid_scope, [])
                |> assign(:scope, scope)
-               |> assign(:data, data)}
+               |> assign(:data, data)
+               |> assign(:exception_status, local_exception_status(data.finding.id, scope))
+               |> assign(:page_title, finding_title(data.finding.cve))
+               |> assign(:kev, Intel.kev_row(data.finding.cve))}
 
             {:error, :out_of_scope} ->
               {:noreply,
@@ -130,7 +136,7 @@ defmodule TriageWeb.FindingLive.Show do
     <Layouts.app flash={@flash} active_page="findings">
       <.page_header
         title={if @data, do: @data.finding.cve, else: "Finding detail"}
-        eyebrow={if @data, do: "Findings / #{@data.finding.cve}", else: "Findings / Occurrence"}
+        eyebrow="Findings"
         subtitle="Current local inventory for one package occurrence, not saved case evidence."
       >
         <:actions>
@@ -145,6 +151,15 @@ defmodule TriageWeb.FindingLive.Show do
           <.link id="back-to-findings" navigate={back_path(@scope)} class="button button-secondary">
             ← Back to inventory
           </.link>
+          <.link
+            :if={advisory_target(@data, @scope)}
+            id="finding-cve-action"
+            navigate={advisory_target(@data, @scope)}
+            class="button button-secondary"
+          >
+            Advisory page
+          </.link>
+          <.copy_value id="finding-cve-copy" label="advisory id" value={finding_cve(@data)} />
         </:actions>
       </.page_header>
 
@@ -158,6 +173,16 @@ defmodule TriageWeb.FindingLive.Show do
       </p>
 
       <%= if @data do %>
+        <.reference_notice id="finding-reference-source" finding={@data.finding} />
+        <p :if={@kev} id="finding-kev" class="cluster">
+          <.kev_marker id="finding-kev-badge" kev={@kev} />
+          <span class="supporting">
+            Cached KEV feed, populated by an explicit operator refresh — current public
+            intelligence about this advisory, not saved case evidence. No marker is shown for
+            an advisory the cache does not hold.
+          </span>
+        </p>
+
         <section id="finding-summary" class="stack" aria-labelledby="finding-summary-title">
           <div>
             <h2 id="finding-summary-title">
@@ -167,7 +192,11 @@ defmodule TriageWeb.FindingLive.Show do
           </div>
           <dl class="evidence-grid key-value finding-identity-strip">
             <div>
-              <dt>Scanner severity</dt>
+              <dt>
+                {if Triage.ReferenceData.reference_image?(@data.finding.image),
+                  do: "NVD CVSS severity",
+                  else: "Scanner severity"}
+              </dt>
               <dd><.status_badge label={label(@data.finding.severity)} kind="severity" /></dd>
             </div>
             <div>
@@ -222,6 +251,10 @@ defmodule TriageWeb.FindingLive.Show do
         <%= if explicit_scope?(@scope) do %>
           <section id="open-case-form" class="notice" aria-labelledby="open-case-title">
             <h2 id="open-case-title">Review this occurrence</h2>
+            <p id="finding-exception-status">{Exceptions.label(@exception_status)}</p>
+            <p class="supporting">
+              Open the case to manage a time-limited local exception or reopen it. Scanner observations remain unchanged.
+            </p>
             <p>
               Open or create one local case for <strong>{@scope.owner} · {@scope.environment}</strong>.
               Creating a case captures frozen evidence from local inventory; this page itself is not a snapshot.
@@ -284,7 +317,11 @@ defmodule TriageWeb.FindingLive.Show do
             <details id="finding-source" class="disclosure">
               <summary>Scanner description and source details</summary>
               <div class="stack">
-                <h3>Scanner description</h3>
+                <h3>
+                  {if Triage.ReferenceData.reference_image?(@data.finding.image),
+                    do: "NVD advisory and provenance",
+                    else: "Scanner description"}
+                </h3>
                 <p id="scanner-description">{reported(@data.finding.description)}</p>
                 <.technical_value
                   id="finding-source-reference"
@@ -412,6 +449,18 @@ defmodule TriageWeb.FindingLive.Show do
     end
   end
 
+  defp local_exception_status(finding_id, scope) do
+    if explicit_scope?(scope) do
+      Map.get(
+        Exceptions.finding_statuses([finding_id]),
+        {finding_id, scope.owner, scope.environment},
+        :action_required
+      )
+    else
+      :action_required
+    end
+  end
+
   defp explicit_scope?(%{owner: owner, environment: environment}) do
     is_binary(owner) and owner != "" and is_binary(environment) and environment != ""
   end
@@ -460,6 +509,24 @@ defmodule TriageWeb.FindingLive.Show do
   # The findings list query, including the result order and position. Distinct
   # from `scope_qs/1`, which is also used for /cases links and must stay
   # scope-only.
+  # The advisory aggregate for this occurrence, scoped to the display scope the
+  # finding was opened in. Only the two scope keys travel: the list's own q,
+  # severity, order and cursor params mean nothing to the advisory route, and
+  # sending them would be a link that claims a filter it cannot apply. Returns
+  # nil — no link at all — when the captured advisory id is blank.
+  # The tab title names the advisory, so several findings stay distinguishable in a tab
+  # strip. Before the occurrence loads there is no id to name.
+  defp finding_title(cve) when is_binary(cve) and cve != "", do: cve <> " · Finding"
+  defp finding_title(_cve), do: "Finding detail"
+
+  defp finding_cve(%{finding: %{cve: cve}}), do: cve
+  defp finding_cve(_data), do: nil
+
+  # The advisory aggregate for the loaded occurrence in this page's display scope, or nil
+  # when no captured id can address the route: absent data, a missing id and a blank id all
+  # render no link at all rather than a link to an empty route.
+  defp advisory_target(data, scope), do: FindingFilters.advisory_path(finding_cve(data), scope)
+
   defp findings_list_qs(scope) do
     FindingFilters.query_params(%{
       owner: scope.owner,

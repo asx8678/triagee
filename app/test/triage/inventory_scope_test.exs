@@ -120,6 +120,30 @@ defmodule Triage.InventoryScopeTest do
     end
   end
 
+  describe "CVE aggregate placement scope" do
+    test "owner, environment and combined scopes constrain placements on shared images" do
+      for scope <- [
+            [owner: "alpha"],
+            [environment: @staging],
+            [owner: "alpha", environment: @staging]
+          ] do
+        assert {:ok, detail} = Inventory.fetch_cve("CVE-2025-1001", scope)
+        assert detail.placements != []
+
+        assert Enum.all?(detail.placements, fn %{placement: placement} ->
+                 Enum.all?(scope, fn {key, value} -> Map.fetch!(placement, key) == value end)
+               end)
+      end
+    end
+
+    test "unscoped reads retain all placements, including retired context" do
+      assert {:ok, detail} = Inventory.fetch_cve("CVE-2025-1001")
+      assert Enum.any?(detail.placements, &(&1.placement.owner == "alpha"))
+      assert Enum.any?(detail.placements, &(&1.placement.owner == "beta"))
+      assert Enum.any?(detail.placements, &(not &1.placement.active))
+    end
+  end
+
   describe "environment and owner scoping through fetch_finding/2" do
     test "environment-only scope keeps active-gated placements and scoped occurrences" do
       openssh_client =

@@ -8,6 +8,7 @@
 # Local BEAM crash artifacts
 erl_crash.dump
 
-# Generated client vendor assets — regenerate with `mix assets.setup`
-# (part of `mix setup`, `mix test` and `mix precommit`)
+# Generated browser assets — regenerate with `mix assets.setup`
+# (part of `mix setup`, `mix test`, `mix precommit` and `mix ci`)
 /priv/static/assets/vendor/
+/priv/static/assets/css/tailwind.css

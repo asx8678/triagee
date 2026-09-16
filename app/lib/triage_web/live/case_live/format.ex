@@ -185,6 +185,15 @@ defmodule TriageWeb.CaseLive.Format do
 
   def time_key(_other), do: 0
 
+  @doc """
+  True when a captured value is usable as a route id: a non-blank binary.
+
+  One real advisory id in one place: a blank or non-binary captured value is
+  rendered as text and never becomes a link to an empty detail route.
+  """
+  def linkable?(value) when is_binary(value) and value != "", do: true
+  def linkable?(_value), do: false
+
   def text(value) when value in [nil, ""], do: "Not reported"
   def text(value) when is_binary(value), do: value
   def text(value), do: inspect(value)
@@ -254,6 +263,9 @@ defmodule TriageWeb.CaseLive.Format do
         image[:digest]
     end
   end
+
+  def source_label("nvd_public_reference"),
+    do: "Real NVD public reference — not a deployed vulnerability"
 
   def source_label("synthetic_local_inventory"), do: "Synthetic local inventory"
   def source_label(value), do: text(value)

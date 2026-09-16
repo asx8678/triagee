@@ -22,7 +22,6 @@ defmodule TriageWeb.CaseFilters do
   """
 
   @recognized ~w(owner environment before)
-  @unsafe_text ~r/[\x00-\x1F\x7F]/
   @cursor_digits ~r/\A[0-9]{1,19}\z/
   # int8 max is exactly 2^63 - 1: the same positive bigint bound as the
   # domain layer's id guards.
@@ -197,20 +196,9 @@ defmodule TriageWeb.CaseFilters do
   # neutral All state and carry no second, conflicting filter intent. Any
   # real, invalid or nonblank cursor value next to a wrapper is ambiguous
   # and rejected; unrelated metadata such as `"_target"` is never taken.
-  defp blank_flat_fields?(flat) when flat == %{}, do: true
-
   defp blank_flat_fields?(flat) do
-    flat
-    |> Enum.all?(fn {_key, value} -> blank_value?(value) end)
+    Enum.all?(flat, fn {_key, value} -> FindingFilters.scope_value(value) == {:ok, nil} end)
   end
-
-  defp blank_value?(nil), do: true
-
-  defp blank_value?(value) when is_binary(value) do
-    String.valid?(value) and not Regex.match?(@unsafe_text, value) and String.trim(value) == ""
-  end
-
-  defp blank_value?(_other), do: false
 
   defp mark_invalid(acc, field), do: %{acc | invalid: [field | acc.invalid]}
 end

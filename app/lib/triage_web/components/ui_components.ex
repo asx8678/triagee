@@ -22,6 +22,21 @@ defmodule TriageWeb.UIComponents do
   # definition, and only arity-1 components may be documented.
   def count_label(1, word), do: "1 " <> word
   def count_label(n, word), do: "#{n} " <> word <> "s"
+  @doc "A count and its noun, with an explicit plural for irregular words."
+  attr :count, :integer, required: true
+  attr :singular, :string, required: true
+  attr :plural, :string, default: nil
+
+  def counted(assigns) do
+    noun =
+      if assigns.count == 1, do: assigns.singular, else: assigns.plural || assigns.singular <> "s"
+
+    assigns = assign(assigns, :noun, noun)
+
+    ~H"""
+    {@count} {@noun}
+    """
+  end
 
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil
@@ -56,6 +71,130 @@ defmodule TriageWeb.UIComponents do
     """
   end
 
+  @doc """
+  The marker for an advisory the cached KEV feed lists as exploited.
+
+  Rendered only when the cache holds a row: a missing row and an empty cache both render
+  nothing, so this can never be read as "not exploited". The label names the cache because
+  a cached feed is the only thing the product knows — an operator refresh populates it, and
+  callers disclose freshness separately.
+  """
+  attr :id, :string, required: true
+  attr :kev, :any, default: nil
+
+  def kev_marker(assigns) do
+    ~H"""
+    <span :if={@kev} id={@id} class="kev-flag">Known exploited (KEV cache)</span>
+    """
+  end
+
+  @doc """
+  The one-line source note for a view that renders KEV markers.
+
+  Shown only while at least one marker is present, so its absence is not a statement
+  either: no marker means nothing was claimed, never that nothing is exploited.
+  """
+  attr :id, :string, required: true
+  attr :present?, :boolean, required: true
+
+  def kev_note(assigns) do
+    ~H"""
+    <p :if={@present?} id={@id} class="supporting">
+      Known exploited is read from the cached KEV feed an operator refresh populates; an
+      advisory missing from it may still be exploited.
+    </p>
+    """
+  end
+
+  @doc """
+  One line of KEV cache freshness: the cache source, its whole-cache advisory count
+  and the latest operator refresh result and time.
+
+  Rendered whether or not any badge is present: a never-refreshed cache, an empty
+  successful refresh, a failed last refresh and a view whose advisories have no cached
+  row all show the source state explicitly. A nil status means the read was skipped
+  (for example an invalid-input view that must not query), and that is stated rather
+  than invented. The row count is always the whole source, never the rows matched by
+  the current view, and a failed refresh never erases the retained cache claim.
+  """
+  attr :id, :string, required: true
+  attr :status, :any, default: nil
+
+  def kev_source_status(assigns) do
+    ~H"""
+    <p :if={is_nil(@status)} id={@id} class="supporting">
+      KEV cache status was not read for this view, so no freshness is claimed here; an
+      advisory without a badge may still be exploited.
+    </p>
+    <p :if={@status} id={@id} class="supporting">
+      KEV cache (source "{@status.source}"): {@status.rows} cached {if @status.rows == 1,
+        do: "advisory",
+        else: "advisories"} across the whole source, not just the rows of this view.
+      <%= cond do %>
+        <% is_nil(@status.receipt) -> %>
+          No refresh has been recorded yet, so no refresh result or time can be shown.
+        <% @status.receipt.succeeded -> %>
+          Last refresh succeeded
+          <.timestamp value={@status.receipt.attempted_at} />{kev_receipt_items(
+            @status.receipt.item_count
+          )}.
+        <% true -> %>
+          Last refresh failed <.timestamp value={@status.receipt.attempted_at} />; the
+          previously cached advisories are retained, not erased <span :if={@status.receipt.message}>({@status.receipt.message})</span>.
+      <% end %>
+      Badges mark only advisories with a cached KEV row; a missing badge is never a claim
+      that an advisory is unexploited.
+    </p>
+    """
+  end
+
+  # An empty feed report is an honest outcome of a successful refresh, never "clear".
+  defp kev_receipt_items(0),
+    do: " and reported 0 items — an empty feed report, not a claim that nothing is exploited"
+
+  defp kev_receipt_items(nil), do: " (item count not recorded)"
+  defp kev_receipt_items(1), do: " and reported 1 feed item"
+  defp kev_receipt_items(count) when is_integer(count), do: " and reported #{count} feed items"
+  defp kev_receipt_items(_other), do: ""
+
+  @doc """
+  Copy control for one exact short value that is also displayed as a heading or a link.
+
+  The shared `CopyValue` hook copies the value verbatim; the accessible name states what is
+  copied and the feedback region is announced politely. Nothing renders when the value is
+  missing, so an absent id never produces a control that copies nothing.
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :value, :any, default: nil
+
+  def copy_value(assigns) do
+    assigns = assign(assigns, :text, if(is_binary(assigns.value), do: assigns.value, else: nil))
+
+    ~H"""
+    <%= if @text do %>
+      <button
+        id={@id}
+        type="button"
+        class="button button-secondary"
+        phx-hook="CopyValue"
+        data-copy-value={@text}
+        data-copy-feedback={"#{@id}-feedback"}
+        aria-label={"Copy exact #{@label}"}
+      >
+        Copy {@label}
+      </button>
+      <span
+        id={"#{@id}-feedback"}
+        class="supporting"
+        role="status"
+        aria-live="polite"
+        phx-update="ignore"
+      ></span>
+    <% end %>
+    """
+  end
+
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :value, :any, required: true
@@ -66,77 +205,40 @@ defmodule TriageWeb.UIComponents do
     assigns = assign(assigns, value: value, available?: value not in [nil, ""])
 
     ~H"""
-    <%= if @variant == "compact" do %>
-      <div id={@id} class="technical-value technical-value-compact">
-        <span class="technical-label sr-only">{@label}</span>
-        <%= if @available? do %>
-          <details class="disclosure technical-compact">
-            <summary aria-label={"Show full #{@label}"}>
-              <span class="technical-preview">{technical_preview(@value)}</span>
-              <span class="supporting">Full value</span>
-            </summary>
-            <code id={"#{@id}-full"} class="technical-full">{@value}</code>
-            <div class="cluster">
-              <button
-                id={"#{@id}-copy"}
-                type="button"
-                class="button button-secondary"
-                phx-hook="CopyValue"
-                data-copy-value={@value}
-                data-copy-feedback={"#{@id}-feedback"}
-                aria-label={"Copy exact #{@label}"}
-              >
-                Copy value
-              </button>
-              <span
-                id={"#{@id}-feedback"}
-                class="supporting"
-                role="status"
-                aria-live="polite"
-                phx-update="ignore"
-              ></span>
-            </div>
-          </details>
-        <% else %>
-          <span class="muted">Not captured</span>
-        <% end %>
-      </div>
-    <% else %>
-      <div id={@id} class="technical-value">
-        <span class="technical-label">{@label}</span>
-        <%= if @available? do %>
-          <details class="disclosure">
-            <summary aria-label={"Show full #{@label}"}>
-              <span class="technical-preview">{technical_preview(@value)}</span>
-              <span class="supporting">Full value</span>
-            </summary>
-            <code id={"#{@id}-full"} class="technical-full">{@value}</code>
-            <div class="cluster">
-              <button
-                id={"#{@id}-copy"}
-                type="button"
-                class="button button-secondary"
-                phx-hook="CopyValue"
-                data-copy-value={@value}
-                data-copy-feedback={"#{@id}-feedback"}
-                aria-label={"Copy exact #{@label}"}
-              >
-                Copy value
-              </button>
-              <span
-                id={"#{@id}-feedback"}
-                class="supporting"
-                role="status"
-                aria-live="polite"
-                phx-update="ignore"
-              ></span>
-            </div>
-          </details>
-        <% else %>
-          <span class="muted">Not captured</span>
-        <% end %>
-      </div>
-    <% end %>
+    <div id={@id} class={["technical-value", @variant == "compact" && "technical-value-compact"]}>
+      <span class={["technical-label", @variant == "compact" && "sr-only"]}>{@label}</span>
+      <%= if @available? do %>
+        <details class={["disclosure", @variant == "compact" && "technical-compact"]}>
+          <summary aria-label={"Show full #{@label}"}>
+            <span class="technical-preview">{technical_preview(@value)}</span>
+            <span class="supporting">Full value</span>
+          </summary>
+          <code id={"#{@id}-full"} class="technical-full">{@value}</code>
+          <div class="cluster">
+            <button
+              id={"#{@id}-copy"}
+              type="button"
+              class="button button-secondary"
+              phx-hook="CopyValue"
+              data-copy-value={@value}
+              data-copy-feedback={"#{@id}-feedback"}
+              aria-label={"Copy exact #{@label}"}
+            >
+              Copy value
+            </button>
+            <span
+              id={"#{@id}-feedback"}
+              class="supporting"
+              role="status"
+              aria-live="polite"
+              phx-update="ignore"
+            ></span>
+          </div>
+        </details>
+      <% else %>
+        <span class="muted">Not captured</span>
+      <% end %>
+    </div>
     """
   end
 

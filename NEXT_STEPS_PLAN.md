@@ -72,9 +72,15 @@ Acceptance:
 - [x] Intended app source, lockfile, migrations, tests and static source assets are
   covered by the reviewed prospective inventory; artifacts are excluded. This is
   checkpoint preparation only, not staged/committed coverage.
-- [ ] Staged diff review remains pending: staging is prohibited in this execution.
-  Prospective source-only diff, ignore policy, and bounded secret-review summary
-  are inspected without production credential values.
+- [ ] Staged diff review remains pending: the approval and the commit are still not
+  taken. **Partly superseded 2026-09-15:** a later approved execution did stage a
+  source-only checkpoint (20 files, +697/−2622) and regenerated the inventory to
+  `evidence/checkpoint/MANIFEST.sha256` (224 paths, re-verified 224/224 against the
+  staged blobs), recorded by `scripts/checkpoint_inventory.sh` and
+  [CHECKPOINT_REVIEW.md](CHECKPOINT_REVIEW.md). "Staging is prohibited in this
+  execution" was a constraint on that execution, not a standing ban, and should not
+  be read as one. Outstanding: the owner's decision on the staged diff, the commit
+  itself, and the `architecture(3).md` decision.
 - [x] One authoritative status links bounded latest verdicts and unresolved gaps.
 - [x] Missing original-baseline proof stays explicitly unresolved; a new baseline
   is recorded as new, never described as recovery of the old one.
@@ -266,3 +272,18 @@ Sizing is relative, not a delivery-date promise. A/B are immediately actionable;
 C/D/E estimates depend on the external contracts above. No tests, app startup,
 credential reads, live calls, DB effects, commits or deployments were performed
 while preparing this plan.
+
+### Decisions taken on the owner's behalf (2026-09-15)
+
+The owner delegated the remaining calls. Taken and recorded in
+[CURRENT_STATUS.md](CURRENT_STATUS.md) → "Decisions taken on the owner's behalf":
+no commit and no push (the reviewed unit worth committing is one commit over the
+whole current tree, which is green under `mix ci`), no exposure write path, no new
+queue filters — the domain exposes saved scope plus the keyset cursor and nothing
+else, so a new filter would be a new query — and the three cross-links the data
+actually supports (case → advisory under the saved scope, queue row → advisory under
+the queue filter, advisory → scoped inventory and per affected package).
+
+Still owner-only, because each needs a fact or an approval that does not exist
+locally: questions 1–5 above, the `architecture(3).md` decision, and the commit
+itself over the verified index and worktree.

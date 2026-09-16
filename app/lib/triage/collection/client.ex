@@ -1,4 +1,6 @@
 defmodule Triage.Collection.Client do
+  @signal_timeout_ms 100
+
   @moduledoc """
   Bounded GraphQL client over the fixed loopback transport.
 
@@ -26,7 +28,7 @@ defmodule Triage.Collection.Client do
   Errors are sanitized constants: raw transport reasons and payloads are never
   echoed into messages or `:reason`, reasons are coerced to a closed atom set,
   and signal callbacks run in monitored, unlinked processes bounded by
-  `min(remaining deadline, #{100} ms)` so a stall cannot outlive the deadline or
+  `min(remaining deadline, #{@signal_timeout_ms} ms)` so a stall cannot outlive the deadline or
   leak arguments into OTP logs.
 
   Bounded in-flight overhead: responses already accepted by the transport may
@@ -47,8 +49,6 @@ defmodule Triage.Collection.Client do
     RedirectError,
     TransportError
   }
-
-  @signal_timeout_ms 100
 
   defstruct [:config, :transport, :transport_state, :deadline, :signal, :counter, :budget, :error]
 
@@ -464,9 +464,6 @@ defmodule Triage.Collection.Client do
 
   defp classify_response(client, status, body, label) do
     cond do
-      byte_size(body) > client.config.max_response_bytes ->
-        {:error, %E.ResponseBudgetError{message: "response exceeded the byte budget"}}
-
       status >= 300 and status < 400 ->
         {:error,
          %RedirectError{message: "redirect (HTTP #{status}) is not followed", status: status}}

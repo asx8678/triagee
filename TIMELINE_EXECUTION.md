@@ -248,3 +248,45 @@ elements, generated server-side, asserted directly in tests, and rendered withou
 3. The chart's layout points initially dropped the `date` and `label` they needed for adjacency and hover text.
 4. The weekday letter colour failed AA (3.47:1) - only a browser could have found this one.
 
+## Correction (2026-09-15): the window assertions only passed on Sundays
+
+Seven assertions across `timeline_test.exs` and `timeline_live_test.exs` hard-coded
+the window as a round multiple of seven (`length(view.days) == 56`,
+`empty_days == 54`, `== 28` for four weeks). `build_window/4` sets `from` to the
+Monday of the current week minus `7 * (weeks - 1)` and `to` to **today**, and
+`build_days/4` is `Date.range(from, to)`, so the span is `49 + day_of_week(today)`:
+
+| today | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| band count, 8 weeks | 50 | 51 | 52 | 53 | 54 | 55 | 56 |
+| band count, 4 weeks | 22 | 23 | 24 | 25 | 26 | 27 | 28 |
+
+The span is 56 only on a Sunday. That is why this record reads as green: the live
+probe above ran on **Sunday 13 September 2026** and counted "56 day bands, 21 of
+56 empty", and the recorded full-gate line (696 passed, 2 skipped) is the pass
+count of the same tree in which those seven assertions fail — 696 + 7 = 703, the
+suite total before the KEV slice of the same day. The implementation was never the
+broken part; the assertions were calendar-dependent, and a Monday run would have
+shown 50 bands and `empty_days` 48.
+
+Fixed the same day, with no production code change:
+
+- every window expectation is derived from the contract through the new
+  `Triage.Fixtures.window_span/1` (Monday-aligned `from`, `to` = today,
+  `days = Date.diff(to, from) + 1`) instead of a literal;
+- the semantics are now pinned in the other direction, so padding the window into
+  days that have not happened fails the suite instead of passing it:
+  `length(view.days) == Date.diff(view.window.to, view.window.from) + 1` and
+  `Date.day_of_week(view.window.to) == 7 or length(view.days) < 7 * weeks`;
+- the window label's honesty is asserted rather than assumed: the label states the
+  real span (`Last 8 weeks · 27 Jul to 15 Sep 2026`) and the day count asserted
+  against it comes from the same contract;
+- the weekday grid's future cells are asserted to read "not yet observed"
+  (`future_days_in_current_week/0`), so a day that has not happened can never be
+  presented as a quiet day.
+
+Evidence: `mix test test/triage/timeline_test.exs
+test/triage_web/live/timeline_live_test.exs` → **50 passed** (43 passed + 7 failed
+before the fix, on a Tuesday); full suite **712 passed, 2 skipped, 0 failed** (was
+705/712).
+
