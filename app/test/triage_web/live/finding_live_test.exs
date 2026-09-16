@@ -14,16 +14,16 @@ defmodule TriageWeb.FindingLiveTest do
   test "index lists grouped advisories", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings")
 
-    assert has_element?(view, "#groups", "CVE-2025-1001")
-    refute has_element?(view, "#groups", "CVE-2023-5005")
+    assert has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups", "CVE-2026-61625")
   end
 
   test "index honours the team filter from the URL", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha")
 
-    assert has_element?(view, "#groups", "CVE-2025-1001")
+    assert has_element?(view, "#groups", "CVE-2026-60002")
     # beta-only suppressed advisory stays hidden without include_suppressed
-    refute has_element?(view, "#groups", "CVE-2025-3003")
+    refute has_element?(view, "#groups", "CVE-2026-48931")
   end
 
   test "unknown team shows a visible notice and an empty table", %{conn: conn} do
@@ -39,13 +39,13 @@ defmodule TriageWeb.FindingLiveTest do
     view |> element("form") |> render_change(%{"owner" => "beta"})
 
     assert_patch(view, ~p"/findings?owner=beta")
-    assert has_element?(view, "#groups", "CVE-2025-1001")
+    assert has_element?(view, "#groups", "CVE-2026-60002")
   end
 
   test "detail renders hostile third-party text as text, never markup", %{conn: conn} do
     finding =
       Repo.one!(
-        from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+        from f in Finding, where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
       )
 
     {:ok, view, html} = live(conn, ~p"/findings/#{finding.id}")
@@ -56,7 +56,7 @@ defmodule TriageWeb.FindingLiveTest do
   end
 
   test "detail labels suppressed findings", %{conn: conn} do
-    suppressed = Repo.one!(from f in Finding, where: f.cve == "CVE-2025-3003")
+    suppressed = Repo.one!(from f in Finding, where: f.cve == "CVE-2026-48931")
 
     {:ok, view, _html} = live(conn, ~p"/findings/#{suppressed.id}")
 
@@ -66,7 +66,7 @@ defmodule TriageWeb.FindingLiveTest do
   test "detail labels unknown deployment context", %{conn: conn} do
     unknown_ctx =
       Repo.one!(
-        from f in Finding, where: f.cve == "CVE-2024-4004" and f.package_version == "1.2.13"
+        from f in Finding, where: f.cve == "CVE-2026-57236" and f.package_version == "1.19.0"
       )
 
     {:ok, view, _html} = live(conn, ~p"/findings/#{unknown_ctx.id}")
@@ -75,7 +75,7 @@ defmodule TriageWeb.FindingLiveTest do
   end
 
   test "detail preserves the selected team scope in its back link", %{conn: conn} do
-    finding = Repo.one!(from f in Finding, where: f.cve == "CVE-2024-2002")
+    finding = Repo.one!(from f in Finding, where: f.cve == "CVE-2026-53492")
 
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}?owner=alpha")
 
@@ -85,7 +85,7 @@ defmodule TriageWeb.FindingLiveTest do
   test "detail applies the selected team to placements and related occurrences", %{conn: conn} do
     finding =
       Repo.one!(
-        from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+        from f in Finding, where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
       )
 
     {:ok, view, _html} =
@@ -93,13 +93,16 @@ defmodule TriageWeb.FindingLiveTest do
 
     assert has_element?(view, "#placements", "alpha")
     refute has_element?(view, "#placements", "beta")
-    assert has_element?(view, "a", "busybox-binsh")
-    refute has_element?(view, "a", "curl 8.5")
+    assert has_element?(view, "a", "openssh-client-common")
+    refute has_element?(view, "a", "openssh-sftp-server 1:10.2p1")
   end
 
   test "detail rejects a finding outside the selected team", %{conn: conn} do
     finding =
-      Repo.one!(from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "curl")
+      Repo.one!(
+        from f in Finding,
+          where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-sftp-server"
+      )
 
     result = live(conn, ~p"/findings/#{finding.id}?owner=alpha")
 

@@ -24,7 +24,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   defp finding_id(package) do
     Repo.one!(
       from f in Finding,
-        where: f.cve == "CVE-2025-1001" and f.package_name == ^package,
+        where: f.cve == "CVE-2026-60002" and f.package_name == ^package,
         select: f.id
     )
   end
@@ -118,15 +118,15 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "rows render badges, review metadata and saved-scope detail links", %{conn: conn} do
-    alpha = open_case!("busybox", "alpha")
-    beta = open_case!("curl", "beta")
+    alpha = open_case!("openssh-client", "alpha")
+    beta = open_case!("openssh-sftp-server", "beta")
     review!(alpha)
 
     {:ok, view, _html} = live(conn, "/cases")
 
     assert has_element?(view, "#case-#{alpha.id}")
     assert has_element?(view, "#case-#{beta.id}")
-    assert has_element?(view, "#case-#{alpha.id}", "busybox")
+    assert has_element?(view, "#case-#{alpha.id}", "openssh-client")
     assert has_element?(view, "#case-#{alpha.id}", "Expedited review")
     assert has_element?(view, "#review-status-#{alpha.id}", "Assessment recorded")
     assert has_element?(view, "#evidence-status-#{alpha.id}", "Local evidence match")
@@ -143,8 +143,8 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "URL scope filters rows; row links keep each row's saved scope", %{conn: conn} do
-    alpha = open_case!("busybox", "alpha")
-    beta = open_case!("curl", "beta")
+    alpha = open_case!("openssh-client", "alpha")
+    beta = open_case!("openssh-sftp-server", "beta")
 
     {:ok, view, _html} = live(conn, "/cases?owner=alpha")
 
@@ -163,7 +163,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "an unknown but valid scope renders the honest empty state", %{conn: conn} do
-    _alpha = open_case!("busybox", "alpha")
+    _alpha = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases?owner=ghost-team")
 
@@ -174,7 +174,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "the empty state is visibly rendered only when the queue has no rows", %{conn: conn} do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
 
     # Rows exist: the empty state is absent from the DOM entirely.
     {:ok, view, _html} = live(conn, "/cases")
@@ -205,7 +205,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   test "the empty state is a sibling of the stream container across filter transitions", %{
     conn: conn
   } do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
 
     # Valid empty scope, one mount for the whole sequence.
     {:ok, view, _html} = live(conn, "/cases?owner=ghost-team")
@@ -243,7 +243,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   test "invalid scope or cursor renders the visible error with no rows; valid recovers", %{
     conn: conn
   } do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases?owner=" <> String.duplicate("a", 121))
 
@@ -321,7 +321,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
 
   test "a filter event patches the canonical URL and discards the cursor", %{conn: conn} do
     _cases = seed_cases!(30, "alpha")
-    beta = open_case!("curl", "beta")
+    beta = open_case!("openssh-sftp-server", "beta")
 
     {:ok, view, _html} = live(conn, "/cases")
 
@@ -337,7 +337,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "a malformed filter event fails visibly and a valid one recovers", %{conn: conn} do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases")
 
@@ -358,13 +358,13 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "manual reload re-queries the current scope without a patch", %{conn: conn} do
-    first = open_case!("busybox", "alpha")
+    first = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases")
 
     assert has_element?(view, "#case-#{first.id}")
 
-    later = open_case!("curl", "beta")
+    later = open_case!("openssh-sftp-server", "beta")
     refute has_element?(view, "#case-#{later.id}")
 
     view |> element("#reload-queue") |> render_click()
@@ -422,7 +422,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "an unsupported event fails visibly and the channel stays alive", %{conn: conn} do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases")
 
@@ -449,7 +449,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "the scope filters, reload and clear actions share one toolbar", %{conn: conn} do
-    _cse = open_case!("busybox", "alpha")
+    _cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases?owner=alpha")
 
@@ -460,7 +460,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
 
   test "each row shares table headings for finding, image, saved scope, evidence, assessment and action",
        %{conn: conn} do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
     {:ok, view, _html} = live(conn, "/cases")
     assert has_element?(view, "tbody#case-queue > tr#case-#{cse.id}")
 
@@ -482,7 +482,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "badge text states the status and colour is only a secondary cue", %{conn: conn} do
-    cse = open_case!("busybox", "alpha")
+    cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases")
 
@@ -493,7 +493,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "an unknown but valid scope stays selected instead of silently showing All", %{conn: conn} do
-    _cse = open_case!("busybox", "alpha")
+    _cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases?owner=ghost-team")
 
@@ -503,7 +503,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   end
 
   test "the coverage notice stays compact behind a detail disclosure", %{conn: conn} do
-    _cse = open_case!("busybox", "alpha")
+    _cse = open_case!("openssh-client", "alpha")
 
     {:ok, view, _html} = live(conn, "/cases")
 

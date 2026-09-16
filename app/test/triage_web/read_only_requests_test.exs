@@ -41,7 +41,7 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
     finding_id =
       Repo.one!(
         from(f in Finding,
-          where: f.cve == "CVE-2025-1001",
+          where: f.cve == "CVE-2026-60002",
           order_by: [asc: f.id],
           limit: 1,
           select: f.id
@@ -58,7 +58,7 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
     refute Intel.Config.enabled?()
     assert Intel.Config.enabled_sources() == []
     assert Intel.Client.fetch(:kev) == {:error, :intel_disabled}
-    assert Intel.Client.fetch({:nvd, "CVE-2024-4004"}) == {:error, :intel_disabled}
+    assert Intel.Client.fetch({:nvd, "CVE-2026-57236"}) == {:error, :intel_disabled}
   end
 
   test "every read route leaves every table unchanged", %{conn: conn} do
@@ -85,7 +85,7 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
 
   defp detail_routes do
     [
-      "/cves/CVE-2024-4004"
+      "/cves/CVE-2026-57236"
       | one_id_route("select id from findings order by id limit 1", "/findings")
     ] ++
       one_id_route("select id from review_cases order by id limit 1", "/cases")

@@ -27,12 +27,12 @@ defmodule TriageWeb.CaseLiveTest do
   defp finding_id(package) do
     Repo.one!(
       from f in Finding,
-        where: f.cve == "CVE-2025-1001" and f.package_name == ^package,
+        where: f.cve == "CVE-2026-60002" and f.package_name == ^package,
         select: f.id
     )
   end
 
-  defp open_case(conn, package \\ "busybox", scope \\ @scope) do
+  defp open_case(conn, package \\ "openssh-client", scope \\ @scope) do
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding_id(package)}?#{scope}")
 
     assert {:error, {:live_redirect, %{to: to}}} =
@@ -74,7 +74,7 @@ defmodule TriageWeb.CaseLiveTest do
   end
 
   test "open-case entry appears only with both an explicit team and environment", %{conn: conn} do
-    id = finding_id("busybox")
+    id = finding_id("openssh-client")
 
     {:ok, view, _html} = live(conn, ~p"/findings/#{id}")
     refute has_element?(view, "#open-case-btn")
@@ -105,7 +105,7 @@ defmodule TriageWeb.CaseLiveTest do
     assert has_element?(cview, "#case-scope", "alpha")
     assert has_element?(cview, "#case-scope", @env)
     assert has_element?(cview, "#evidence-snapshot")
-    assert has_element?(cview, "#evidence-snapshot", "busybox")
+    assert has_element?(cview, "#evidence-snapshot", "openssh-client")
     assert has_element?(cview, "#evidence-snapshot", "registry.internal/app-a")
     assert has_element?(cview, "#evidence-snapshot", "Synthetic local inventory")
     assert has_element?(cview, "#review-form")
@@ -122,8 +122,8 @@ defmodule TriageWeb.CaseLiveTest do
   end
 
   test "back link preserves owner, environment, search and suppressed filters", %{conn: conn} do
-    qs = %{owner: "alpha", environment: @env, q: "busybox", suppressed: "1"}
-    id = finding_id("busybox")
+    qs = %{owner: "alpha", environment: @env, q: "openssh-client", suppressed: "1"}
+    id = finding_id("openssh-client")
     {:ok, view, _html} = live(conn, ~p"/findings/#{id}?#{qs}")
 
     assert {:error, {:live_redirect, %{to: to}}} =
@@ -140,7 +140,7 @@ defmodule TriageWeb.CaseLiveTest do
     assert URI.decode_query(uri.query || "") == %{
              "owner" => "alpha",
              "environment" => @env,
-             "q" => "busybox",
+             "q" => "openssh-client",
              "suppressed" => "1"
            }
   end
@@ -325,11 +325,11 @@ defmodule TriageWeb.CaseLiveTest do
   } do
     {to, _cview} = open_case(conn)
     path = URI.parse(to).path
-    fid = finding_id("busybox")
+    fid = finding_id("openssh-client")
 
     # Matching scope: no notice, and the back link preserves all four filters.
     {:ok, view, _html} =
-      live(conn, path <> "?owner=alpha&environment=#{@env}&q=busybox&suppressed=1")
+      live(conn, path <> "?owner=alpha&environment=#{@env}&q=openssh-client&suppressed=1")
 
     refute has_element?(view, "#scope-mismatch")
     assert has_element?(view, "#case-scope", "alpha")
@@ -344,7 +344,7 @@ defmodule TriageWeb.CaseLiveTest do
     assert URI.decode_query(uri.query || "") == %{
              "owner" => "alpha",
              "environment" => @env,
-             "q" => "busybox",
+             "q" => "openssh-client",
              "suppressed" => "1"
            }
 
@@ -352,9 +352,9 @@ defmodule TriageWeb.CaseLiveTest do
     # case keeps its own saved scope, and the back link carries ONLY the case
     # scope — never the mismatched (e.g. beta) query context.
     for query <- [
-          "?owner=beta&environment=#{@env}&q=busybox&suppressed=1",
-          "?owner=alpha&environment=other-cluster&q=busybox&suppressed=1",
-          "?owner=beta&environment=other-cluster&q=busybox&suppressed=1"
+          "?owner=beta&environment=#{@env}&q=openssh-client&suppressed=1",
+          "?owner=alpha&environment=other-cluster&q=openssh-client&suppressed=1",
+          "?owner=beta&environment=other-cluster&q=openssh-client&suppressed=1"
         ] do
       {:ok, view, _html} = live(conn, path <> query)
 
@@ -404,10 +404,10 @@ defmodule TriageWeb.CaseLiveTest do
   # #invalid-back-scope notice.
   test "an invalid back scope on a same-LiveView patch resets the back link to /findings; valid scope recovers it",
        %{conn: conn} do
-    {to_a, _cview_a} = open_case(conn, "busybox", @scope)
-    {to_b, _cview_b} = open_case(conn, "curl", %{owner: "beta", environment: @env})
-    fid_a = finding_id("busybox")
-    fid_b = finding_id("curl")
+    {to_a, _cview_a} = open_case(conn, "openssh-client", @scope)
+    {to_b, _cview_b} = open_case(conn, "openssh-sftp-server", %{owner: "beta", environment: @env})
+    fid_a = finding_id("openssh-client")
+    fid_b = finding_id("openssh-sftp-server")
     path_a = URI.parse(to_a).path
     path_b = URI.parse(to_b).path
 
@@ -450,7 +450,7 @@ defmodule TriageWeb.CaseLiveTest do
     assert URI.decode_query(uri.query || "") == %{
              "owner" => "beta",
              "environment" => @env,
-             "q" => "curl",
+             "q" => "openssh-sftp-server",
              "suppressed" => "1"
            }
   end

@@ -122,64 +122,78 @@ defmodule Triage.InventoryScopeTest do
 
   describe "environment and owner scoping through fetch_finding/2" do
     test "environment-only scope keeps active-gated placements and scoped occurrences" do
-      busybox =
+      openssh_client =
         Repo.one!(
-          from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+          from f in Finding,
+            where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
         )
 
-      {:ok, data} = Inventory.fetch_finding(busybox.id, environment: @staging)
+      {:ok, data} = Inventory.fetch_finding(openssh_client.id, environment: @staging)
 
       # display keeps every matching placement, active or retired
       assert Enum.map(data.placements, &{&1.owner, &1.active}) |> Enum.sort() ==
                [{"alpha", true}, {"beta", false}]
 
       # related occurrences follow only active placements in the environment
-      assert Enum.map(data.other_occurrences, & &1.package_name) == ["busybox-binsh"]
+      assert Enum.map(data.other_occurrences, & &1.package_name) == ["openssh-client-common"]
     end
 
     test "owner+environment intersection" do
-      busybox =
+      openssh_client =
         Repo.one!(
-          from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+          from f in Finding,
+            where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
         )
 
-      {:ok, data} = Inventory.fetch_finding(busybox.id, owner: "alpha", environment: @staging)
+      {:ok, data} =
+        Inventory.fetch_finding(openssh_client.id, owner: "alpha", environment: @staging)
 
       assert [%{owner: "alpha", environment: @staging}] = data.placements
-      assert Enum.map(data.other_occurrences, & &1.package_name) == ["busybox-binsh"]
+      assert Enum.map(data.other_occurrences, & &1.package_name) == ["openssh-client-common"]
     end
 
     test "a retired-only matching placement is out of scope" do
-      busybox =
+      openssh_client =
         Repo.one!(
-          from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+          from f in Finding,
+            where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
         )
 
       assert {:error, :out_of_scope} =
-               Inventory.fetch_finding(busybox.id, owner: "beta", environment: @staging)
+               Inventory.fetch_finding(openssh_client.id, owner: "beta", environment: @staging)
     end
 
     test "unknown valid scopes return empty lists or out_of_scope, never everything" do
-      busybox =
+      openssh_client =
         Repo.one!(
-          from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+          from f in Finding,
+            where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
         )
 
       assert Inventory.list_groups(owner: "beta", environment: @staging) == []
-      assert {:error, :out_of_scope} = Inventory.fetch_finding(busybox.id, environment: "ghost")
-      assert {:error, :out_of_scope} = Inventory.fetch_finding(busybox.id, owner: "ghost")
+
+      assert {:error, :out_of_scope} =
+               Inventory.fetch_finding(openssh_client.id, environment: "ghost")
+
+      assert {:error, :out_of_scope} = Inventory.fetch_finding(openssh_client.id, owner: "ghost")
     end
 
     test "unscoped calls keep the full history, placements and occurrences" do
-      busybox =
+      openssh_client =
         Repo.one!(
-          from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+          from f in Finding,
+            where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
         )
 
-      {:ok, data} = Inventory.fetch_finding(busybox.id)
+      {:ok, data} = Inventory.fetch_finding(openssh_client.id)
 
       assert length(data.placements) == 4
-      assert Enum.map(data.other_occurrences, & &1.package_name) == ["busybox-binsh", "curl"]
+
+      assert Enum.map(data.other_occurrences, & &1.package_name) == [
+               "openssh-client-common",
+               "openssh-sftp-server"
+             ]
+
       assert Enum.map(data.events, & &1.event) == ["appeared"]
     end
   end

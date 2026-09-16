@@ -16,8 +16,8 @@ defmodule TriageWeb.InventoryReadabilityTest do
     {:ok, view, _} = live(conn, ~p"/findings?owner=ghost-team&environment=ghost-env")
     assert has_element?(view, "select[name='owner'] option[value='ghost-team'][selected]")
     assert has_element?(view, "select[name='environment'] option[value='ghost-env'][selected]")
-    view |> form("#filter-form", %{"q" => "busybox"}) |> render_change()
-    assert_patch(view, ~p"/findings?environment=ghost-env&owner=ghost-team&q=busybox")
+    view |> form("#filter-form", %{"q" => "openssh-client"}) |> render_change()
+    assert_patch(view, ~p"/findings?environment=ghost-env&owner=ghost-team&q=openssh-client")
     assert has_element?(view, "select[name='owner'] option[value='ghost-team'][selected]")
     assert has_element?(view, "select[name='environment'] option[value='ghost-env'][selected]")
     refute has_element?(view, "#groups > tr")
@@ -37,24 +37,24 @@ defmodule TriageWeb.InventoryReadabilityTest do
     conn: conn
   } do
     counts = Inventory.summary_counts()
-    {:ok, view, _html} = live(conn, ~p"/findings?q=busybox")
+    {:ok, view, _html} = live(conn, ~p"/findings?q=openssh-client")
 
     assert has_element?(view, "h1", "Findings")
     assert has_element?(view, "#findings-summary", "1 matching advisory")
-    assert has_element?(view, "#findings-summary", "busybox")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='packages']", "3 packages")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='images']", "2 images")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='occurrences']", "3 occurrences")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='teams']", "2 teams")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='fix']", "2 of 3 occurrences")
+    assert has_element?(view, "#findings-summary", "openssh-client")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='packages']", "3 packages")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='images']", "2 images")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='occurrences']", "3 occurrences")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='teams']", "2 teams")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='fix']", "2 of 3 occurrences")
     assert has_element?(view, "#open-occurrence-count", to_string(counts.open))
     assert has_element?(view, "#suppressed-occurrence-count", to_string(counts.suppressed))
     assert has_element?(view, "#filter-form #findings-summary")
     assert has_element?(view, "#inventory-search-help", "whole advisory group")
 
-    render_patch(view, ~p"/findings?owner=alpha&q=busybox")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='packages']", "2 packages")
-    assert has_element?(view, "#group-CVE-2025-1001 [data-field='images']", "1 image")
+    render_patch(view, ~p"/findings?owner=alpha&q=openssh-client")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='packages']", "2 packages")
+    assert has_element?(view, "#group-CVE-2026-60002 [data-field='images']", "1 image")
     assert has_element?(view, "#open-occurrence-count", to_string(counts.open))
     assert has_element?(view, "#suppressed-occurrence-count", to_string(counts.suppressed))
   end
@@ -72,18 +72,18 @@ defmodule TriageWeb.InventoryReadabilityTest do
            )
 
     assert has_element?(view, ".data-table th[scope='col']", "Scanner severity")
-    assert has_element?(view, "#group-CVE-2024-4004", "Reopened")
-    assert has_element?(view, "#group-CVE-2025-3003", "1 suppressed")
-    assert has_element?(view, "#group-CVE-2025-3003 [data-field='fix']", "Not reported")
+    assert has_element?(view, "#group-CVE-2026-57236", "Reopened")
+    assert has_element?(view, "#group-CVE-2026-48931", "1 suppressed")
+    assert has_element?(view, "#group-CVE-2026-48931 [data-field='fix']", "Not reported")
     assert has_element?(view, "#findings-order-details", "affected image count")
-    refute has_element?(view, "#group-CVE-2023-5005")
+    refute has_element?(view, "#group-CVE-2026-61625")
   end
 
   test "invalid filters show an error, not empty-success counts, and reset recovers", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/findings?q=busybox")
-    render_change(view, "filter", %{"q" => ["busybox"]})
+    {:ok, view, _html} = live(conn, ~p"/findings?q=openssh-client")
+    render_change(view, "filter", %{"q" => ["openssh-client"]})
 
     assert has_element?(view, "#invalid-filters[role='alert']")
     refute has_element?(view, "#findings-summary")
@@ -104,14 +104,14 @@ defmodule TriageWeb.InventoryReadabilityTest do
   test "detail identifies current occurrence before case action and keeps full filter context", %{
     conn: conn
   } do
-    finding = finding!("busybox") |> Repo.preload(:image)
-    qs = %{owner: "alpha", environment: "prod", q: "busybox", suppressed: "1"}
+    finding = finding!("openssh-client") |> Repo.preload(:image)
+    qs = %{owner: "alpha", environment: "prod", q: "openssh-client", suppressed: "1"}
     before = record_counts()
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}?#{qs}")
 
-    assert has_element?(view, "#finding-summary", "busybox")
-    assert has_element?(view, "#finding-summary", "1.37")
-    assert has_element?(view, "#finding-summary", "1.38")
+    assert has_element?(view, "#finding-summary", "openssh-client")
+    assert has_element?(view, "#finding-summary", "1:10.2p1")
+    assert has_element?(view, "#finding-summary", "1:10.4p1")
     assert has_element?(view, "#finding-display-scope", "alpha · prod")
     assert has_element?(view, "#finding-summary ~ #open-case-form")
     assert has_element?(view, "#open-case-btn[data-confirm][phx-disable-with]")
@@ -138,7 +138,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
 
   test "missing metadata is explicit and reported source text never becomes an executable link",
        %{conn: conn} do
-    finding = finding!("busybox-binsh")
+    finding = finding!("openssh-client-common")
 
     Repo.update_all(from(f in Finding, where: f.id == ^finding.id),
       set: [
@@ -175,7 +175,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
   end
 
   test "disappearance history is not relabelled as remediation", %{conn: conn} do
-    finding = finding!("gzip")
+    finding = finding!("victoria-metrics")
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}")
 
     assert has_element?(view, "#finding-summary", "No longer observed in local inventory")
@@ -186,9 +186,9 @@ defmodule TriageWeb.InventoryReadabilityTest do
 
   test "activity return context is independently validated and cannot relabel finding or case scope",
        %{conn: conn} do
-    finding = finding!("busybox")
+    finding = finding!("openssh-client")
     context = %{from: "activity", owner: "beta", environment: "other-environment", before: "12"}
-    scope = %{owner: "alpha", environment: "prod", q: "busybox", suppressed: "1"}
+    scope = %{owner: "alpha", environment: "prod", q: "openssh-client", suppressed: "1"}
     params = Map.put(scope, :activity, context)
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}?#{params}")
 
@@ -197,7 +197,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
     assert has_element?(view, "#finding-display-scope", "alpha · prod")
     assert has_element?(view, "#open-case-btn", "alpha · prod")
     refute has_element?(view, "#placements", "beta")
-    related = finding!("busybox-binsh")
+    related = finding!("openssh-client-common")
 
     assert has_element?(
              view,
@@ -219,7 +219,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
   test "finding detail breadcrumb names the CVE and occurrence stays in the identity strip", %{
     conn: conn
   } do
-    finding = finding!("busybox")
+    finding = finding!("openssh-client")
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}")
 
     assert has_element?(view, ".page-header .eyebrow", "Findings / #{finding.cve}")

@@ -25,18 +25,23 @@ defmodule Triage.InventoryTest do
   end
 
   test "one advisory maps to one finding row per package occurrence" do
-    rows = Repo.all(from f in Finding, where: f.cve == "CVE-2025-1001")
+    rows = Repo.all(from f in Finding, where: f.cve == "CVE-2026-60002")
 
     assert length(rows) == 3
-    assert Enum.sort(Enum.map(rows, & &1.package_name)) == ["busybox", "busybox-binsh", "curl"]
+
+    assert Enum.sort(Enum.map(rows, & &1.package_name)) == [
+             "openssh-client",
+             "openssh-client-common",
+             "openssh-sftp-server"
+           ]
   end
 
   test "groups are team-scoped and shared images appear under both teams" do
     alpha = Inventory.list_groups(owner: "alpha")
     beta = Inventory.list_groups(owner: "beta")
 
-    alpha_1001 = Enum.find(alpha, &(&1.cve == "CVE-2025-1001"))
-    beta_1001 = Enum.find(beta, &(&1.cve == "CVE-2025-1001"))
+    alpha_1001 = Enum.find(alpha, &(&1.cve == "CVE-2026-60002"))
+    beta_1001 = Enum.find(beta, &(&1.cve == "CVE-2026-60002"))
 
     assert alpha_1001.occurrences == 2
     assert beta_1001.occurrences == 3
@@ -69,10 +74,10 @@ defmodule Triage.InventoryTest do
 
   test "suppressed findings are hidden by default and labelled when included" do
     default = Inventory.list_groups(owner: "beta")
-    refute Enum.any?(default, &(&1.cve == "CVE-2025-3003"))
+    refute Enum.any?(default, &(&1.cve == "CVE-2026-48931"))
 
     including = Inventory.list_groups(owner: "beta", include_suppressed: true)
-    group = Enum.find(including, &(&1.cve == "CVE-2025-3003"))
+    group = Enum.find(including, &(&1.cve == "CVE-2026-48931"))
 
     assert group
     assert group.suppressed_occurrences == 1
@@ -82,13 +87,15 @@ defmodule Triage.InventoryTest do
   test "resolved findings never appear in the active list" do
     refute Enum.any?(
              Inventory.list_groups(include_suppressed: true),
-             &(&1.cve == "CVE-2023-5005")
+             &(&1.cve == "CVE-2026-61625")
            )
   end
 
   test "reopened fixture keeps full appeared → resolved → reopened history" do
     reopened =
-      Repo.one!(from f in Finding, where: f.cve == "CVE-2024-4004" and f.package_version == "1.3")
+      Repo.one!(
+        from f in Finding, where: f.cve == "CVE-2026-57236" and f.package_version == "1.3"
+      )
 
     {:ok, data} = Inventory.fetch_finding(reopened.id)
 
@@ -98,7 +105,7 @@ defmodule Triage.InventoryTest do
   end
 
   test "resolved fixture records its disappearance without claiming remediation" do
-    resolved = Repo.one!(from f in Finding, where: f.cve == "CVE-2023-5005")
+    resolved = Repo.one!(from f in Finding, where: f.cve == "CVE-2026-61625")
 
     {:ok, data} = Inventory.fetch_finding(resolved.id)
 
@@ -107,8 +114,8 @@ defmodule Triage.InventoryTest do
   end
 
   test "group search matches a package without hiding other affected packages" do
-    groups = Inventory.list_groups(search: "busybox")
-    group = Enum.find(groups, &(&1.cve == "CVE-2025-1001"))
+    groups = Inventory.list_groups(search: "openssh-client")
+    group = Enum.find(groups, &(&1.cve == "CVE-2026-60002"))
 
     assert group
     assert group.occurrences == 3
@@ -122,7 +129,7 @@ defmodule Triage.InventoryTest do
     {:ok, finding} =
       Inventory.upsert_finding(
         image,
-        %{cve: "CVE-2025-1001", package_name: "busybox", package_version: "1.37"},
+        %{cve: "CVE-2026-60002", package_name: "openssh-client", package_version: "1:10.2p1"},
         DateTime.utc_now()
       )
 
@@ -159,7 +166,7 @@ defmodule Triage.InventoryTest do
     assert counts.total == expected_total
     assert bands == expected_bands
 
-    # The seeded estate records CVE-2024-4004 at HIGH and MEDIUM, so the bands
+    # The seeded estate records CVE-2026-57236 at HIGH and MEDIUM, so the bands
     # are not a partition of the total. Adding them up is exactly what
     # overstated the total before it became its own distinct count.
     assert bands > counts.total

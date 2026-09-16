@@ -140,7 +140,7 @@ defmodule TriageWeb.OverviewReadabilityTest do
     total = count.("home-total-count")
 
     assert total == Inventory.cve_summary_counts().total
-    assert bands > total, "the seeded estate records CVE-2024-4004 at two severities"
+    assert bands > total, "the seeded estate records CVE-2026-57236 at two severities"
   end
 
   test "old overview modes redirect to the canonical list and invalid modes fail visibly", %{
@@ -196,8 +196,13 @@ defmodule TriageWeb.OverviewReadabilityTest do
   end
 
   test "a rail does not claim to withhold advisories when it shows them all", %{conn: conn} do
+    # The seeded demo fleet is far larger than one rail, so build a small,
+    # intentional estate through the app's own public writes instead.
+    Triage.DataCase.reset_inventory!()
+    add_recent_advisories!(4)
+
     total = Inventory.count_groups([])
-    assert total <= 5, "the seeded estate must fit in one rail for this assertion"
+    assert total <= 5, "the small fixture estate must fit in one rail for this assertion"
 
     document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
 

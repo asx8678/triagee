@@ -1,10 +1,11 @@
 {
   "configVersion": 4,
   "prewalk": {
-    "model": "zro/glm-5.3-flash",
+    "model": "zro/kimi-k3",
     "thinking": "high",
     "mode": "trajectory",
-    "alwaysRearm": true
+    "alwaysRearm": true,
+    "enabled": true
   },
   "compaction": {
     "thresholds": {
@@ -13,5 +14,8 @@
     "tokenThresholds": {
       "openai-codex/gpt-6-astra": null
     }
+  },
+  "executor": {
+    "kernel": "python"
   }
 }

@@ -8,7 +8,7 @@ defmodule TriageWeb.UIReadabilityBoundaryTest do
   test "all ten route mounts, scoped navigation and invalid filters leave stored rows unchanged",
        %{conn: conn} do
     :ok = Seeds.seed()
-    id = Repo.one!(from f in Finding, where: f.package_name == "busybox", select: f.id)
+    id = Repo.one!(from f in Finding, where: f.package_name == "openssh-client", select: f.id)
     {:ok, opened} = Cases.open_case(id, owner: "alpha", environment: "prod")
     case_id = opened.case.id
     before = fingerprints()
@@ -22,7 +22,7 @@ defmodule TriageWeb.UIReadabilityBoundaryTest do
 
     for path <- [
           "/findings",
-          "/findings/#{id}?owner=alpha&environment=prod&q=busybox",
+          "/findings/#{id}?owner=alpha&environment=prod&q=openssh-client",
           "/cases",
           "/cases/#{case_id}?owner=beta&environment=other",
           "/whats-new",

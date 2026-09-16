@@ -14,7 +14,7 @@ defmodule TriageWeb.CveLiveTest do
   end
 
   test "renders CVE aggregate with teams, packages, exposure and priority", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2025-1001")
+    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-60002")
 
     assert html =~ "Advisory"
     assert html =~ "Teams affected"
@@ -28,7 +28,7 @@ defmodule TriageWeb.CveLiveTest do
   end
 
   test "internet-exposed placement shows escalated priority", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2024-2002")
+    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-53492")
 
     # image_a placement is internet_exposed per seeds
     assert html =~ "internet_exposed"
@@ -63,23 +63,23 @@ defmodule TriageWeb.CveLiveTest do
   end
 
   test "internal placement shows labelled evidence", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-57236")
 
     assert html =~ "unknown"
     assert html =~ "Exposure is operator-declared evidence"
   end
 
   test "absent KEV cache entry is explicit, not reassuring", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2025-1001")
+    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-60002")
 
     assert html =~ "No cached KEV entry" or html =~ "never fetched"
   end
 
   test "priority is derived per placement, not from the advisory's worst severity", %{conn: conn} do
-    # CVE-2024-4004 has a HIGH occurrence on image_a (internet_exposed placement)
+    # CVE-2026-57236 has a HIGH occurrence on image_a (internet_exposed placement)
     # and only a MEDIUM occurrence on the shared-base image, whose placement has no
     # exposure evidence. The unexposed placement must not inherit image_a's severity.
-    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2026-57236")
 
     exposed = placement_id("registry.internal/app-a", "web", "alpha")
     unexposed = placement_id("registry.internal/shared-base", "(unknown)", "alpha")
@@ -89,7 +89,7 @@ defmodule TriageWeb.CveLiveTest do
   end
 
   test "a cached KEV entry escalates review priority for every placement", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2026-57236")
 
     unexposed = placement_id("registry.internal/shared-base", "(unknown)", "alpha")
 
@@ -99,13 +99,13 @@ defmodule TriageWeb.CveLiveTest do
     {:ok, _} =
       Intel.replace_advisories("kev", [
         %{
-          external_id: "CVE-2024-4004",
+          external_id: "CVE-2026-57236",
           summary: "kev entry",
           published_at: ~U[2026-09-12 10:00:00Z]
         }
       ])
 
-    {:ok, view, html} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, view, html} = live(conn, ~p"/cves/CVE-2026-57236")
 
     assert html =~ "KEV cache match: Yes"
     assert has_element?(view, "#cve-priority-reasons", "Actively exploited (KEV)")
@@ -121,22 +121,22 @@ defmodule TriageWeb.CveLiveTest do
     unexposed = placement_id("registry.internal/shared-base", "(unknown)", "alpha")
     row = "#cve-placement-#{unexposed}"
 
-    {:ok, view, html} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, view, html} = live(conn, ~p"/cves/CVE-2026-57236")
 
     assert has_element?(view, row, "medium")
     refute has_element?(view, row, "high")
     assert html =~ "NVD entries: 0"
 
     {:ok, _} =
-      Intel.replace_advisories("nvd:CVE-2024-4004", [
+      Intel.replace_advisories("nvd:CVE-2026-57236", [
         %{
-          external_id: "CVE-2024-4004",
+          external_id: "CVE-2026-57236",
           summary: "NVD single-source severity claim",
           published_at: ~U[2026-09-12 10:00:00Z]
         }
       ])
 
-    {:ok, view2, html2} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, view2, html2} = live(conn, ~p"/cves/CVE-2026-57236")
 
     # Displayed, attributed to its own source, and separately from KEV.
     assert html2 =~ "NVD entries: 1"
@@ -151,13 +151,13 @@ defmodule TriageWeb.CveLiveTest do
     {:ok, _} =
       Intel.replace_advisories("kev", [
         %{
-          external_id: "CVE-2024-4004",
+          external_id: "CVE-2026-57236",
           summary: "kev entry",
           published_at: ~U[2026-09-12 10:00:00Z]
         }
       ])
 
-    {:ok, view3, html3} = live(conn, ~p"/cves/CVE-2024-4004")
+    {:ok, view3, html3} = live(conn, ~p"/cves/CVE-2026-57236")
 
     # Exploitation evidence, unlike the severity claim, does raise priority.
     assert html3 =~ "KEV cache match: Yes"
@@ -181,14 +181,14 @@ defmodule TriageWeb.CveLiveTest do
   end
 
   test "invalid scope shows visible error, no advisory", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2025-1001?owner[]=bad")
+    {:ok, view, _html} = live(conn, ~p"/cves/CVE-2026-60002?owner[]=bad")
 
     assert has_element?(view, "#cve-scope-error")
     refute has_element?(view, "#cve-title")
   end
 
   test "teams are a live count from current placements, not stale text", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2025-1001")
+    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-60002")
 
     assert html =~ "Teams affected"
     refute html =~ "(unknown)"

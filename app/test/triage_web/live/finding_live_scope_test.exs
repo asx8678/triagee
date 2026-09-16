@@ -63,16 +63,16 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   test "environment filter alone scopes the list", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings?environment=#{@staging}")
 
-    assert has_element?(view, "#groups", "CVE-2025-1001")
-    assert has_element?(view, "#groups", "CVE-2024-2002")
+    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#groups", "CVE-2026-53492")
     # image_b (beta, staging) is outside the staging-cluster-1 scope
-    refute has_element?(view, "#groups", "CVE-2025-3003")
+    refute has_element?(view, "#groups", "CVE-2026-48931")
   end
 
   test "owner and environment intersect on the list", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha&environment=#{@staging}")
 
-    assert has_element?(view, "#groups", "CVE-2025-1001")
+    assert has_element?(view, "#groups", "CVE-2026-60002")
   end
 
   test "mismatched valid scopes stay visibly empty, never invalid or unscoped", %{conn: conn} do
@@ -80,7 +80,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
 
     assert has_element?(view, "p", "No open findings")
     refute has_element?(view, "#invalid-filters")
-    refute has_element?(view, "#groups", "CVE-2025-1001")
+    refute has_element?(view, "#groups", "CVE-2026-60002")
   end
 
   test "unknown valid environments stay visibly empty", %{conn: conn} do
@@ -93,36 +93,36 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   test "detail environment-only scope keeps placements and related occurrences in scope", %{
     conn: conn
   } do
-    busybox_id = first_occurrence_id("CVE-2025-1001")
+    openssh_client_id = first_occurrence_id("CVE-2026-60002")
 
-    {:ok, view, _html} = live(conn, "/findings/#{busybox_id}?environment=#{@staging}")
+    {:ok, view, _html} = live(conn, "/findings/#{openssh_client_id}?environment=#{@staging}")
 
     assert has_element?(view, "#placements", "alpha")
     # the retired beta placement is displayed honestly with active "no"
     assert has_element?(view, "#placements", "beta")
     # related occurrences follow active placements in the environment only
-    assert has_element?(view, "#other-occurrences", "busybox-binsh")
-    refute has_element?(view, "#other-occurrences", "curl 8.5")
+    assert has_element?(view, "#other-occurrences", "openssh-client-common")
+    refute has_element?(view, "#other-occurrences", "openssh-sftp-server 1:10.2p1")
   end
 
   test "detail owner+environment intersection narrows placements and related occurrences", %{
     conn: conn
   } do
-    busybox_id = first_occurrence_id("CVE-2025-1001")
+    openssh_client_id = first_occurrence_id("CVE-2026-60002")
 
     {:ok, view, _html} =
-      live(conn, "/findings/#{busybox_id}?owner=alpha&environment=#{@staging}")
+      live(conn, "/findings/#{openssh_client_id}?owner=alpha&environment=#{@staging}")
 
     assert has_element?(view, "#placements", "alpha")
     refute has_element?(view, "#placements", "beta")
-    assert has_element?(view, "#other-occurrences", "busybox-binsh")
-    refute has_element?(view, "#other-occurrences", "curl 8.5")
+    assert has_element?(view, "#other-occurrences", "openssh-client-common")
+    refute has_element?(view, "#other-occurrences", "openssh-sftp-server 1:10.2p1")
   end
 
   test "a retired-only scope placement does not pass the active gate", %{conn: conn} do
-    busybox_id = first_occurrence_id("CVE-2025-1001")
+    openssh_client_id = first_occurrence_id("CVE-2026-60002")
 
-    result = live(conn, "/findings/#{busybox_id}?owner=beta&environment=#{@staging}")
+    result = live(conn, "/findings/#{openssh_client_id}?owner=beta&environment=#{@staging}")
 
     assert {:error, {:live_redirect, %{to: to}}} = result
     uri = URI.parse(to)
@@ -134,16 +134,16 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   end
 
   test "all four list filters survive index to detail to back and related links", %{conn: conn} do
-    qs = %{owner: "alpha", environment: "prod", q: "busybox", suppressed: "1"}
+    qs = %{owner: "alpha", environment: "prod", q: "openssh-client", suppressed: "1"}
     {:ok, view, _html} = live(conn, ~p"/findings?#{qs}")
 
-    assert has_element?(view, "#groups", "CVE-2025-1001")
+    assert has_element?(view, "#groups", "CVE-2026-60002")
 
-    busybox_id = first_occurrence_id("CVE-2025-1001")
-    expected_detail = ~p"/findings/#{busybox_id}?#{qs}"
+    openssh_client_id = first_occurrence_id("CVE-2026-60002")
+    expected_detail = ~p"/findings/#{openssh_client_id}?#{qs}"
 
     assert {:error, {:live_redirect, %{to: ^expected_detail}}} =
-             view |> element("a", "CVE-2025-1001") |> render_click()
+             view |> element("a", "CVE-2026-60002") |> render_click()
 
     {:ok, view, _html} = live(conn, expected_detail)
 
@@ -153,7 +153,8 @@ defmodule TriageWeb.FindingLive.ScopeTest do
     # related occurrence links keep the full scope too
     related =
       Repo.one!(
-        from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox-binsh"
+        from f in Finding,
+          where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client-common"
       )
 
     assert has_element?(
@@ -170,7 +171,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
     suppressed =
       Repo.insert!(%Finding{
         image_id: image_a.id,
-        cve: "CVE-2024-2002",
+        cve: "CVE-2026-53492",
         package_name: "openssl-cli",
         package_version: "3.1",
         severity: "CRITICAL",
@@ -180,7 +181,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
       })
 
     openssl =
-      Repo.one!(from f in Finding, where: f.cve == "CVE-2024-2002" and f.suppressed == false)
+      Repo.one!(from f in Finding, where: f.cve == "CVE-2026-53492" and f.suppressed == false)
 
     {:ok, view, _html} = live(conn, "/findings/#{openssl.id}")
 

@@ -12,7 +12,7 @@ defmodule TriageWeb.CaseReadabilityTest do
 
     finding =
       Repo.one!(
-        from f in Finding, where: f.cve == "CVE-2025-1001" and f.package_name == "busybox"
+        from f in Finding, where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
       )
 
     {:ok, %{case: review_case}} = Cases.open_case(finding.id, @scope)
@@ -80,7 +80,7 @@ defmodule TriageWeb.CaseReadabilityTest do
              "#case-workspace > .case-summary + .assessment-panel + .case-details"
            )
 
-    assert has_element?(view, "#evidence-snapshot", "busybox")
+    assert has_element?(view, "#evidence-snapshot", "openssh-client")
     assert has_element?(view, "#evidence-snapshot", "Reported fixed version")
     assert has_element?(view, "#evidence-snapshot time[datetime][title]")
     assert has_element?(view, "#case-scope", "alpha")
