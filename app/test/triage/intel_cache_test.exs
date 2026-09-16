@@ -207,6 +207,29 @@ defmodule Triage.IntelCacheTest do
     assert Intel.kev_index(["CVE-2026-6001"]) == %{}
   end
 
+  test "kev_status reports the whole-source count and the latest refresh receipt" do
+    assert Intel.kev_status() == %{source: "kev", rows: 0, receipt: nil}
+
+    {:ok, 2} =
+      Intel.replace_advisories("kev", [
+        %{external_id: "CVE-2026-8001"},
+        %{external_id: "CVE-2026-8002"}
+      ])
+
+    {:ok, _} = Intel.record_receipt("kev", true, 2)
+    {:ok, _} = Intel.record_receipt("kev", false, nil, "simulated outage")
+
+    status = Intel.kev_status()
+    assert status.source == "kev"
+    # The count is the whole source, never the rows one view matched.
+    assert status.rows == 2
+    assert status.receipt.succeeded == false
+    assert status.receipt.message == "simulated outage"
+
+    # A failed receipt does not erase or invalidate retained rows.
+    assert Intel.kev_index(["CVE-2026-8001"]) |> Map.has_key?("CVE-2026-8001")
+  end
+
   test "NVD rows are found by their per-CVE source key" do
     {:ok, _} =
       Intel.replace_advisories("nvd:CVE-2024-3094", [

@@ -216,13 +216,18 @@ defmodule TriageWeb.InventoryReadabilityTest do
     end
   end
 
-  test "finding detail breadcrumb names the CVE and occurrence stays in the identity strip", %{
-    conn: conn
-  } do
+  test "finding detail eyebrow stays deduplicated and the occurrence stays in the identity strip",
+       %{
+         conn: conn
+       } do
     finding = finding!("busybox")
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}")
 
-    assert has_element?(view, ".page-header .eyebrow", "Findings / #{finding.cve}")
+    # The advisory id is the page title and copy target; repeating it in the eyebrow
+    # was the deliberate round-3 dedupe, so the eyebrow names only the section.
+    assert has_element?(view, ".page-header .eyebrow", "Findings")
+    refute has_element?(view, ".page-header .eyebrow", finding.cve)
+    assert has_element?(view, ".page-header h1", finding.cve)
     assert has_element?(view, "#finding-summary", "Occurrence ##{finding.id}")
   end
 

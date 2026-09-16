@@ -174,6 +174,28 @@ defmodule Triage.Cases do
   end
 
   @doc """
+  Batched saved-case state for advisory action rows, using the queue's existing
+  source/evidence comparison. Does not open cases or change scanner inventory.
+  Only positive bigint finding IDs are accepted; empty input performs no query.
+  """
+  def states_for_findings([]), do: []
+
+  def states_for_findings(finding_ids) when is_list(finding_ids) do
+    if Enum.all?(finding_ids, &(is_integer(&1) and &1 > 0 and &1 <= @max_id)) do
+      Repo.all(
+        from c in ReviewCase,
+          where: c.finding_id in ^finding_ids,
+          left_join: s in EvidenceSnapshot,
+          on: s.id == c.current_snapshot_id,
+          select: {c, s, nil}
+      )
+      |> queue_rows()
+    else
+      raise ArgumentError, "finding ids must be positive bigints"
+    end
+  end
+
+  @doc """
   Sorted distinct nonblank owner and environment values from saved cases.
 
   Queue filter options come from `review_cases` only — independent of the
@@ -1089,13 +1111,21 @@ defmodule Triage.Cases do
   defp payload(owner, environment, data) do
     %{
       "schema_version" => @payload_schema_version,
-      "source" => @payload_source,
+      "source" =>
+        if(Triage.ReferenceData.reference_image?(data.finding.image),
+          do: "nvd_public_reference",
+          else: @payload_source
+        ),
       "scope" => %{"owner" => owner, "environment" => environment},
       "finding" => finding_payload(data.finding),
       "image" => image_payload(data.finding.image),
       "placements" => placements_payload(data.placements),
       "events" => lifecycle_payload(data.events),
-      "coverage" => @coverage
+      "coverage" =>
+        if(Triage.ReferenceData.reference_image?(data.finding.image),
+          do: %{"kind" => "public_reference_only", "warning" => Triage.ReferenceData.warning()},
+          else: @coverage
+        )
     }
   end
 

@@ -31,6 +31,7 @@ defmodule TriageWeb.FindingLive.Index do
       socket
       |> assign(:page_title, "Findings")
       |> assign(:invalid_filters, [])
+      |> assign(:kev_status, nil)
       |> stream_configure(:groups, dom_id: &"group-#{&1.cve}")
 
     {:ok, socket}
@@ -80,6 +81,10 @@ defmodule TriageWeb.FindingLive.Index do
     # rendered for an advisory the cache actually holds.
     kev = Intel.kev_index(Enum.map(groups, & &1.cve))
 
+    # Source freshness is one read per page load, never per row. Invalid input
+    # keeps this view's no-query rule: status renders as unread, never invented.
+    kev_status = if invalid or unknown_team?, do: nil, else: Intel.kev_status()
+
     {:noreply,
      socket
      |> assign(
@@ -102,6 +107,7 @@ defmodule TriageWeb.FindingLive.Index do
      |> assign(:advisory_count, total)
      |> assign(:shown, length(groups))
      |> assign(:kev, kev)
+     |> assign(:kev_status, kev_status)
      |> assign(:per_page, @per_page)
      |> assign(:has_more?, has_more?)
      |> assign(:cursor, parsed.before)
@@ -145,6 +151,7 @@ defmodule TriageWeb.FindingLive.Index do
        |> assign(:beyond_end?, false)
        |> assign(:empty?, true)
        |> assign(:kev, %{})
+       |> assign(:kev_status, nil)
        |> stream(:groups, [], reset: true)}
     end
   end
@@ -243,6 +250,12 @@ defmodule TriageWeb.FindingLive.Index do
         subtitle="Advisories grouped across affected packages and images in local inventory."
       />
 
+      <.notice id="reference-inventory-help" kind="info">
+        The <strong>public-reference / not-a-deployment</strong> scope contains real NVD CVEs,
+        not proof that your systems are affected. Its severity comes from public CVSS metrics;
+        installed versions, exposure and fixes are not asserted. Open a CVE for source links and provenance.
+      </.notice>
+
       <dl
         id="inventory-totals"
         class="metric-strip metric-strip-compact"
@@ -260,7 +273,7 @@ defmodule TriageWeb.FindingLive.Index do
       <details id="inventory-count-scope" class="disclosure supporting">
         <summary>All local inventory · counts are not filtered</summary>
         <p>
-          Independent of filters and active placements. Open excludes suppressed; both counts exclude occurrences no longer observed. Suppression is not mitigation evidence.
+          Independent of display filters; only images with active placements count. Open excludes suppressed; both counts exclude occurrences no longer observed. Suppression is not mitigation evidence.
         </p>
       </details>
 
@@ -322,6 +335,7 @@ defmodule TriageWeb.FindingLive.Index do
         match keeps the whole advisory group, so other affected packages remain included.
       </p>
       <.kev_note id="inventory-kev-note" present?={map_size(@kev) > 0} />
+      <.kev_source_status id="inventory-kev-status" status={@kev_status} />
 
       <p :if={@invalid_filters != []} id="invalid-filters" class="notice" role="alert">
         Invalid filter value{if length(@invalid_filters) == 1, do: "", else: "s"} for

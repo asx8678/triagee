@@ -16,6 +16,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
   attr :lanes, :map, required: true
   attr :filters, :map, required: true
   attr :kev, :map, default: %{}
+  attr :kev_status, :any, default: nil
 
   def lane_table(assigns) do
     ~H"""
@@ -91,6 +92,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
       </div>
 
       <.kev_note id="tl-lanes-kev-note" present?={map_size(@kev) > 0} />
+      <.kev_source_status id="tl-lanes-kev-status" status={@kev_status} />
 
       <p :if={@lanes.truncated_count > 0} class="supporting">
         {@lanes.truncated_count} further CVE(s) in this window are not shown.

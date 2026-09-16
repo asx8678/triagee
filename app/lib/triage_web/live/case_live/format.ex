@@ -264,6 +264,9 @@ defmodule TriageWeb.CaseLive.Format do
     end
   end
 
+  def source_label("nvd_public_reference"),
+    do: "Real NVD public reference — not a deployed vulnerability"
+
   def source_label("synthetic_local_inventory"), do: "Synthetic local inventory"
   def source_label(value), do: text(value)
 

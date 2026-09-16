@@ -394,12 +394,18 @@ defmodule Triage.Inventory do
   def summary_counts do
     open =
       Repo.one(
-        from f in Finding, where: is_nil(f.resolved_at) and f.suppressed == false, select: count()
+        from f in Finding,
+          where: is_nil(f.resolved_at) and f.suppressed == false,
+          where: f.image_id in subquery(active_placement_image_ids(nil, nil)),
+          select: count()
       )
 
     suppressed =
       Repo.one(
-        from f in Finding, where: is_nil(f.resolved_at) and f.suppressed == true, select: count()
+        from f in Finding,
+          where: is_nil(f.resolved_at) and f.suppressed == true,
+          where: f.image_id in subquery(active_placement_image_ids(nil, nil)),
+          select: count()
       )
 
     %{open: open || 0, suppressed: suppressed || 0}
@@ -505,6 +511,7 @@ defmodule Triage.Inventory do
     query =
       from(f in Finding,
         where: f.cve == ^cve and is_nil(f.resolved_at),
+        where: f.image_id not in subquery(Triage.ReferenceData.retired_image_ids()),
         order_by: [asc: f.package_name, asc: f.id],
         preload: :image
       )

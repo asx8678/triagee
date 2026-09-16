@@ -26,6 +26,7 @@ defmodule TriageWeb.Router do
 
     live "/cases", CaseLive.Index
     live "/cases/:id", CaseLive.Show
+    live "/cases/:id/exception", ExceptionLive
 
     live "/whats-new", WhatsNewLive
     live "/timeline", TimelineLive

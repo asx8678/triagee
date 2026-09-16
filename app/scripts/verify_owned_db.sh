@@ -17,6 +17,22 @@ for pg_name in $(env | sed -n 's/^\(PG[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$pg_n
 export MIX_ENV=test PGPASSFILE=/dev/null PGSERVICEFILE=/dev/null PGCONNECT_TIMEOUT=5
 export TRIAGE_BIND=127.0.0.1 PORT=0
 
+# Optional override for the owned disposable server's PostgreSQL port, for when
+# 5432 already belongs to a pre-existing server that must not be touched.
+# Validated BEFORE any database effect; absent keeps the historical default.
+db_port=5432
+if [ "${TRIAGE_OWNED_DB_PORT+x}" = x ]; then
+  case "$TRIAGE_OWNED_DB_PORT" in
+    ""|*[!0-9]*) echo "verify-owned-db: TRIAGE_OWNED_DB_PORT must be decimal digits 1024..65535" >&2; exit 65;;
+  esac
+  if [ "${#TRIAGE_OWNED_DB_PORT}" -gt 5 ] || [ "$TRIAGE_OWNED_DB_PORT" -lt 1024 ] || [ "$TRIAGE_OWNED_DB_PORT" -gt 65535 ]; then
+    echo "verify-owned-db: TRIAGE_OWNED_DB_PORT must be 1024..65535" >&2; exit 65
+  fi
+  db_port=$TRIAGE_OWNED_DB_PORT
+fi
+# The Mix-side test config reads this only alongside the guarded _ab_ partition.
+export TRIAGE_OWNED_DB_PORT="$db_port"
+
 command -v mise >/dev/null 2>&1 || { echo "verify-owned-db: mise unavailable" >&2; exit 69; }
 command -v psql >/dev/null 2>&1 || { echo "verify-owned-db: psql unavailable" >&2; exit 69; }
 
@@ -28,7 +44,7 @@ case "$db" in triage_test_ab_[a-zA-Z0-9_]*) ;; *) echo "verify-owned-db: unsafe 
 export MIX_TEST_PARTITION="$partition"
 echo "verify-owned-db: generated database=$db"
 
-psql_admin() { psql -X --no-password -h localhost -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -Atqc "$1"; }
+psql_admin() { psql -X --no-password -h localhost -p "$db_port" -U postgres -d postgres -v ON_ERROR_STOP=1 -Atqc "$1"; }
 created=0
 cleanup() {
   status=$?

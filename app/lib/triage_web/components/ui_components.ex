@@ -82,6 +82,57 @@ defmodule TriageWeb.UIComponents do
   end
 
   @doc """
+  One line of KEV cache freshness: the cache source, its whole-cache advisory count
+  and the latest operator refresh result and time.
+
+  Rendered whether or not any badge is present: a never-refreshed cache, an empty
+  successful refresh, a failed last refresh and a view whose advisories have no cached
+  row all show the source state explicitly. A nil status means the read was skipped
+  (for example an invalid-input view that must not query), and that is stated rather
+  than invented. The row count is always the whole source, never the rows matched by
+  the current view, and a failed refresh never erases the retained cache claim.
+  """
+  attr :id, :string, required: true
+  attr :status, :any, default: nil
+
+  def kev_source_status(assigns) do
+    ~H"""
+    <p :if={is_nil(@status)} id={@id} class="supporting">
+      KEV cache status was not read for this view, so no freshness is claimed here; an
+      advisory without a badge may still be exploited.
+    </p>
+    <p :if={@status} id={@id} class="supporting">
+      KEV cache (source "{@status.source}"): {@status.rows} cached {if @status.rows == 1,
+        do: "advisory",
+        else: "advisories"} across the whole source, not just the rows of this view.
+      <%= cond do %>
+        <% is_nil(@status.receipt) -> %>
+          No refresh has been recorded yet, so no refresh result or time can be shown.
+        <% @status.receipt.succeeded -> %>
+          Last refresh succeeded
+          <.timestamp value={@status.receipt.attempted_at} />{kev_receipt_items(
+            @status.receipt.item_count
+          )}.
+        <% true -> %>
+          Last refresh failed <.timestamp value={@status.receipt.attempted_at} />; the
+          previously cached advisories are retained, not erased <span :if={@status.receipt.message}>({@status.receipt.message})</span>.
+      <% end %>
+      Badges mark only advisories with a cached KEV row; a missing badge is never a claim
+      that an advisory is unexploited.
+    </p>
+    """
+  end
+
+  # An empty feed report is an honest outcome of a successful refresh, never "clear".
+  defp kev_receipt_items(0),
+    do: " and reported 0 items — an empty feed report, not a claim that nothing is exploited"
+
+  defp kev_receipt_items(nil), do: " (item count not recorded)"
+  defp kev_receipt_items(1), do: " and reported 1 feed item"
+  defp kev_receipt_items(count) when is_integer(count), do: " and reported #{count} feed items"
+  defp kev_receipt_items(_other), do: ""
+
+  @doc """
   Copy control for one exact short value that is also displayed as a heading or a link.
 
   The shared `CopyValue` hook copies the value verbatim; the accessible name states what is

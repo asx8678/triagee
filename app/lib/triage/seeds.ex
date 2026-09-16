@@ -1,6 +1,10 @@
 defmodule Triage.Seeds do
   @moduledoc """
-  Deterministic synthetic fixtures for the PR 1 offline demo.
+  Deterministic synthetic fixtures for automated tests only.
+
+  Development setup now uses `Triage.ReferenceData.seed!/0`, backed by the
+  downloaded real NVD catalogue. These fake fixtures are retained for isolated
+  regressions and are never called by the development seed entry point.
 
   These rows are fake security data. They exist so the interface can be developed
   and tested without production connections. Running `seed/1` again updates

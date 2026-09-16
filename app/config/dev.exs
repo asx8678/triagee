@@ -2,9 +2,13 @@ import Config
 
 # Configure your database
 config :triage, Triage.Repo,
-  # Local PostgreSQL 18 (Homebrew) trusts the local `postgres` superuser; no password.
+  # Local PostgreSQL trusts the local `postgres` superuser; no password.
+  # TRIAGE_DB_PORT selects a non-default local instance, such as the
+  # Triage-owned development database from scripts/triage_dev_db.sh.
+  # Absent keeps the historic default port.
   username: "postgres",
   hostname: "localhost",
+  port: String.to_integer(System.get_env("TRIAGE_DB_PORT") || "5432"),
   database: "triage_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

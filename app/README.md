@@ -1,5 +1,15 @@
 # Triage — local review, replay and historical import
 
+## Real CVE reference dataset
+
+Development setup now loads **95 real NVD advisories: 30 critical, 40 high, 20 medium, 5 low**
+from `priv/reference/nvd-cves.json`, offline. The `public-reference / not-a-deployment`
+scope is reference data, not a scan or proof your systems are affected. Source links,
+CVSS scores and provenance are shown on CVE details. Existing databases require an
+explicit preview/apply; saved assessments and unrelated inventory are preserved.
+See [REAL_CVES.md](REAL_CVES.md) for validation, download and safe replacement commands.
+
+
 ## Current independent UI verdict — PASS within bounded local coverage
 
 Actual owned headless Chrome verified 1440/375/320px navigation, six homepage
@@ -147,7 +157,7 @@ snapshots and unauthenticated local-operator assessments.
 ```bash
 brew services start postgresql@18   # if not already running
 cd app
-mise x -- mix setup                 # deps.get + ecto.create + migrate + synthetic seeds
+mise x -- mix setup                 # deps.get + ecto.create + migrate + offline real NVD reference seed
 ```
 
 The dev database is `triage_dev`; tests use the sandboxed `triage_test`. The local

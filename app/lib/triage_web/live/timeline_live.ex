@@ -36,7 +36,8 @@ defmodule TriageWeb.TimelineLive do
      |> assign(:detail, nil)
      |> assign(:selected_cve, nil)
      |> assign(:detail_error, nil)
-     |> assign(:kev, %{})}
+     |> assign(:kev, %{})
+     |> assign(:kev_status, nil)}
   end
 
   @impl true
@@ -78,6 +79,7 @@ defmodule TriageWeb.TimelineLive do
           |> assign(:options, Timeline.filter_options())
           |> assign(:filter_form, to_form(filter_params(timeline, parsed)))
           |> assign(:kev, Intel.kev_index(Enum.map(timeline.lanes.rows, & &1.cve)))
+          |> assign(:kev_status, Intel.kev_status())
           |> load_detail(parsed)
 
         {:error, _reason} ->
@@ -104,6 +106,7 @@ defmodule TriageWeb.TimelineLive do
     |> assign(:timeline, nil)
     |> assign(:filters, TimelineFilters.defaults())
     |> assign(:filter_form, to_form(blank_filter_params()))
+    |> assign(:kev_status, nil)
     |> assign(:detail, nil)
     |> assign(:selected_cve, nil)
     |> assign(:detail_error, nil)
@@ -315,7 +318,12 @@ defmodule TriageWeb.TimelineLive do
 
         <Bands.waterfall days={@timeline.days} filters={@filters} />
         <Grid.weekday_grid grid={@timeline.grid} />
-        <Lanes.lane_table lanes={@timeline.lanes} filters={@filters} kev={@kev} />
+        <Lanes.lane_table
+          lanes={@timeline.lanes}
+          filters={@filters}
+          kev={@kev}
+          kev_status={@kev_status}
+        />
       </div>
     </Layouts.app>
     """

@@ -15,6 +15,7 @@ defmodule TriageWeb.CaseLive.Show do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Exceptions
   alias Triage.Intel
   alias TriageWeb.{CaseFilters, FindingFilters}
 
@@ -41,6 +42,7 @@ defmodule TriageWeb.CaseLive.Show do
      socket
      |> assign(:page_title, "Review case")
      |> assign(:case_error, nil)
+     |> assign(:kev_status, nil)
      |> assign(:case, nil)
      |> assign(:snapshot, nil)
      |> assign(:latest_review, nil)
@@ -399,8 +401,10 @@ defmodule TriageWeb.CaseLive.Show do
       if restore?, do: retained.rebind_required?, else: socket.assigns.rebind_required?
 
     evidence = evidence_view(data.snapshot && data.snapshot.payload)
+    decision = Exceptions.latest_index([review_case.id])[review_case.id]
 
     socket
+    |> assign(:exception_status, Exceptions.status(decision, Exceptions.binding(data)))
     |> assign(:case_error, nil)
     |> assign(:case, review_case)
     |> assign(:snapshot, data.snapshot)
@@ -408,6 +412,7 @@ defmodule TriageWeb.CaseLive.Show do
     |> assign(:evidence, evidence)
     |> assign(:page_title, case_title(evidence.finding[:cve], review_case.id))
     |> assign(:kev, Intel.kev_row(evidence.finding[:cve]))
+    |> assign(:kev_status, Intel.kev_status())
     |> assign(:evidence_status, data.evidence_status)
     |> assign(:known_snapshot_ids, Enum.map(data.snapshots, & &1.id))
     |> assign(:expected_revision, revision)
@@ -436,6 +441,7 @@ defmodule TriageWeb.CaseLive.Show do
   defp invalidate_case(socket, reason) do
     socket
     |> assign(:case_error, reason)
+    |> assign(:kev_status, nil)
     |> assign(:case, nil)
     |> assign(:snapshot, nil)
     |> assign(:latest_review, nil)
@@ -678,6 +684,25 @@ defmodule TriageWeb.CaseLive.Show do
               </div>
             </dl>
           </div>
+
+          <.kev_source_status id="case-kev-status" status={@kev_status} />
+
+          <section id="case-local-exception" class="assessment-panel stack">
+            <h2>Local exception / action status</h2>
+            <p id="case-exception-status">{Exceptions.label(@exception_status)}</p>
+            <p>
+              Remediation and investigation belong in the assessment below. To temporarily suppress
+              this occurrence or record “not affected”, use a separate scoped decision with a reason,
+              evidence and a review date. This does not change scanner severity or remote suppression.
+            </p>
+            <.link
+              id="case-exception-action"
+              navigate={~p"/cases/#{@case.id}/exception"}
+              class="button"
+            >
+              Manage local exception / reopen
+            </.link>
+          </section>
 
           <div id="case-workspace" class="case-workspace">
             <.evidence_snapshot

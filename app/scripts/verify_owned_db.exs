@@ -1,6 +1,22 @@
 case System.argv() do
   [expected, check] when check in ["config", "pristine", "identity", "empty"] ->
     partition = System.get_env("MIX_TEST_PARTITION")
+
+    # The owned-port override is re-validated here against the same rule the
+    # wrapper enforces, so the identity check compares against a port that was
+    # proven valid — anything else fails closed before any connection.
+    expected_port =
+      case System.get_env("TRIAGE_OWNED_DB_PORT") do
+        nil ->
+          5432
+
+        text ->
+          case Integer.parse(text) do
+            {port, ""} when port >= 1024 and port <= 65_535 -> port
+            _ -> raise("invalid TRIAGE_OWNED_DB_PORT")
+          end
+      end
+
     config = Triage.Repo.config()
     ecto_repos = Application.get_env(:triage, :ecto_repos)
 
@@ -10,7 +26,7 @@ case System.argv() do
         is_binary(partition) and Regex.match?(~r/^_ab_[A-Za-z0-9_]+$/, partition) and
         config[:database] == expected and expected == "triage_test#{partition}" and
         ecto_repos == [Triage.Repo] and config[:hostname] == "localhost" and
-        config[:username] == "postgres" and Keyword.get(config, :port, 5432) == 5432 and
+        config[:username] == "postgres" and Keyword.get(config, :port, 5432) == expected_port and
         is_nil(config[:url]) and is_nil(config[:socket]) and is_nil(config[:socket_dir])
 
     unless safe?, do: raise("owned database configuration mismatch")

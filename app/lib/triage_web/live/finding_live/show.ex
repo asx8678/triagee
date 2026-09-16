@@ -9,9 +9,11 @@ defmodule TriageWeb.FindingLive.Show do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Exceptions
   alias Triage.Intel
   alias Triage.Inventory
   alias TriageWeb.{ActivityFilters, FindingFilters}
+  import TriageWeb.ReferenceComponents, only: [reference_notice: 1]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -69,6 +71,7 @@ defmodule TriageWeb.FindingLive.Show do
                |> assign(:invalid_scope, [])
                |> assign(:scope, scope)
                |> assign(:data, data)
+               |> assign(:exception_status, local_exception_status(data.finding.id, scope))
                |> assign(:page_title, finding_title(data.finding.cve))
                |> assign(:kev, Intel.kev_row(data.finding.cve))}
 
@@ -133,7 +136,7 @@ defmodule TriageWeb.FindingLive.Show do
     <Layouts.app flash={@flash} active_page="findings">
       <.page_header
         title={if @data, do: @data.finding.cve, else: "Finding detail"}
-        eyebrow={if @data, do: "Findings / #{@data.finding.cve}", else: "Findings / Occurrence"}
+        eyebrow="Findings"
         subtitle="Current local inventory for one package occurrence, not saved case evidence."
       >
         <:actions>
@@ -170,6 +173,7 @@ defmodule TriageWeb.FindingLive.Show do
       </p>
 
       <%= if @data do %>
+        <.reference_notice id="finding-reference-source" finding={@data.finding} />
         <p :if={@kev} id="finding-kev" class="cluster">
           <.kev_marker id="finding-kev-badge" kev={@kev} />
           <span class="supporting">
@@ -188,7 +192,11 @@ defmodule TriageWeb.FindingLive.Show do
           </div>
           <dl class="evidence-grid key-value finding-identity-strip">
             <div>
-              <dt>Scanner severity</dt>
+              <dt>
+                {if Triage.ReferenceData.reference_image?(@data.finding.image),
+                  do: "NVD CVSS severity",
+                  else: "Scanner severity"}
+              </dt>
               <dd><.status_badge label={label(@data.finding.severity)} kind="severity" /></dd>
             </div>
             <div>
@@ -243,6 +251,10 @@ defmodule TriageWeb.FindingLive.Show do
         <%= if explicit_scope?(@scope) do %>
           <section id="open-case-form" class="notice" aria-labelledby="open-case-title">
             <h2 id="open-case-title">Review this occurrence</h2>
+            <p id="finding-exception-status">{Exceptions.label(@exception_status)}</p>
+            <p class="supporting">
+              Open the case to manage a time-limited local exception or reopen it. Scanner observations remain unchanged.
+            </p>
             <p>
               Open or create one local case for <strong>{@scope.owner} · {@scope.environment}</strong>.
               Creating a case captures frozen evidence from local inventory; this page itself is not a snapshot.
@@ -305,7 +317,11 @@ defmodule TriageWeb.FindingLive.Show do
             <details id="finding-source" class="disclosure">
               <summary>Scanner description and source details</summary>
               <div class="stack">
-                <h3>Scanner description</h3>
+                <h3>
+                  {if Triage.ReferenceData.reference_image?(@data.finding.image),
+                    do: "NVD advisory and provenance",
+                    else: "Scanner description"}
+                </h3>
                 <p id="scanner-description">{reported(@data.finding.description)}</p>
                 <.technical_value
                   id="finding-source-reference"
@@ -430,6 +446,18 @@ defmodule TriageWeb.FindingLive.Show do
         when reason in [:invalid_scope, :out_of_scope, :not_found, :invalid_request] ->
           {:noreply, assign(socket, :open_case_error, reason)}
       end
+    end
+  end
+
+  defp local_exception_status(finding_id, scope) do
+    if explicit_scope?(scope) do
+      Map.get(
+        Exceptions.finding_statuses([finding_id]),
+        {finding_id, scope.owner, scope.environment},
+        :action_required
+      )
+    else
+      :action_required
     end
   end
 

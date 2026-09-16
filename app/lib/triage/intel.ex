@@ -233,6 +233,22 @@ defmodule Triage.Intel do
     |> Repo.all()
   end
 
+  @doc """
+  Read-only KEV source status, independent of matches in the displayed inventory.
+
+  Reads the whole-source cache count and latest receipt once per page load, never
+  per advisory. A failed receipt does not invalidate or remove cached matches.
+  No receipt means no recorded refresh, even if rows were populated separately.
+  """
+  @spec kev_status() :: %{source: String.t(), rows: non_neg_integer(), receipt: map() | nil}
+  def kev_status do
+    %{
+      source: "kev",
+      rows: cached_advisory_count("kev"),
+      receipt: Enum.find(latest_receipts(), &(&1.source == "kev"))
+    }
+  end
+
   @doc "Insert a refresh receipt. Receipts are append-only."
   def record_receipt(source, succeeded, item_count \\ nil, message \\ nil) do
     %RefreshReceipt{}

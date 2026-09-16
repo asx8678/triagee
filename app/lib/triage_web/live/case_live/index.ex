@@ -16,6 +16,7 @@ defmodule TriageWeb.CaseLive.Index do
   use TriageWeb, :live_view
 
   alias Triage.Cases
+  alias Triage.Exceptions
   alias Triage.Intel
   alias TriageWeb.CaseFilters
 
@@ -38,6 +39,7 @@ defmodule TriageWeb.CaseLive.Index do
      |> assign(:next_before_id, nil)
      |> assign(:cursor, nil)
      |> assign(:raw_params, %{})
+     |> assign(:kev_status, nil)
      |> stream_configure(:cases, dom_id: &"case-#{&1.id}")}
   end
 
@@ -104,7 +106,8 @@ defmodule TriageWeb.CaseLive.Index do
           |> assign(:next_before_id, next_before_id)
           |> assign(:cursor, parsed.before_id)
           |> assign(:kev, Intel.kev_index(Enum.map(rows, & &1.finding.cve)))
-          |> stream(:cases, rows, reset: true)
+          |> assign(:kev_status, Intel.kev_status())
+          |> stream(:cases, Exceptions.decorate_rows(rows), reset: true)
 
         {:error, _reason} ->
           # A queue data-load error must never masquerade as current data.
@@ -125,6 +128,7 @@ defmodule TriageWeb.CaseLive.Index do
     |> assign(:next_before_id, nil)
     |> assign(:cursor, nil)
     |> assign(:kev, %{})
+    |> assign(:kev_status, nil)
     |> stream(:cases, [], reset: true)
   end
 
@@ -294,6 +298,7 @@ defmodule TriageWeb.CaseLive.Index do
       </.empty_state>
       <%!-- Empty/error messages stay outside the stream so patches cannot retain stale static rows. --%>
       <.kev_note id="queue-kev-note" present?={map_size(@kev) > 0} />
+      <.kev_source_status id="queue-kev-status" status={@kev_status} />
 
       <div class="table-region" role="region" tabindex="0" aria-label="Saved review cases">
         <table id="queue-table" class="data-table">
@@ -363,6 +368,7 @@ defmodule TriageWeb.CaseLive.Index do
                 </p>
               </td>
               <td>
+                <p id={"case-exception-status-#{row.id}"}>{Exceptions.label(row.exception_status)}</p>
                 <.link
                   id={"case-link-#{row.id}"}
                   navigate={case_path(row, @filters, @cursor)}
@@ -376,7 +382,7 @@ defmodule TriageWeb.CaseLive.Index do
       <details id="queue-legend" class="disclosure">
         <summary>Evidence and assessment meaning</summary>
         <p>
-          Local evidence match means only that the captured hash matches current local source facts, not production freshness. An assessment on the displayed snapshot can still need revalidation when local evidence changes. Saved history never approves an exception or verifies remediation. Filters select saved case scopes, not access rights.
+          Local evidence match means only that the captured hash matches current local source facts, not production freshness. An assessment on the displayed snapshot can still need revalidation when local evidence changes. Assessments do not activate exceptions or verify remediation. Separate local exception decisions have their own reason, expiry and history. Filters select saved case scopes, not access rights.
         </p>
       </details>
     </Layouts.app>

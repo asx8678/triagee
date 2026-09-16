@@ -12,11 +12,12 @@ defmodule TriageWeb.CveLive.Show do
 
   use TriageWeb, :live_view
 
-  alias Triage.{Intel, Inventory, Risk}
+  alias Triage.{Cases, Exceptions, Intel, Inventory, Risk}
   alias TriageWeb.FindingFilters
   alias TriageWeb.UIComponents
 
   import TriageWeb.CaseLive.Format, only: [linkable?: 1]
+  import TriageWeb.ReferenceComponents, only: [reference_notice: 1]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -31,7 +32,10 @@ defmodule TriageWeb.CveLive.Show do
      |> assign(:nvd_advisories, [])
      |> assign(:kev_matched?, false)
      |> assign(:kev_cache, empty_cache())
-     |> assign(:nvd_cache, empty_cache())}
+     |> assign(:nvd_cache, empty_cache())
+     |> assign(:triage_targets, %{})
+     |> assign(:triage_error, nil)
+     |> stream(:triage_targets, [])}
   end
 
   @impl true
@@ -45,7 +49,8 @@ defmodule TriageWeb.CveLive.Show do
        |> assign(:invalid_scope, parsed.invalid)
        |> assign(:scope, scope)
        |> assign(:detail, nil)
-       |> assign(:risk, nil)}
+       |> assign(:risk, nil)
+       |> assign_triage(nil)}
     else
       case Inventory.fetch_cve(id, owner: scope.owner, environment: scope.environment) do
         {:ok, detail} ->
@@ -59,6 +64,7 @@ defmodule TriageWeb.CveLive.Show do
            |> assign(:invalid_scope, [])
            |> assign(:scope, scope)
            |> assign(:detail, detail)
+           |> assign_triage(detail)
            |> assign_intel(kev, nvd)
            |> assign(
              :kev_cache,
@@ -77,6 +83,79 @@ defmodule TriageWeb.CveLive.Show do
           not_found(socket, "Advisory not found in current inventory")
       end
     end
+  end
+
+  # Event parameters select only a displayed target; finding and scope are
+  # always server-owned. Cases rechecks active scope before any write.
+  @impl true
+  def handle_event("open_triage", %{"target" => target}, socket) when is_binary(target) do
+    case Map.get(socket.assigns.triage_targets, target) do
+      nil ->
+        {:noreply,
+         assign(socket, :triage_error, "Choose a currently displayed package and scope.")}
+
+      row ->
+        case Cases.open_case(row.finding_id, owner: row.owner, environment: row.environment) do
+          {:ok, %{case: review_case}} ->
+            path =
+              ~p"/cases/#{review_case.id}?#{%{owner: row.owner, environment: row.environment}}"
+
+            {:noreply, push_navigate(socket, to: path <> "#review-section")}
+
+          {:error, _reason} ->
+            {:noreply,
+             assign(
+               socket,
+               :triage_error,
+               "This occurrence is no longer available in that active scope. Reload and choose again."
+             )}
+        end
+    end
+  end
+
+  def handle_event("open_triage", _params, socket) do
+    {:noreply, assign(socket, :triage_error, "Choose a currently displayed package and scope.")}
+  end
+
+  defp assign_triage(socket, detail) do
+    targets = triage_targets(detail)
+    ids = targets |> Enum.map(& &1.finding_id) |> Enum.uniq()
+    statuses = Exceptions.finding_statuses(ids)
+
+    rows =
+      Enum.map(targets, fn row ->
+        Map.put(
+          row,
+          :exception_status,
+          Map.get(statuses, {row.finding_id, row.owner, row.environment}, :action_required)
+        )
+      end)
+
+    socket
+    |> assign(:triage_targets, Map.new(rows, &{&1.id, &1}))
+    |> assign(:triage_error, nil)
+    |> stream(:triage_targets, rows, reset: true)
+  end
+
+  defp triage_targets(nil), do: []
+
+  defp triage_targets(detail) do
+    for finding <- detail.occurrences,
+        %{placement: placement} <- detail.placements,
+        placement.active and placement.image_id == finding.image_id,
+        placement.owner not in [nil, "", "all"],
+        placement.environment not in [nil, "", "all"] do
+      %{
+        id: "#{finding.id}-#{placement.id}",
+        finding_id: finding.id,
+        package: finding.package_name,
+        version: finding.package_version,
+        image: image_reference(finding.image),
+        owner: placement.owner,
+        environment: placement.environment
+      }
+    end
+    |> Enum.uniq_by(&{&1.finding_id, &1.owner, &1.environment})
   end
 
   defp assign_intel(socket, kev, nvd) do
@@ -263,6 +342,66 @@ defmodule TriageWeb.CveLive.Show do
               <.copy_value id="cve-copy" label="advisory id" value={@detail.cve} />
             </:actions>
           </.page_header>
+
+          <.reference_notice
+            id="cve-reference-source"
+            finding={Enum.find(@detail.occurrences, &Triage.ReferenceData.reference_image?(&1.image))}
+          />
+
+          <section id="cve-triage" class="assessment-panel stack" aria-labelledby="cve-triage-title">
+            <h2 id="cve-triage-title">Triage / action required</h2>
+            <p>
+              Choose the package, team and environment to assess. Open assessment exposes
+              applicability, priority, next action and rationale. Each case covers only this
+              occurrence and scope — never every occurrence of the CVE.
+            </p>
+            <p class="supporting">
+              Local exceptions never lower scanner severity or remove inventory/report rows. Status is checked on page load.
+              Opening an existing case keeps its evidence and history. Opening a new case
+              captures local evidence; simply viewing this page writes nothing.
+            </p>
+            <p :if={@triage_error} id="cve-triage-error" class="notice" role="alert">
+              {@triage_error}
+            </p>
+            <p :if={map_size(@triage_targets) == 0} id="cve-triage-empty" class="notice">
+              No explicit active team/environment placement is available for assessment in this scope.
+              Record deployment context before making a scoped decision; missing context does not mean safe.
+            </p>
+            <div class="table-region" role="region" tabindex="0" aria-label="Scoped triage actions">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Package / version</th>
+                    <th scope="col">Image</th>
+                    <th scope="col">Team / environment</th>
+                    <th scope="col">Local action status</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="cve-triage-targets" phx-update="stream">
+                  <tr :for={{dom_id, target} <- @streams.triage_targets} id={dom_id}>
+                    <td>{target.package} <code>{target.version}</code></td>
+                    <td><code>{target.image}</code></td>
+                    <td>{target.owner} / {target.environment}</td>
+                    <td id={"cve-triage-status-#{target.id}"}>
+                      {Exceptions.label(target.exception_status)}
+                    </td>
+                    <td>
+                      <button
+                        id={"cve-open-triage-#{target.id}"}
+                        type="button"
+                        phx-click="open_triage"
+                        phx-value-target={target.id}
+                        phx-disable-with="Opening…"
+                        data-confirm="Open the assessment for this package, team and environment? A new case captures local evidence."
+                        class="button"
+                      >Open assessment</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
 
           <section id="cve-priority" class="stack" aria-labelledby="cve-priority-title">
             <h2 id="cve-priority-title">
