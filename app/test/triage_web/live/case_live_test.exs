@@ -16,8 +16,8 @@ defmodule TriageWeb.CaseLiveTest do
   alias Triage.{Cases, Repo, Seeds}
   alias Triage.Inventory.Finding
 
-  @env "prod-cluster-1"
-  @scope %{owner: "alpha", environment: "prod-cluster-1"}
+  @env "prod"
+  @scope %{owner: "alpha", environment: "prod"}
 
   setup do
     :ok = Seeds.seed()
@@ -296,7 +296,7 @@ defmodule TriageWeb.CaseLiveTest do
 
     {:ok, view, _html} = live(conn, path <> "?owner=beta&environment=other-cluster")
     assert has_element?(view, "#case-scope", "alpha")
-    assert has_element?(view, "#case-scope", "prod-cluster-1")
+    assert has_element?(view, "#case-scope", "prod")
     refute has_element?(view, "#case-scope", "beta")
 
     {:ok, view, _html} = live(conn, path <> "?q=" <> String.duplicate("a", 300))

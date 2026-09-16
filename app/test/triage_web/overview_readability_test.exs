@@ -27,37 +27,37 @@ defmodule TriageWeb.OverviewReadabilityTest do
            |> Enum.count() == 1
   end
 
-  test "the overview is posture plus two rails, with the removed blocks gone", %{conn: conn} do
+  test "overview renders one canonical recent-findings list in last-observed order", %{conn: conn} do
+    rows = Inventory.active_now_cve_groups(5)
     document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
 
-    # Section order: posture first, then the two bounded rails.
-    assert LazyHTML.query(document, "#home-inventory, #home-active, #home-newest")
-           |> LazyHTML.attribute("id") == ["home-inventory", "home-active", "home-newest"]
+    # Exactly one list, one ordering label, one scope link. No second mode and
+    # no review CTA this page cannot act on: review starts in Triage only.
+    assert LazyHTML.query(document, "#home-activity .ov-list") |> Enum.count() == 1
+    assert LazyHTML.query(document, "#home-view-tabs") |> Enum.count() == 0
+    assert LazyHTML.query(document, "#home-review-critical") |> Enum.count() == 0
+    assert LazyHTML.query(document, "#home-rails-coincide") |> Enum.count() == 0
+    assert LazyHTML.query(document, "#home-newest") |> Enum.count() == 0
 
-    assert LazyHTML.query(document, "#home-inventory-title") |> LazyHTML.text() ==
-             "Local inventory"
+    assert LazyHTML.query(document, "#home-activity-title") |> LazyHTML.text() ==
+             "Recent findings"
 
-    assert LazyHTML.query(document, "#overview-inventory-title") |> LazyHTML.text() ==
-             "Occurrence counts"
+    assert LazyHTML.text(document) =~ "Last observed locally, newest first"
 
-    assert LazyHTML.query(document, "#home-active-title") |> LazyHTML.text() == "Active now"
+    assert LazyHTML.query(document, "#home-active-list .ov-list-title a")
+           |> Enum.map(&LazyHTML.text/1) == Enum.map(rows, & &1.cve)
 
-    assert LazyHTML.query(document, "#home-newest-title") |> LazyHTML.text() ==
-             "Newest discovered"
+    assert LazyHTML.query(document, "#home-active-all[href='/findings?sort=last_seen']")
+           |> Enum.count() == 1
 
-    # The three blocks this redesign removed: a critical table (Triage owns it),
-    # a cases preview (the case pages own it) and the news feed (Intel owns it).
-    for removed <- ["#home-critical-list", "#home-critical-title", "#overview-recent-cases"] do
-      assert LazyHTML.query(document, removed) |> Enum.count() == 0
+    # Timestamps match the label: last observation, not first discovery.
+    for {row, item} <- Enum.zip(rows, LazyHTML.query(document, "#home-active-list .ov-list-row")) do
+      dom = LazyHTML.query(item, "time") |> Enum.at(0)
+      assert dom |> LazyHTML.attribute("datetime") |> hd() == DateTime.to_iso8601(row.last_seen)
     end
 
-    assert LazyHTML.query(document, "#home-news") |> Enum.count() == 0
-    assert LazyHTML.query(document, "#home-news-list") |> Enum.count() == 0
-
-    # The capabilities are still one link away rather than silently dropped.
-    assert LazyHTML.query(document, "#home-scope-note a[href='/triage']") |> Enum.count() == 1
-    assert LazyHTML.query(document, "#home-scope-note a[href='/intel']") |> Enum.count() == 1
-    assert LazyHTML.query(document, "#home-scope-note a[href='/findings']") |> Enum.count() == 1
+    # Read-only browsing: nothing was created, approved or activated.
+    assert LazyHTML.query(document, "#home-activity form") |> Enum.count() == 0
   end
 
   test "the overview is posture only: no page header, section chrome or search", %{conn: conn} do
@@ -143,23 +143,15 @@ defmodule TriageWeb.OverviewReadabilityTest do
     assert bands > total, "the seeded estate records CVE-2024-4004 at two severities"
   end
 
-  test "coincident rails say so instead of reading as a duplicated render", %{conn: conn} do
-    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
-
-    rail = fn id ->
-      document |> LazyHTML.query("#{id} .ov-list-title") |> LazyHTML.text() |> String.trim()
+  test "old overview modes redirect to the canonical list and invalid modes fail visibly", %{
+    conn: conn
+  } do
+    for view <- ["recent", "newest"] do
+      assert conn |> get("/?view=" <> view) |> redirected_to() == ~p"/"
     end
 
-    note = LazyHTML.query(document, "#home-rails-coincide")
-
-    # The note is a property of the data, not of the layout: it appears exactly
-    # when the two orders coincide, so it can never claim a divergence that is
-    # not there, nor stay silent about one that is.
-    assert rail.("#home-active-list") == rail.("#home-newest-list") ==
-             (Enum.count(note) == 1)
-
-    if Enum.count(note) == 1 do
-      assert LazyHTML.text(note) =~ "first observed on the day it was last observed"
+    for query <- ["view=unexpected", "view[]=newest", "view[nested]=recent"] do
+      assert conn |> get("/?" <> query) |> response(400) =~ "Invalid overview view"
     end
   end
 
@@ -195,27 +187,12 @@ defmodule TriageWeb.OverviewReadabilityTest do
     assert document |> LazyHTML.query("#home-active-caption") |> LazyHTML.text() =~
              "Showing 5 of #{total}"
 
+    # The header link is the one enumator: exact order, no caption duplication.
     assert document
-           |> LazyHTML.query("#home-active-caption a[href='/findings?sort=last_seen']")
+           |> LazyHTML.query("#home-active-all[href='/findings?sort=last_seen']")
            |> Enum.count() == 1
-  end
 
-  test "the newest rail shows five of the real total and links its own order", %{conn: conn} do
-    add_recent_advisories!(12)
-
-    total = Inventory.count_groups([])
-    assert total > 5, "the rail must be truncated beyond its five-row read"
-
-    document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
-
-    assert LazyHTML.query(document, "#home-newest-list li") |> Enum.count() == 5
-
-    assert document |> LazyHTML.query("#home-newest-caption") |> LazyHTML.text() =~
-             "Showing 5 of #{total}"
-
-    assert document
-           |> LazyHTML.query("#home-newest-caption a[href='/findings?sort=newest']")
-           |> Enum.count() == 1
+    assert LazyHTML.query(document, "#home-active-caption a") |> Enum.count() == 0
   end
 
   test "a rail does not claim to withhold advisories when it shows them all", %{conn: conn} do
@@ -226,7 +203,6 @@ defmodule TriageWeb.OverviewReadabilityTest do
 
     assert LazyHTML.query(document, "#home-active-list li") |> Enum.count() == total
     assert LazyHTML.query(document, "#home-active-caption") |> LazyHTML.text() =~ "Showing all"
-    assert LazyHTML.query(document, "#home-newest-caption") |> LazyHTML.text() =~ "Showing all"
   end
 
   test "an empty inventory renders zero posture without claiming a clean estate", %{conn: conn} do
@@ -238,7 +214,6 @@ defmodule TriageWeb.OverviewReadabilityTest do
              "0"
 
     assert document |> LazyHTML.query("#home-active-empty") |> Enum.count() == 1
-    assert document |> LazyHTML.query("#home-newest-empty") |> Enum.count() == 1
 
     assert document |> LazyHTML.query("#home-active-empty") |> LazyHTML.text() =~
              "not proof of a clean estate"

@@ -18,10 +18,10 @@ defmodule Triage.CasesIntegrityTest do
   alias Triage.Inventory
 
   # From `Triage.Seeds`: image_a carries active placements for teams alpha and
-  # beta in "prod-cluster-1"; its openssl finding is CRITICAL with fix "3.2.1".
+  # beta in "prod"; its openssl finding is CRITICAL with fix "3.2.1".
   @owner "alpha"
   @other_owner "beta"
-  @environment "prod-cluster-1"
+  @environment "prod"
 
   @review_attrs %{
     "applicability" => "not_affected_with_evidence",

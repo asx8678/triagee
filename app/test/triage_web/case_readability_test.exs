@@ -5,7 +5,7 @@ defmodule TriageWeb.CaseReadabilityTest do
   alias Triage.{Cases, Repo, Seeds}
   alias Triage.Inventory.Finding
 
-  @scope [owner: "alpha", environment: "prod-cluster-1"]
+  @scope [owner: "alpha", environment: "prod"]
 
   setup do
     :ok = Seeds.seed()
@@ -343,7 +343,7 @@ defmodule TriageWeb.CaseReadabilityTest do
              queue |> element("#case-link-#{review_case.id}") |> render_click()
 
     {:ok, detail, _} = live(conn, to)
-    assert has_element?(detail, "#case-scope", "prod-cluster-1")
+    assert has_element?(detail, "#case-scope", "prod")
 
     assert {:error, {:live_redirect, %{to: back}}} =
              detail |> element("#back-to-cases") |> render_click()
@@ -373,7 +373,7 @@ defmodule TriageWeb.CaseReadabilityTest do
 
       assert URI.decode_query(URI.parse(back).query) == %{
                "owner" => "alpha",
-               "environment" => "prod-cluster-1"
+               "environment" => "prod"
              }
     end
   end

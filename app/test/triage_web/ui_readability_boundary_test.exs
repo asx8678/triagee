@@ -5,11 +5,11 @@ defmodule TriageWeb.UIReadabilityBoundaryTest do
   alias Triage.{Cases, Repo, Seeds}
   alias Triage.Inventory.Finding
 
-  test "all nine route mounts, scoped navigation and invalid filters leave stored rows unchanged",
+  test "all ten route mounts, scoped navigation and invalid filters leave stored rows unchanged",
        %{conn: conn} do
     :ok = Seeds.seed()
     id = Repo.one!(from f in Finding, where: f.package_name == "busybox", select: f.id)
-    {:ok, opened} = Cases.open_case(id, owner: "alpha", environment: "prod-cluster-1")
+    {:ok, opened} = Cases.open_case(id, owner: "alpha", environment: "prod")
     case_id = opened.case.id
     before = fingerprints()
 
@@ -22,13 +22,14 @@ defmodule TriageWeb.UIReadabilityBoundaryTest do
 
     for path <- [
           "/findings",
-          "/findings/#{id}?owner=alpha&environment=prod-cluster-1&q=busybox",
+          "/findings/#{id}?owner=alpha&environment=prod&q=busybox",
           "/cases",
           "/cases/#{case_id}?owner=beta&environment=other",
           "/whats-new",
           "/imports",
           "/replay",
           "/replay/history",
+          "/statistics",
           "/findings?owner=alpha&q=no-such-synthetic-package",
           "/findings?owner[]=invalid",
           "/cases?environment[]=invalid",
@@ -42,7 +43,7 @@ defmodule TriageWeb.UIReadabilityBoundaryTest do
 
     {:ok, data} = Cases.get_case(case_id)
     assert data.case.owner == "alpha"
-    assert data.case.environment == "prod-cluster-1"
+    assert data.case.environment == "prod"
     assert data.case.revision == 1
     assert data.reviews == []
   end

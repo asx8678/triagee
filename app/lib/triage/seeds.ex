@@ -14,6 +14,9 @@ defmodule Triage.Seeds do
     * a scanner-suppressed finding (suppression is not mitigation evidence);
     * a reopened finding with a full appeared → resolved → reopened history;
     * a resolved (disappeared) finding that stays out of the active list;
+    * CRITICAL lifecycle examples: cleared after ten days; cleared within two
+      days; still observed since mid-August; cleared, observed again, then
+      suppressed; and scanner-suppressed from first observation;
     * an image with unknown deployment context (namespace `(unknown)`);
     * a hostile description string to prove third-party text is rendered safely.
   """
@@ -26,7 +29,21 @@ defmodule Triage.Seeds do
   @resolved ~U[2026-08-05 06:00:00Z]
   @reopened ~U[2026-08-06 06:00:00Z]
   @recent ~U[2026-09-09 06:00:00Z]
-  @env "prod-cluster-1"
+
+  # The demo fleet spans exactly the three delivery environments.
+  @env_prod "prod"
+  @env_staging "staging"
+  @env_dev "dev"
+
+  # Extra CRITICAL lifecycle examples: appeared → cleared ("handled"),
+  # appeared → cleared fast, appeared → still observed, appeared → cleared →
+  # observed again → suppressed, and appeared → suppressed.
+  @crit_appeared ~U[2026-08-10 06:00:00Z]
+  @crit_cleared ~U[2026-08-20 06:00:00Z]
+  @crit_late_appeared ~U[2026-08-24 06:00:00Z]
+  @crit_late_cleared ~U[2026-08-26 06:00:00Z]
+  @crit_reappeared ~U[2026-08-28 06:00:00Z]
+  @crit_still_open ~U[2026-08-15 06:00:00Z]
 
   def seed(now \\ @recent) do
     Repo.transaction(fn ->
@@ -57,10 +74,12 @@ defmodule Triage.Seeds do
           now
         )
 
-      placement!(image_a, "web", "alpha", @env, now)
-      placement!(image_a, "web", "beta", @env, now)
-      placement!(image_b, "web", "beta", @env, now)
-      placement!(image_c, "(unknown)", "alpha", @env, now)
+      placement!(image_a, "web", "alpha", @env_prod, now)
+      placement!(image_a, "web", "beta", @env_prod, now)
+      placement!(image_b, "web", "beta", @env_staging, now)
+      # app-b also runs for beta in prod (same image, second environment).
+      placement!(image_b, "web", "beta", @env_prod, now)
+      placement!(image_c, "(unknown)", "alpha", @env_dev, now)
 
       # Explicit operator-declared exposure evidence (never inferred from names).
       # Idempotency: record evidence only when the placement has none yet.
@@ -68,7 +87,7 @@ defmodule Triage.Seeds do
         image_a,
         "web",
         "alpha",
-        @env,
+        @env_prod,
         "internet_exposed",
         "seed:operator declared",
         now
@@ -78,18 +97,27 @@ defmodule Triage.Seeds do
         image_a,
         "web",
         "beta",
-        @env,
+        @env_prod,
         "internet_exposed",
         "seed:operator declared",
         now
       )
 
-      seed_exposure!(image_b, "web", "beta", @env, "internal", "seed:operator declared", now)
+      seed_exposure!(
+        image_b,
+        "web",
+        "beta",
+        @env_staging,
+        "internal",
+        "seed:operator declared",
+        now
+      )
+
       # image_c placement intentionally has NO evidence → stays exposure `unknown`.
 
       # Operator-declared business impact for one placement. Never inferred from
       # severity, namespace or exposure.
-      seed_impact!(image_a, "web", "alpha", @env, "critical", "seed:operator declared", now)
+      seed_impact!(image_a, "web", "alpha", @env_prod, "critical", "seed:operator declared", now)
 
       finding!(
         image_a,
@@ -194,6 +222,108 @@ defmodule Triage.Seeds do
         resolved_at: @resolved,
         reopen_count: 0,
         events: [{"appeared", @appeared}, {"resolved", @resolved}]
+      })
+
+      # CRITICAL lifecycle examples: only CRITICAL severities are added here.
+      crit_handled =
+        finding!(
+          image_a,
+          "CVE-2025-9101",
+          "krb5-libs",
+          "1.20",
+          "CRITICAL",
+          "1.20.1",
+          "Synthetic CRITICAL finding that was cleared ten days after first observation.",
+          now: now
+        )
+
+      crit_fast =
+        finding!(
+          image_b,
+          "CVE-2025-9102",
+          "libxml2",
+          "2.11",
+          "CRITICAL",
+          "2.11.2",
+          "Synthetic CRITICAL finding cleared within two days of first observation.",
+          now: now
+        )
+
+      crit_open =
+        finding!(
+          image_b,
+          "CVE-2025-9103",
+          "systemd",
+          "252",
+          "CRITICAL",
+          nil,
+          "Synthetic CRITICAL finding still observed since mid-August; never cleared.",
+          now: now
+        )
+
+      crit_suppressed =
+        finding!(
+          image_a,
+          "CVE-2025-9104",
+          "gnutls",
+          "3.8",
+          "CRITICAL",
+          "3.8.1",
+          "Synthetic scanner-suppressed CRITICAL finding. Suppression is not mitigation evidence.",
+          now: now,
+          suppressed: true
+        )
+
+      crit_back =
+        finding!(
+          image_c,
+          "CVE-2025-9105",
+          "apr-util",
+          "1.6",
+          "CRITICAL",
+          "1.6.3",
+          "Synthetic CRITICAL finding cleared once, observed again, then suppressed.",
+          now: now,
+          suppressed: true
+        )
+
+      pin_history!(crit_handled, %{
+        first_seen: @crit_appeared,
+        resolved_at: @crit_cleared,
+        reopen_count: 0,
+        events: [{"appeared", @crit_appeared}, {"resolved", @crit_cleared}]
+      })
+
+      pin_history!(crit_fast, %{
+        first_seen: @crit_late_appeared,
+        resolved_at: @crit_late_cleared,
+        reopen_count: 0,
+        events: [{"appeared", @crit_late_appeared}, {"resolved", @crit_late_cleared}]
+      })
+
+      pin_history!(crit_open, %{
+        first_seen: @crit_still_open,
+        resolved_at: nil,
+        reopen_count: 0,
+        events: [{"appeared", @crit_still_open}]
+      })
+
+      pin_history!(crit_suppressed, %{
+        first_seen: @crit_appeared,
+        resolved_at: nil,
+        reopen_count: 0,
+        events: [{"appeared", @crit_appeared}]
+      })
+
+      pin_history!(crit_back, %{
+        first_seen: @crit_appeared,
+        resolved_at: nil,
+        reopen_count: 1,
+        events: [
+          {"appeared", @crit_appeared},
+          {"resolved", @crit_cleared},
+          {"reopened", @crit_reappeared}
+        ]
       })
 
       # Decision history: one live acceptance and one expired mitigation, so the

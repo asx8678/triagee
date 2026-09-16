@@ -6,6 +6,7 @@ defmodule TriageWeb.NavigationTest do
     {"triage", "/triage"},
     {"findings", "/findings"},
     {"timeline", "/timeline"},
+    {"statistics", "/statistics"},
     {"imports", "/imports"},
     {"replay", "/replay"},
     {"intel", "/intel"}
@@ -39,7 +40,7 @@ defmodule TriageWeb.NavigationTest do
       # The section is one tab, marked on both of its routes.
       assert document |> LazyHTML.query("#nav-replay[aria-current='page']") |> Enum.count() == 1
       assert document |> LazyHTML.query("#nav-replay-history") |> Enum.count() == 0
-      assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 7
+      assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 8
 
       # The local subnavigation is what tells the two routes apart, and it marks
       # exactly one of them.
@@ -62,7 +63,7 @@ defmodule TriageWeb.NavigationTest do
     assert document |> LazyHTML.query("a[href='#main-content']") |> Enum.count() == 1
     assert document |> LazyHTML.query("main#main-content[tabindex='-1']") |> Enum.count() == 1
     assert document |> LazyHTML.query("nav[aria-label='Primary']") |> Enum.count() == 1
-    assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 7
+    assert document |> LazyHTML.query("#primary-navigation a") |> Enum.count() == 8
     assert LazyHTML.query(document, "#nav-home") |> LazyHTML.text() |> String.trim() == "Overview"
 
     assert LazyHTML.query(document, "#nav-triage") |> LazyHTML.text() |> String.trim() ==

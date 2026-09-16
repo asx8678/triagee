@@ -36,6 +36,44 @@ defmodule TriageWeb.TriageLiveTest do
 
   defp text(document, selector), do: document |> LazyHTML.query(selector) |> LazyHTML.text()
 
+  test "multiple scopes require a named choice and review navigation does not create a case", %{
+    conn: conn
+  } do
+    image = image!("scope-choices")
+    placement!(image, "alpha", "prod-cluster-1")
+    placement!(image, "beta", "staging")
+    finding = finding!(image, "CVE-2026-7199", severity: "CRITICAL")
+
+    {:ok, view, html} = live(conn, ~p"/triage")
+    assert has_element?(view, "details#triage-scopes-CVE-2026-7199 > summary", "Choose scope (2)")
+    refute has_element?(view, "details#triage-scopes-CVE-2026-7199[open]")
+    links = html |> LazyHTML.from_document() |> LazyHTML.query(".triage-scope-action")
+    assert Enum.count(links) == 2
+    assert links |> LazyHTML.attribute("id") |> Enum.uniq() |> length() == 2
+
+    target =
+      Enum.find(
+        LazyHTML.attribute(links, "href"),
+        &(URI.decode_query(URI.parse(&1).query)["owner"] == "beta")
+      )
+
+    assert URI.parse(target).path == "/findings/#{finding.id}"
+
+    assert URI.decode_query(URI.parse(target).query) == %{
+             "owner" => "beta",
+             "environment" => "staging"
+           }
+
+    {:ok, scoped, _} =
+      view
+      |> element(".triage-scope-action[href='#{target}']")
+      |> render_click()
+      |> follow_redirect(conn)
+
+    assert has_element?(scoped, "#open-case-btn", "Open case for beta · staging")
+    assert Triage.Repo.aggregate(Triage.Cases.ReviewCase, :count) == 0
+  end
+
   test "the shown count leads and the unpaged total is scoped to local inventory", %{conn: conn} do
     critical!("counts-intake", "CVE-2026-7101")
 
@@ -133,9 +171,21 @@ defmodule TriageWeb.TriageLiveTest do
 
     # The only place a case can be opened is the finding page, so an unassessed
     # scope links there rather than pretending a case exists.
-    assert document
-           |> LazyHTML.query("#triage-open-#{finding.id}[href='/findings/#{finding.id}']")
-           |> Enum.count() == 1
+    action = LazyHTML.query(document, ".triage-scope-action[data-finding-id='#{finding.id}']")
+
+    [href] = LazyHTML.attribute(action, "href")
+    assert URI.parse(href).path == "/findings/#{finding.id}"
+
+    assert URI.decode_query(URI.parse(href).query) == %{
+             "owner" => "alpha",
+             "environment" => "prod-cluster-1"
+           }
+
+    assert LazyHTML.text(action) =~ "Review scope"
+    assert [label] = LazyHTML.attribute(action, "aria-label")
+    assert String.starts_with?(label, "Review scope for alpha / prod-cluster-1")
+    assert has_element?(view, "div#triage-scopes-CVE-2026-7001 .triage-scope-action")
+    refute has_element?(view, "details#triage-scopes-CVE-2026-7001")
 
     # The CVE id is itself the link to the detail page; a second "Deep dive"
     # link beside it named a destination that was already named.
@@ -166,9 +216,17 @@ defmodule TriageWeb.TriageLiveTest do
     assert text(document, "#triage-coverage-CVE-2026-7002") =~ "1 of 1 scope assessed"
     assert text(document, "#triage-scope-count") =~ "1 of 1"
 
-    assert document
-           |> LazyHTML.query("#triage-case-#{finding.id}[href='/cases/#{cse.id}']")
-           |> Enum.count() == 1
+    action = LazyHTML.query(document, ".triage-scope-action[data-finding-id='#{finding.id}']")
+
+    [href] = LazyHTML.attribute(action, "href")
+    assert URI.parse(href).path == "/cases/#{cse.id}"
+
+    assert URI.decode_query(URI.parse(href).query) == %{
+             "owner" => "alpha",
+             "environment" => "prod-cluster-1"
+           }
+
+    assert LazyHTML.text(action) =~ "Review case"
   end
 
   test "the handled filter is the exact complement of the active filter", %{conn: conn} do
@@ -344,9 +402,14 @@ defmodule TriageWeb.TriageLiveTest do
     {:ok, view, html} = live(conn, ~p"/triage")
     document = LazyHTML.from_document(html)
 
-    assert has_element?(view, "#triage-impact-#{finding.id}")
-    assert text(document, "#triage-impact-#{finding.id}") =~ "impact: High"
-    assert text(document, "#triage-impact-#{finding.id}") =~ "live:operator declared"
+    assert has_element?(view, ".triage-scope-impact[data-finding-id='#{finding.id}']")
+
+    assert text(document, ".triage-scope-impact[data-finding-id='#{finding.id}']") =~
+             "impact: High"
+
+    assert text(document, ".triage-scope-impact[data-finding-id='#{finding.id}']") =~
+             "live:operator declared"
+
     assert text(document, "#triage-impact-count") =~ "1"
   end
 
@@ -356,7 +419,7 @@ defmodule TriageWeb.TriageLiveTest do
     {:ok, view, html} = live(conn, ~p"/triage")
     document = LazyHTML.from_document(html)
 
-    refute has_element?(view, "#triage-impact-#{finding.id}")
+    refute has_element?(view, ".triage-scope-impact[data-finding-id='#{finding.id}']")
 
     assert text(document, "#triage-scope-CVE-2026-7011-alpha-prod-cluster-1-#{finding.id}") =~
              "Impact not recorded"

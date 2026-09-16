@@ -95,7 +95,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
           navigate={~p"/cves/#{@selected_cve}"}
           class="button button-secondary"
         >
-          Advisory page
+          CVE detail
         </.link>
       </div>
 

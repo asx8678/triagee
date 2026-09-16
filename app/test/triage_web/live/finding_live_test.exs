@@ -89,7 +89,7 @@ defmodule TriageWeb.FindingLiveTest do
       )
 
     {:ok, view, _html} =
-      live(conn, ~p"/findings/#{finding.id}?owner=alpha&environment=prod-cluster-1")
+      live(conn, ~p"/findings/#{finding.id}?owner=alpha&environment=prod")
 
     assert has_element?(view, "#placements", "alpha")
     refute has_element?(view, "#placements", "beta")

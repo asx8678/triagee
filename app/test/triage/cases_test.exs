@@ -12,8 +12,8 @@ defmodule Triage.CasesTest do
   alias Triage.{Cases, Inventory, Repo}
   alias Triage.Cases.{CaseEvent, EvidenceSnapshot, Review, ReviewCase}
 
-  @env "prod-cluster-1"
-  @scope [owner: "alpha", environment: "prod-cluster-1"]
+  @env "prod"
+  @scope [owner: "alpha", environment: "prod"]
 
   @review_attrs %{
     "applicability" => "affected",
@@ -114,7 +114,8 @@ defmodule Triage.CasesTest do
   test "unknown namespace and other context values are preserved, never guessed" do
     fid = finding_id("CVE-2024-4004", "zlib", "1.2.13")
 
-    assert {:ok, %{snapshot: snap}} = Cases.open_case(fid, @scope)
+    # The (unknown)-namespace image runs for alpha in the dev environment.
+    assert {:ok, %{snapshot: snap}} = Cases.open_case(fid, owner: "alpha", environment: "dev")
 
     assert [%{"namespace" => "(unknown)", "owner" => "alpha"}] = snap.payload["placements"]
   end

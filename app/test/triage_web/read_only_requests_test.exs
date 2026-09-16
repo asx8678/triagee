@@ -22,6 +22,7 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
     "/cases",
     "/whats-new",
     "/timeline",
+    "/statistics",
     "/replay",
     "/replay/history",
     "/imports"
@@ -48,7 +49,7 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
       )
 
     {:ok, %{case: review_case}} =
-      Cases.open_case(finding_id, owner: "alpha", environment: "prod-cluster-1")
+      Cases.open_case(finding_id, owner: "alpha", environment: "prod")
 
     review_case
   end

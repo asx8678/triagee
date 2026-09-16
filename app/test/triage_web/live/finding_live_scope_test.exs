@@ -3,7 +3,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   Environment and context regressions using a test-only additive fixture:
   image_a additionally runs for alpha in staging-cluster-1, and for beta in
   staging-cluster-1 only as a retired (inactive) placement. The seeded beta /
-  prod-cluster-1 image_b data stays untouched.
+  staging image_b data stays untouched.
   """
 
   use TriageWeb.ConnCase, async: true
@@ -65,7 +65,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
 
     assert has_element?(view, "#groups", "CVE-2025-1001")
     assert has_element?(view, "#groups", "CVE-2024-2002")
-    # image_b (beta, prod) is outside the staging scope
+    # image_b (beta, staging) is outside the staging-cluster-1 scope
     refute has_element?(view, "#groups", "CVE-2025-3003")
   end
 
@@ -134,7 +134,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   end
 
   test "all four list filters survive index to detail to back and related links", %{conn: conn} do
-    qs = %{owner: "alpha", environment: "prod-cluster-1", q: "busybox", suppressed: "1"}
+    qs = %{owner: "alpha", environment: "prod", q: "busybox", suppressed: "1"}
     {:ok, view, _html} = live(conn, ~p"/findings?#{qs}")
 
     assert has_element?(view, "#groups", "CVE-2025-1001")

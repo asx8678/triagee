@@ -283,9 +283,14 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-track-CVE-2026-5200")
       assert has_element?(view, "#tl-track-CVE-2026-5202")
 
-      # The axis labels every day, every week start and today, at the window's size.
-      assert document |> LazyHTML.query("#tl-chart .tl-c-weekday") |> Enum.count() ==
-               window_days(8)
+      # Fit emphasizes weeks; Daily detail retains every weekday label.
+      refute has_element?(view, "#tl-chart .tl-c-weekday")
+      {:ok, _, detail_html} = live(conn, ~p"/timeline?scale=detail")
+
+      assert detail_html
+             |> LazyHTML.from_document()
+             |> LazyHTML.query("#tl-chart .tl-c-weekday")
+             |> Enum.count() == window_days(8)
 
       # Eight week starts plus the gutter's own CVE label.
       assert document |> LazyHTML.query("#tl-chart .tl-c-week-label") |> Enum.count() == 9
@@ -343,6 +348,21 @@ defmodule TriageWeb.TimelineLiveTest do
       assert html =~ "suppression flag currently set (imported scanner data)"
       assert html =~ "hidden from screen readers"
       assert has_element?(view, "#tl-chart figcaption")
+
+      # The C/H/M/L chips are explained: colour and letter are a key, not a guess.
+      assert html =~ "Severity chips — current scanner severity"
+      assert html =~ "Scanner severity is not assessed impact"
+      assert html =~ "No recorded severity"
+
+      assert has_element?(
+               view,
+               "#tl-chart .tl-chart-legend-groups .tl-c-key-chip.tl-c-sev-critical"
+             )
+
+      assert has_element?(
+               view,
+               "#tl-chart .tl-chart-legend-groups .tl-c-key-chip.tl-c-sev-unknown"
+             )
     end
 
     test "a lane recorded before the window starts with an entry tick", %{conn: conn} do
@@ -382,7 +402,7 @@ defmodule TriageWeb.TimelineLiveTest do
 
       assert document |> LazyHTML.query("#tl-chart .tl-chart-track") |> Enum.count() == 12
       assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-dot") |> Enum.count() == 12
-      assert render(view) =~ "most severe lanes of 13"
+      assert render(view) =~ "ranked by current scanner severity"
 
       # The cap is stated before the chart as well as after it: an operator who
       # stops at the figure must not read the unplotted lanes as quiet ones.
@@ -391,10 +411,11 @@ defmodule TriageWeb.TimelineLiveTest do
       truncation =
         document |> LazyHTML.query("#tl-chart-truncation") |> LazyHTML.text()
 
-      assert truncation =~ "12 most severe"
-      assert truncation =~ "of the 13 CVEs"
-      assert truncation =~ "The other 1 is listed"
-      assert truncation =~ "not a quiet one"
+      assert truncation =~ "12 of 13 CVEs"
+      assert truncation =~ "Unplotted lanes are not quiet lanes"
+      assert has_element?(view, "#tl-chart-truncation a[href='#tl-lanes-table']")
+      assert has_element?(view, "#tl-chart > .tl-chart-legend-groups")
+      refute has_element?(view, "#tl-chart-key .tl-chart-legend-groups")
 
       assert document
              |> LazyHTML.query("#tl-chart-truncation + .tl-chart-figure")
@@ -439,6 +460,10 @@ defmodule TriageWeb.TimelineLiveTest do
 
       # It does change the drawing, and the control says which mode is in force.
       assert svg_width(fit) < svg_width(detail)
+      assert has_element?(fit_view, "svg.tl-chart-fit")
+      assert has_element?(detail_view, "svg.tl-chart-detail")
+      refute has_element?(fit_view, ".tl-c-weekday")
+      assert has_element?(detail_view, ".tl-c-weekday")
       assert has_element?(fit_view, "#timeline-form", "Fit window")
       assert has_element?(detail_view, "#timeline-form", "Daily detail")
     end

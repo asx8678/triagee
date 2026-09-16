@@ -24,7 +24,7 @@ defmodule TriageWeb.WhatsNewLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Activity")
+     |> assign(:page_title, "What’s New")
      |> assign(:filter_form, to_form(%{}))
      |> assign(:filters, %{owner: nil, environment: nil})
      |> assign(:options, %{owners: [], environments: []})
@@ -186,7 +186,10 @@ defmodule TriageWeb.WhatsNewLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} active_page="whats-new">
-      <.page_header title="Activity" subtitle="Recorded lifecycle observations from local inventory.">
+      <.page_header
+        title="What’s New"
+        subtitle="Recorded lifecycle observations from local inventory."
+      >
         <:actions>
           <button
             id="reload-events"

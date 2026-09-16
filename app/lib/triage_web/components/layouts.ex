@@ -61,7 +61,7 @@ defmodule TriageWeb.Layouts do
         >
           <div class="cluster environment-summary">
             <strong>Local workspace · No sign-in · {@runtime.binding}</strong>
-            <span>Live collection is disabled. Production coverage is unknown.</span>
+            <span>Collection disabled · Production coverage unknown</span>
           </div>
           <details id="safety-details">
             <summary>Safety details</summary>
@@ -109,7 +109,8 @@ defmodule TriageWeb.Layouts do
          {"home", "Overview", ~p"/"},
          {"triage", "Triage", ~p"/triage"},
          {"findings", "Findings", ~p"/findings"},
-         {"timeline", "Timeline", ~p"/timeline"}
+         {"timeline", "Timeline", ~p"/timeline"},
+         {"statistics", "Statistics", ~p"/statistics"}
        ]},
       {"Data tools",
        [

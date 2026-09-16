@@ -14,7 +14,7 @@ defmodule Triage.CasesQueueTest do
   alias Triage.{Cases, Inventory, Repo}
   alias Triage.Cases.{CaseEvent, EvidenceSnapshot, Review, ReviewCase}
 
-  @env "prod-cluster-1"
+  @env "prod"
   @scope [owner: "alpha", environment: @env]
   @max_id Integer.pow(2, 63) - 1
 
@@ -1019,6 +1019,6 @@ defmodule Triage.CasesQueueTest do
 
     options = Cases.case_filter_options()
     assert options.owners == ["alpha", "beta"]
-    assert options.environments == ["prod-cluster-1", "staging"]
+    assert options.environments == ["prod", "staging"]
   end
 end

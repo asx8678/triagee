@@ -205,13 +205,13 @@ defmodule TriageWeb.FindingLive.InputTest do
     |> element("#filter-form")
     |> render_change(%{
       "owner" => "beta",
-      "environment" => "prod-cluster-1",
+      "environment" => "prod",
       "q" => "curl",
       "suppressed" => "true",
       "_target" => ["owner"]
     })
 
-    assert_patch(view, ~p"/findings?environment=prod-cluster-1&owner=beta&q=curl&suppressed=1")
+    assert_patch(view, ~p"/findings?environment=prod&owner=beta&q=curl&suppressed=1")
     assert has_element?(view, "#groups", "CVE-2025-1001")
   end
 

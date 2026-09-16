@@ -63,7 +63,7 @@ defmodule Triage.InventoryTest do
   end
 
   test "environment scoping narrows results" do
-    assert Inventory.list_groups(environment: "prod-cluster-1") != []
+    assert Inventory.list_groups(environment: "prod") != []
     assert Inventory.list_groups(environment: "no-such-cluster") == []
   end
 
@@ -76,7 +76,7 @@ defmodule Triage.InventoryTest do
 
     assert group
     assert group.suppressed_occurrences == 1
-    assert Inventory.summary_counts().suppressed == 1
+    assert Inventory.summary_counts().suppressed == 3
   end
 
   test "resolved findings never appear in the active list" do

@@ -94,7 +94,7 @@ defmodule TriageWeb.WhatsNewLiveTest do
     refute has_element?(view, "#events-error")
 
     html = render(view)
-    assert has_element?(view, "h1", "Activity")
+    assert has_element?(view, "h1", "What’s New")
     assert html =~ "First observed locally"
     assert html =~ "Recorded observation time"
   end

@@ -13,7 +13,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   alias Triage.Cases.ReviewCase
   alias Triage.Inventory.Finding
 
-  @env "prod-cluster-1"
+  @env "prod"
   @now ~U[2026-09-09 06:00:00Z]
 
   setup do

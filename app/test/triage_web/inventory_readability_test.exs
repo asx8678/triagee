@@ -105,14 +105,14 @@ defmodule TriageWeb.InventoryReadabilityTest do
     conn: conn
   } do
     finding = finding!("busybox") |> Repo.preload(:image)
-    qs = %{owner: "alpha", environment: "prod-cluster-1", q: "busybox", suppressed: "1"}
+    qs = %{owner: "alpha", environment: "prod", q: "busybox", suppressed: "1"}
     before = record_counts()
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}?#{qs}")
 
     assert has_element?(view, "#finding-summary", "busybox")
     assert has_element?(view, "#finding-summary", "1.37")
     assert has_element?(view, "#finding-summary", "1.38")
-    assert has_element?(view, "#finding-display-scope", "alpha · prod-cluster-1")
+    assert has_element?(view, "#finding-display-scope", "alpha · prod")
     assert has_element?(view, "#finding-summary ~ #open-case-form")
     assert has_element?(view, "#open-case-btn[data-confirm][phx-disable-with]")
 
@@ -188,14 +188,14 @@ defmodule TriageWeb.InventoryReadabilityTest do
        %{conn: conn} do
     finding = finding!("busybox")
     context = %{from: "activity", owner: "beta", environment: "other-environment", before: "12"}
-    scope = %{owner: "alpha", environment: "prod-cluster-1", q: "busybox", suppressed: "1"}
+    scope = %{owner: "alpha", environment: "prod", q: "busybox", suppressed: "1"}
     params = Map.put(scope, :activity, context)
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}?#{params}")
 
     expected = ~p"/whats-new?#{Map.delete(context, :from)}"
     assert has_element?(view, "#back-to-activity[href='#{expected}']")
-    assert has_element?(view, "#finding-display-scope", "alpha · prod-cluster-1")
-    assert has_element?(view, "#open-case-btn", "alpha · prod-cluster-1")
+    assert has_element?(view, "#finding-display-scope", "alpha · prod")
+    assert has_element?(view, "#open-case-btn", "alpha · prod")
     refute has_element?(view, "#placements", "beta")
     related = finding!("busybox-binsh")
 
@@ -212,7 +212,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
       render_patch(view, ~p"/findings/#{finding.id}?#{Map.put(scope, :activity, invalid)}")
       refute has_element?(view, "#back-to-activity")
       refute has_element?(view, "#invalid-scope")
-      assert has_element?(view, "#finding-display-scope", "alpha · prod-cluster-1")
+      assert has_element?(view, "#finding-display-scope", "alpha · prod")
     end
   end
 

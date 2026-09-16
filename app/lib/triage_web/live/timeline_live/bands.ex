@@ -88,7 +88,7 @@ defmodule TriageWeb.TimelineLive.Bands do
                     navigate={~p"/cves/#{row.cve}"}
                     class="button button-secondary"
                   >
-                    Advisory page
+                    CVE detail
                   </.link>
                 </div>
               </li>

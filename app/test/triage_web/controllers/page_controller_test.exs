@@ -24,6 +24,7 @@ defmodule TriageWeb.PageControllerTest do
     end
 
     assert document |> LazyHTML.query("#home-workflows .triage-action-card") |> Enum.count() == 0
+    assert document |> LazyHTML.query("#home-view-tabs") |> Enum.count() == 0
 
     # The overview is a posture dashboard: no search form and no page header,
     # because every workflow is one click away in the top navigation.

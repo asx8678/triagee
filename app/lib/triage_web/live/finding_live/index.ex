@@ -321,9 +321,6 @@ defmodule TriageWeb.FindingLive.Index do
           </div>
         </:summary>
       </.filter_bar>
-      <p id="inventory-search-help" class="supporting">
-        Package search matches the whole advisory group; other affected packages remain included.
-      </p>
 
       <p :if={@invalid_filters != []} id="invalid-filters" class="notice" role="alert">
         Invalid filter value{if length(@invalid_filters) == 1, do: "", else: "s"} for
@@ -341,13 +338,15 @@ defmodule TriageWeb.FindingLive.Index do
         shown. A position belongs to the filters and order it was issued with.
         <.link patch={list_path(@filters, :start)}>Start from the newest slice</.link>
       </p>
-      <p id="findings-order" class="supporting">
-        One page shows at most {@per_page} advisory groups in this order; the matching total is
-        the unpaged count for this scope.
-      </p>
-
-      <details id="findings-order-details" class="disclosure">
-        <summary>How this list is ordered</summary>
+      <details id="findings-order-details" class="disclosure supporting">
+        <summary>Search and ordering details</summary>
+        <p id="inventory-search-help">
+          Package search matches the whole advisory group; other affected packages remain included.
+        </p>
+        <p id="findings-order">
+          One page shows at most {@per_page} advisory groups in this order; the matching total is
+          the unpaged count for this scope.
+        </p>
         <p>
           Counts in each row use the selected scope and active placements; teams can overlap.
         </p>
@@ -383,7 +382,7 @@ defmodule TriageWeb.FindingLive.Index do
               <th scope="col">
                 Scanner severity <span class="supporting">· highest in group</span>
               </th>
-              <th scope="col">Affected in scope</th>
+              <th scope="col">Present in scope</th>
               <th scope="col">Reported fix</th>
               <th scope="col">First seen</th>
               <th scope="col">Teams</th>

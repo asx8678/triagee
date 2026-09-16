@@ -126,118 +126,51 @@
         <% end %>
       </div>
 
-      <div class="ov-grid">
-        <section id="home-active" class="ov-col" aria-labelledby="home-active-title">
-          <div class="section-header">
-            <h3 id="home-active-title">Active now</h3>
-            <span class="supporting">Most recently observed first</span>
-          </div>
-          <%= case @active_now do %>
-            <% {:ok, []} -> %>
-              <.empty_state
-                id="home-active-empty"
-                title="No active advisories recorded"
-                description="No open, unsuppressed advisory with an active placement is recorded locally. An empty rail is not proof of a clean estate."
-              >
-                <:actions><.link href={~p"/findings"}>Browse findings</.link></:actions>
-              </.empty_state>
-            <% {:ok, rows} -> %>
-              <ul id="home-active-list" class="ov-list">
-                <li
-                  :for={row <- rows}
-                  id={"home-active-#{row.cve}"}
-                  class="ov-list-row"
-                >
-                  <div class="ov-list-main">
-                    <h4 class="ov-list-title">
-                      <.link href={~p"/cves/#{row.cve}"}>{row.cve}</.link>
-                    </h4>
-                    <p class="supporting">
-                      {display_value(row.team_list, "No team named")} · {if row.images == 1,
-                        do: "#{row.images} image",
-                        else: "#{row.images} images"} ·
-                      last observed <.timestamp value={row.last_seen} />
-                    </p>
-                  </div>
-                  <.status_badge label={row.severity} kind="severity" />
-                </li>
-              </ul>
-              <p id="home-active-caption" class="supporting cluster">
-                {rail_caption(@advisory_total, rows)} by most recent local observation ·
-                <.link id="home-active-all" href={~p"/findings?sort=last_seen"}>
-                  See all findings in this order
-                </.link>
-              </p>
-            <% _ -> %>
-              <.notice id="home-active-error" kind="warning" title="Active rail unavailable">
-                Could not load inventory.
-                <.link href={~p"/findings"}>Browse findings directly</.link>
-              </.notice>
-          <% end %>
-        </section>
-
-        <section id="home-newest" class="ov-col" aria-labelledby="home-newest-title">
-          <div class="section-header">
-            <h3 id="home-newest-title">Newest discovered</h3>
-            <span class="supporting">First observed locally first</span>
-          </div>
-          <%= case @newest do %>
-            <% {:ok, []} -> %>
-              <.empty_state
-                id="home-newest-empty"
-                title="No open advisories recorded"
-                description="The inventory is empty. An empty overview is not proof of a clean estate."
-              >
-                <:actions><.link href={~p"/findings"}>Browse findings</.link></:actions>
-              </.empty_state>
-            <% {:ok, rows} -> %>
-              <ul id="home-newest-list" class="ov-list">
-                <li
-                  :for={row <- rows}
-                  id={"home-newest-#{row.cve}"}
-                  class="ov-list-row"
-                >
-                  <div class="ov-list-main">
-                    <h4 class="ov-list-title">
-                      <.link href={~p"/cves/#{row.cve}"}>{row.cve}</.link>
-                    </h4>
-                    <p class="supporting">
-                      {display_value(row.team_list, "No team named")} · {if row.images == 1,
-                        do: "#{row.images} image",
-                        else: "#{row.images} images"} ·
-                      first observed <.timestamp value={row.first_seen} />
-                    </p>
-                  </div>
-                  <.status_badge label={row.severity} kind="severity" />
-                </li>
-              </ul>
-              <p id="home-newest-caption" class="supporting cluster">
-                {rail_caption(@advisory_total, rows)} by first local observation ·
-                <.link id="home-newest-all" href={~p"/findings?sort=newest"}>See all findings</.link>
-              </p>
-            <% _ -> %>
-              <.notice id="home-newest-error" kind="warning" title="Newest rail unavailable">
-                Could not load inventory.
-                <.link href={~p"/findings"}>Browse findings directly</.link>
-              </.notice>
-          <% end %>
-        </section>
-      </div>
-
-      <p :if={@rails_coincide} id="home-rails-coincide" class="supporting">
-        Both rails list the same advisories in the same order: in local inventory each of these
-        was first observed on the day it was last observed, so the two orders have not diverged
-        yet. They separate as soon as local observations span more than one day — neither rail
-        is a duplicate of the other, and both always read the same inventory.
-      </p>
+      <section id="home-activity" class="ov-activity" aria-labelledby="home-activity-title">
+        <div class="section-header">
+          <h2 id="home-activity-title">Recent findings</h2>
+          <.link id="home-active-all" href={~p"/findings?sort=last_seen"}>
+            View all findings
+          </.link>
+        </div>
+        <p class="supporting">Last observed locally, newest first. Not live production status.</p>
+        <%= case @groups do %>
+          <% {:ok, []} -> %>
+            <.empty_state
+              id="home-active-empty"
+              title="No active findings recorded"
+              description="No open, unsuppressed advisory with an active placement is recorded locally. An empty overview is not proof of a clean estate."
+            />
+          <% {:ok, rows} -> %>
+            <ul id="home-active-list" class="ov-list">
+              <li :for={row <- rows} id={"home-active-" <> row.cve} class="ov-list-row">
+                <div class="ov-list-main">
+                  <h3 class="ov-list-title">
+                    <.link href={~p"/cves/#{row.cve}"}>{row.cve}</.link>
+                  </h3>
+                  <p class="supporting">
+                    {display_value(row.team_list, "No team named")} · {count_label(
+                      row.images,
+                      "image"
+                    )} ·
+                    last observed <.timestamp value={row.last_seen} />
+                  </p>
+                </div>
+                <.status_badge label={row.severity} kind="severity" />
+              </li>
+            </ul>
+            <p id="home-active-caption" class="supporting">
+              {rail_caption(@advisory_total, rows)}
+            </p>
+          <% _ -> %>
+            <.notice id="home-active-error" kind="warning" title="Recent findings unavailable">
+              Could not load inventory. Use View all findings to retry.
+            </.notice>
+        <% end %>
+      </section>
 
       <p id="home-scope-note" class="supporting">
-        Both rails read the same active inventory as every other view: unresolved, unsuppressed and
-        with an active placement. Scanner severity is not impact. The critical work list lives in <.link href={
-          ~p"/triage"
-        }>Triage</.link>, the complete searchable inventory in <.link href={~p"/findings"}>Findings</.link>, and cached public intelligence in <.link href={
-          ~p"/intel"
-        }>Intel</.link>.
+        Open, unsuppressed findings with an active local placement. Scanner severity is not assessed impact.
       </p>
     </section>
   </div>

@@ -244,7 +244,7 @@ defmodule TriageWeb.TriageLive do
       },
       %{
         id: "triage-lane-handled",
-        title: "Reviewed · nothing says affected",
+        title: "Handled — reviewed, nothing says affected",
         note: "Every active scope has a current human review and none of them says affected.",
         detail: nil,
         rows: Enum.filter(rows, &(&1.state == :assessed_no_impact))
@@ -295,7 +295,7 @@ defmodule TriageWeb.TriageLive do
     <Layouts.app flash={@flash} active_page="triage">
       <.page_header
         title="Triage"
-        subtitle="Critical advisories that still need a human, what a human has already recorded for each scope, and which operator decisions cover them."
+        subtitle="Review critical advisories in their team and environment scope."
       />
 
       <p id="triage-banner" class="supporting">
@@ -303,7 +303,7 @@ defmodule TriageWeb.TriageLive do
       </p>
 
       <details id="triage-banner-details" class="disclosure">
-        <summary>How assessment and decisions affect this list</summary>
+        <summary>Assessment rules</summary>
         <p>
           “Assessed” means a saved human review for that exact team and environment scope —
           opening a case is not an assessment. This page writes exactly one thing: an operator
@@ -405,11 +405,11 @@ defmodule TriageWeb.TriageLive do
             <thead>
               <tr>
                 <th scope="col">Advisory</th>
-                <th scope="col">Affected in active scopes</th>
+                <th scope="col">Present in active scopes</th>
                 <th scope="col">Human coverage</th>
                 <th scope="col">Assessment state</th>
                 <th scope="col">Last observed</th>
-                <th scope="col">Work items</th>
+                <th scope="col">Review scope</th>
               </tr>
             </thead>
             <tbody id={"#{lane.id}-rows"}>
@@ -481,66 +481,16 @@ defmodule TriageWeb.TriageLive do
                 </td>
                 <td><.timestamp value={row.last_seen} /></td>
                 <td>
-                  <details id={"triage-scopes-#{row.cve}"}>
-                    <summary>
-                      {row.scopes_total} {if row.scopes_total == 1, do: "scope", else: "scopes"}
-                    </summary>
-                    <ul class="triage-scope-list">
-                      <li
-                        :for={item <- row.work_items}
-                        id={"triage-scope-#{row.cve}-#{item.owner}-#{item.environment}-#{item.finding_id}"}
-                      >
-                        <div>
-                          <strong>{item.owner}</strong> · <span>{item.environment}</span>
-                        </div>
-                        <div class="supporting">
-                          {item.package_name} <code>{item.package_version}</code>
-                          · {item.image_repository}:{item.image_tag}
-                        </div>
-                        <div class="cluster">
-                          <.status_badge
-                            label={item_label(item.assessment)}
-                            kind={item_kind(item.assessment)}
-                          />
-                          <.status_badge
-                            :if={item.applicability}
-                            label={"applicability: #{item.applicability}"}
-                          />
-                          <.status_badge :if={item.priority} label={item.priority} />
-                          <.status_badge :if={item.next_action} label={item.next_action} />
-                        </div>
-                        <div :if={item.impact} id={"triage-impact-#{item.finding_id}"} class="cluster">
-                          <.status_badge
-                            label={impact_label(item.impact)}
-                            kind={impact_kind(item.impact)}
-                          />
-                          <span class="supporting">
-                            {item.impact.source} · observed
-                            <.timestamp value={item.impact.observed_at} />
-                          </span>
-                        </div>
-                        <div :if={is_nil(item.impact)} class="supporting">
-                          Impact not recorded for this placement.
-                        </div>
-                        <div :if={item.reviewed_at} class="supporting">
-                          Assessed <.timestamp value={item.reviewed_at} />
-                        </div>
-                        <div class="cluster">
-                          <.link
-                            :if={item.case_id}
-                            id={"triage-case-#{item.finding_id}"}
-                            navigate={~p"/cases/#{item.case_id}"}
-                            class="button button-secondary"
-                          >Review case</.link>
-                          <.link
-                            :if={is_nil(item.case_id)}
-                            id={"triage-open-#{item.finding_id}"}
-                            navigate={~p"/findings/#{item.finding_id}"}
-                            class="button button-secondary"
-                          >Open case</.link>
-                        </div>
-                      </li>
-                    </ul>
+                  <div :if={length(row.work_items) == 1} id={"triage-scopes-#{row.cve}"}>
+                    <.scope_work_items row={row} />
+                  </div>
+                  <details
+                    :if={length(row.work_items) > 1}
+                    id={"triage-scopes-#{row.cve}"}
+                    class="triage-scope-picker"
+                  >
+                    <summary>Choose scope ({row.scopes_total})</summary>
+                    <.scope_work_items row={row} />
                   </details>
                 </td>
               </tr>
@@ -606,6 +556,52 @@ defmodule TriageWeb.TriageLive do
         </p>
       </details>
     </Layouts.app>
+    """
+  end
+
+  attr :row, :map, required: true
+
+  defp scope_work_items(assigns) do
+    ~H"""
+    <ul class="triage-scope-list">
+      <li
+        :for={item <- @row.work_items}
+        id={"triage-scope-#{@row.cve}-#{item.owner}-#{item.environment}-#{item.finding_id}"}
+      >
+        <div class="supporting"><strong>{item.owner}</strong> · {item.environment}</div>
+        <.link
+          id={"triage-review-#{item.finding_id}-#{item.owner}-#{item.environment}"}
+          class="button triage-scope-action"
+          data-finding-id={item.finding_id}
+          navigate={
+            if item.case_id,
+              do: ~p"/cases/#{item.case_id}?#{[owner: item.owner, environment: item.environment]}",
+              else:
+                ~p"/findings/#{item.finding_id}?#{[owner: item.owner, environment: item.environment]}"
+          }
+          aria-label={"#{if item.case_id, do: "Review case", else: "Review scope"} for #{item.owner} / #{item.environment} · #{@row.cve}"}
+        >{if item.case_id, do: "Review case", else: "Review scope"}</.link>
+        <details class="supporting triage-scope-evidence">
+          <summary>Scope details</summary>
+          <div>
+            {item.package_name} <code>{item.package_version}</code>
+            · {item.image_repository}:{item.image_tag}
+          </div>
+          <div class="cluster">
+            <.status_badge label={item_label(item.assessment)} kind={item_kind(item.assessment)} />
+            <.status_badge :if={item.applicability} label={"applicability: #{item.applicability}"} />
+            <.status_badge :if={item.priority} label={item.priority} />
+            <.status_badge :if={item.next_action} label={item.next_action} />
+          </div>
+          <div :if={item.impact} class="cluster triage-scope-impact" data-finding-id={item.finding_id}>
+            <.status_badge label={impact_label(item.impact)} kind={impact_kind(item.impact)} />
+            <span>{item.impact.source} · observed <.timestamp value={item.impact.observed_at} /></span>
+          </div>
+          <div :if={is_nil(item.impact)}>Impact not recorded for this placement.</div>
+          <div :if={item.reviewed_at}>Assessed <.timestamp value={item.reviewed_at} /></div>
+        </details>
+      </li>
+    </ul>
     """
   end
 end

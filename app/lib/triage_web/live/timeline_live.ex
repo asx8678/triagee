@@ -186,7 +186,7 @@ defmodule TriageWeb.TimelineLive do
     <Layouts.app flash={@flash} active_page="timeline">
       <.page_header
         title="Timeline"
-        subtitle="Recorded local observations over time. Days stack newest first; a CVE reads across the days it was recorded on."
+        subtitle="Recorded local observations over time — not verified remediation."
       />
 
       <.filter_bar id="timeline-form" form={@filter_form} change="filter">
@@ -229,7 +229,7 @@ defmodule TriageWeb.TimelineLive do
 
       <.explain
         id="timeline-banner"
-        summary="Every row is a recorded local observation — not remediation, a scan time, a verified fix or an approval"
+        summary="Observation limits and provenance"
       >
         <p>
           A row is not a scan completion time, a CVE publication date, or an approval.
