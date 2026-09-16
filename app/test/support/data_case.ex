@@ -18,6 +18,8 @@ defmodule Triage.DataCase do
 
   using do
     quote do
+      @moduletag :db
+
       alias Triage.Repo
 
       import Ecto

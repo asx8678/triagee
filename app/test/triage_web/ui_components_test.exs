@@ -6,6 +6,20 @@ defmodule TriageWeb.UIComponentsTest do
   import TriageWeb.UIComponents
   alias TriageWeb.{CoreComponents, Layouts, UIComponents}
 
+  test "counted handles zero, singular and irregular plurals without interpreting markup" do
+    for {n, expected} <- [{0, "0 packages"}, {1, "1 package"}, {2, "2 packages"}] do
+      doc = component(&UIComponents.counted/1, count: n, singular: "package")
+      assert doc |> LazyHTML.text() |> String.trim() == expected
+    end
+
+    doc = component(&UIComponents.counted/1, count: 2, singular: "advisory", plural: "advisories")
+    assert doc |> LazyHTML.text() |> String.trim() == "2 advisories"
+
+    doc = component(&UIComponents.counted/1, count: 1, singular: "<script>probe</script>")
+    assert count(doc, "script") == 0
+    assert doc |> LazyHTML.text() |> String.trim() == "1 <script>probe</script>"
+  end
+
   test "technical disclosure preserves and copies the exact untrusted original" do
     value =
       "registry/team/" <>

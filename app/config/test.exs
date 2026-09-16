@@ -38,6 +38,11 @@ config :triage, Triage.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
+# The only environment allowed to compile in the network-capable loopback
+# transport. `Triage.Collection.Loopback` reads this with `compile_env/3`;
+# all gate consumers read its compiled value. Other environments disable it.
+config :triage, :collection, loopback_transport: true
+
 # Tests do not run a server by default. runtime.exs independently enforces this
 # loopback address and uses port 4002 unless PORT is explicitly supplied.
 config :triage, TriageWeb.Endpoint,

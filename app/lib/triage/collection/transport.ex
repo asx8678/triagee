@@ -3,8 +3,10 @@ defmodule Triage.Collection.Transport do
   Transport contract for offline collection.
 
   A transport is fixed, not arbitrary: the only network-capable transport is
-  `Transport.Req`, which is compile-time gated to test builds and only ever
-  posts to the literal `http://127.0.0.1` loopback endpoint of its validated
+  `Transport.Req`, which is compile-time gated by
+  `config :triage, :collection, loopback_transport` (enabled only by
+  `config/test.exs`) and only ever posts to the literal `http://127.0.0.1`
+  loopback endpoint of its validated
   `Config`. The default (`Disabled`) performs no network access. `post/3`
   revalidates its state, so a forged state map or struct cannot bypass the gate.
 
@@ -19,11 +21,14 @@ defmodule Triage.Collection.Transport do
     InvalidOptionsError
   }
 
-  # Compile-time gate: false in dev/prod releases, true only for test builds.
-  # Never evaluated at runtime, so a release cannot enable the loopback path.
-  @loopback_enabled Mix.env() == :test
+  # Compile-time gate, read from the one shared definition in
+  # `Triage.Collection.Loopback` so this module, `Triage.Collection` and the
+  # nested `Req` module cannot drift apart. The guarantee is unchanged: the value
+  # is baked in when this module is compiled, so a release still cannot enable
+  # the loopback path at runtime.
+  @loopback_enabled Triage.Collection.Loopback.enabled?()
 
-  @doc "True only when this build was compiled for tests."
+  @doc "True only when this build was compiled with the loopback transport enabled."
   @spec loopback_enabled?() :: boolean()
   def loopback_enabled?, do: @loopback_enabled
 
@@ -58,6 +63,10 @@ defmodule Triage.Collection.Transport do
 
     @behaviour Triage.Collection.Transport
 
+    # Module attributes are not inherited by nested modules, so the shared
+    # compile-time value is read again here rather than restated.
+    @loopback_enabled Triage.Collection.Loopback.enabled?()
+
     defstruct [:endpoint, :headers, :request_timeout_ms, :max_response_bytes, :error]
 
     @doc "Builds the transport state from a validated `Config`."
@@ -88,7 +97,7 @@ defmodule Triage.Collection.Transport do
       {:error, %InvalidOptionsError{message: "transport state is invalid"}}
     end
 
-    if Mix.env() == :test do
+    if @loopback_enabled do
       def post(%__MODULE__{} = state, body, opts) when is_binary(body) do
         case validate_state(state, opts) do
           {:ok, endpoint, timeout, max} -> do_post(endpoint, body, timeout, max)
@@ -117,7 +126,7 @@ defmodule Triage.Collection.Transport do
 
     # The live request path is compiled only for tests (dev and prod are offline by
     # construction), so its helpers are defined only where they can be called.
-    if Mix.env() == :test do
+    if @loopback_enabled do
       alias Triage.Collection.Errors
 
       alias Triage.Collection.Errors.{ResponseBudgetError, TransportError}
@@ -154,16 +163,14 @@ defmodule Triage.Collection.Transport do
           Elixir.Req.Request.new(url: endpoint)
           |> Elixir.Req.Steps.attach()
           |> Elixir.Req.merge(
-            headers: @fixed_headers,
-            body: body,
-            decode_body: false,
-            redirect: false,
-            retry: false,
-            max_retries: 0,
-            receive_timeout: timeout,
-            request_timeout: timeout,
-            finch: [name: Elixir.Req.Finch],
-            into: into_fun(max)
+            # The fixed pool owns its connection settings. Req rejects a named
+            # pool combined with connect_options; request_timeout still bounds
+            # this request, and the client enforces the outer deadline.
+            Keyword.delete(
+              Triage.HTTP.options(timeout: timeout, max_bytes: max),
+              :connect_options
+            ) ++
+              [headers: @fixed_headers, body: body, finch: [name: Elixir.Req.Finch]]
           )
           |> Map.put(:adapter, Elixir.Req.Finch)
 
@@ -184,44 +191,21 @@ defmodule Triage.Collection.Transport do
         %TransportError{message: Errors.sanitize_message(message), reason: :transport}
       end
 
-      defp into_fun(max) do
-        fn
-          {:data, data}, {req, resp} ->
-            acc = resp.body || ""
-            size = byte_size(acc) + byte_size(data)
+      defp finish(%{body: nil} = response, max), do: finish(%{response | body: ""}, max)
 
-            if size > max do
-              keep = max - byte_size(acc)
-              partial = acc <> binary_part(data, 0, max(keep, 0))
-              {:halt, {req, put_in(resp.body, {:overflow, partial})}}
-            else
-              {:cont, {req, put_in(resp.body, acc <> data)}}
-            end
+      defp finish(%{body: body} = response, max) do
+        case Triage.HTTP.bounded_body(body, max) do
+          {:ok, body} ->
+            {:ok,
+             %{status: response.status, headers: normalize_headers(response.headers), body: body}}
 
-          _other, {req, resp} ->
-            {:cont, {req, resp}}
+          {:error, :too_large} ->
+            {:error,
+             %ResponseBudgetError{message: "response exceeded the byte budget before decode"}}
+
+          {:error, :invalid_body} ->
+            {:error, %ResponseBudgetError{message: "response body was not a bounded binary"}}
         end
-      end
-
-      defp finish(%{body: {:overflow, _partial}}, _max) do
-        {:error, %ResponseBudgetError{message: "response exceeded the byte budget before decode"}}
-      end
-
-      defp finish(%{body: body} = response, max) when is_binary(body) do
-        if byte_size(body) > max do
-          {:error, %ResponseBudgetError{message: "response exceeded the byte budget"}}
-        else
-          {:ok,
-           %{status: response.status, headers: normalize_headers(response.headers), body: body}}
-        end
-      end
-
-      defp finish(%{body: nil} = response, _max) do
-        {:ok, %{status: response.status, headers: normalize_headers(response.headers), body: ""}}
-      end
-
-      defp finish(_other, _max) do
-        {:error, %ResponseBudgetError{message: "response body was not a bounded binary"}}
       end
 
       defp normalize_headers(headers) do

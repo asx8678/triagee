@@ -19,6 +19,7 @@ defmodule TriageWeb.CaseLive.Index do
   alias Triage.Exceptions
   alias Triage.Intel
   alias TriageWeb.CaseFilters
+  alias TriageWeb.FilterAssigns
 
   # Only the route-id guard: `text/1` here is Phoenix.HTML's escaping helper,
   # which the queue already uses for captured display values.
@@ -29,7 +30,7 @@ defmodule TriageWeb.CaseLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Review Queue")
-     |> assign(:filter_form, to_form(%{}))
+     |> assign(:filter_form, FilterAssigns.filter_form(%{}))
      |> assign(:filters, %{owner: nil, environment: nil})
      |> assign(:options, %{owners: [], environments: []})
      |> assign(:queue_error, nil)
@@ -100,6 +101,7 @@ defmodule TriageWeb.CaseLive.Index do
           |> assign(:queue_error, nil)
           |> assign(:queue_empty?, rows == [])
           |> assign(:page_count, length(rows))
+          |> assign(:filter_form, FilterAssigns.filter_form(parsed))
           |> assign(:filters, %{owner: parsed.owner, environment: parsed.environment})
           |> assign(:options, Cases.case_filter_options())
           |> assign(:has_more?, has_more?)
@@ -121,12 +123,9 @@ defmodule TriageWeb.CaseLive.Index do
   defp queue_error(socket, owner, environment) do
     socket
     |> assign(:queue_error, true)
-    |> assign(:page_count, 0)
+    |> assign(FilterAssigns.cleared_page())
     |> assign(:queue_empty?, false)
     |> assign(:filters, %{owner: owner, environment: environment})
-    |> assign(:has_more?, false)
-    |> assign(:next_before_id, nil)
-    |> assign(:cursor, nil)
     |> assign(:kev, %{})
     |> assign(:kev_status, nil)
     |> stream(:cases, [], reset: true)

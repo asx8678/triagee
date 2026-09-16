@@ -19,6 +19,8 @@ defmodule TriageWeb.ConnCase do
 
   using do
     quote do
+      @moduletag :db
+
       # The default endpoint for testing
       @endpoint TriageWeb.Endpoint
 

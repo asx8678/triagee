@@ -19,6 +19,7 @@ defmodule TriageWeb.WhatsNewLive do
 
   alias Triage.Activity
   alias TriageWeb.ActivityFilters
+  alias TriageWeb.FilterAssigns
   alias TriageWeb.FindingFilters
 
   @impl true
@@ -26,7 +27,7 @@ defmodule TriageWeb.WhatsNewLive do
     {:ok,
      socket
      |> assign(:page_title, "Activity")
-     |> assign(:filter_form, to_form(%{}))
+     |> assign(:filter_form, FilterAssigns.filter_form(%{}))
      |> assign(:filters, %{owner: nil, environment: nil})
      |> assign(:options, %{owners: [], environments: []})
      |> assign(:feed_error, nil)
@@ -87,7 +88,7 @@ defmodule TriageWeb.WhatsNewLive do
           |> assign(:page_count, length(rows))
           |> assign(
             :filter_form,
-            to_form(%{"owner" => parsed.owner, "environment" => parsed.environment})
+            FilterAssigns.filter_form(parsed)
           )
           |> assign(:filters, %{owner: parsed.owner, environment: parsed.environment})
           |> assign(:options, Activity.event_filter_options())
@@ -108,11 +109,8 @@ defmodule TriageWeb.WhatsNewLive do
     socket
     |> assign(:feed_error, true)
     |> assign(:feed_empty?, false)
-    |> assign(:page_count, 0)
+    |> assign(FilterAssigns.cleared_page())
     |> assign(:filters, %{owner: owner, environment: environment})
-    |> assign(:has_more?, false)
-    |> assign(:next_before_id, nil)
-    |> assign(:cursor, nil)
     |> stream(:events, [], reset: true)
   end
 

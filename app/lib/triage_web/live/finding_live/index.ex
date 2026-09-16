@@ -2,9 +2,9 @@ defmodule TriageWeb.FindingLive.Index do
   @moduledoc """
   CVE inventory grouped by advisory, with URL-restorable team/environment filters.
 
-  Synthetic demo data only (PR 1). Team filtering scopes what is displayed; it is
-  not authentication or authorization, and this unauthenticated demo must stay on
-  loopback until real identity and roles land.
+  Local inventory may include synthetic fixtures and public-reference CVEs. Team
+  filtering scopes the display, not authorization; the unauthenticated app must
+  stay on loopback until real identity and roles land.
   """
 
   use TriageWeb, :live_view
@@ -42,9 +42,10 @@ defmodule TriageWeb.FindingLive.Index do
     parsed = FindingFilters.parse(params)
     invalid = parsed.invalid != []
 
-    # Invalid values are never normalized into a scope, truncated or dropped:
-    # nothing is queried and the state is surfaced visibly instead.
-    unknown_team? = not invalid and team_unknown?(parsed.owner)
+    # Invalid values never become a scope: no finding query runs. Global
+    # dropdown options/counts remain available so the user can recover.
+    teams = Inventory.teams()
+    unknown_team? = not invalid and parsed.owner != nil and parsed.owner not in teams
     sort = parsed.sort || default_sort()
 
     scope_opts = [
@@ -81,53 +82,22 @@ defmodule TriageWeb.FindingLive.Index do
     # rendered for an advisory the cache actually holds.
     kev = Intel.kev_index(Enum.map(groups, & &1.cve))
 
-    # Source freshness is one read per page load, never per row. Invalid input
-    # keeps this view's no-query rule: status renders as unread, never invented.
+    # Source freshness is one read per valid page load, never per row.
+    # Invalid input leaves status unread rather than inventing freshness.
     kev_status = if invalid or unknown_team?, do: nil, else: Intel.kev_status()
 
     {:noreply,
      socket
+     |> assign(filter_assigns(parsed, sort))
      |> assign(
-       :filters,
-       %{
-         owner: parsed.owner,
-         environment: parsed.environment,
-         search: parsed.q,
-         include_suppressed: parsed.include_suppressed,
-         severity: parsed.severity,
-         sort: sort,
-         before: parsed.before
-       }
+       unknown_team?: unknown_team?,
+       teams: teams,
+       environments: Inventory.environments(),
+       counts: Inventory.summary_counts(),
+       kev: kev,
+       kev_status: kev_status
      )
-     |> assign(:invalid_filters, if(invalid, do: parsed.invalid, else: []))
-     |> assign(:unknown_team?, unknown_team?)
-     |> assign(:teams, Inventory.teams())
-     |> assign(:environments, Inventory.environments())
-     |> assign(:counts, Inventory.summary_counts())
-     |> assign(:advisory_count, total)
-     |> assign(:shown, length(groups))
-     |> assign(:kev, kev)
-     |> assign(:kev_status, kev_status)
-     |> assign(:per_page, @per_page)
-     |> assign(:has_more?, has_more?)
-     |> assign(:cursor, parsed.before)
-     |> assign(:next_before, next_before)
-     |> assign(:beyond_end?, groups == [] and total > 0)
-     |> assign(:order_note, sort_note(sort))
-     |> assign(:sort_options, sort_options())
-     |> assign(
-       :filter_form,
-       to_form(%{
-         "owner" => parsed.owner,
-         "environment" => parsed.environment,
-         "q" => parsed.q,
-         "suppressed" => parsed.include_suppressed,
-         "severity" => parsed.severity,
-         "sort" => sort
-       })
-     )
-     |> assign(:empty?, groups == [])
-     |> stream(:groups, groups, reset: true)}
+     |> assign_results(groups, total, has_more?, parsed.before, next_before)}
   end
 
   @impl true
@@ -138,28 +108,55 @@ defmodule TriageWeb.FindingLive.Index do
       {:noreply,
        push_patch(socket, to: ~p"/findings?#{FindingFilters.query_params(canonical(parsed))}")}
     else
-      # Keep the last valid URL; show the invalid state and no findings.
+      # Keep the last valid URL/form; clear the same result model used by URL loads.
       {:noreply,
        socket
-       |> assign(:invalid_filters, parsed.invalid)
-       |> assign(:unknown_team?, false)
-       |> assign(:advisory_count, 0)
-       |> assign(:shown, 0)
-       |> assign(:has_more?, false)
-       |> assign(:cursor, nil)
-       |> assign(:next_before, nil)
-       |> assign(:beyond_end?, false)
-       |> assign(:empty?, true)
-       |> assign(:kev, %{})
-       |> assign(:kev_status, nil)
-       |> stream(:groups, [], reset: true)}
+       |> assign(invalid_filters: parsed.invalid, unknown_team?: false, kev: %{}, kev_status: nil)
+       |> assign_results([], 0, false, nil, nil)}
     end
   end
 
-  defp team_unknown?(nil), do: false
+  defp filter_assigns(parsed, sort) do
+    %{
+      filters: %{
+        owner: parsed.owner,
+        environment: parsed.environment,
+        search: parsed.q,
+        include_suppressed: parsed.include_suppressed,
+        severity: parsed.severity,
+        sort: sort,
+        before: parsed.before
+      },
+      invalid_filters: parsed.invalid,
+      order_note: sort_note(sort),
+      sort_options: sort_options(),
+      filter_form:
+        to_form(%{
+          "owner" => parsed.owner,
+          "environment" => parsed.environment,
+          "q" => parsed.q,
+          "suppressed" => parsed.include_suppressed,
+          "severity" => parsed.severity,
+          "sort" => sort
+        })
+    }
+  end
 
-  defp team_unknown?(owner) do
-    owner not in Inventory.teams()
+  # Streams do not retain an enumerable list. Compute all derived result state
+  # together whenever the stream resets, including invalid form events.
+  defp assign_results(socket, groups, total, has_more?, cursor, next_before) do
+    socket
+    |> assign(%{
+      advisory_count: total,
+      shown: length(groups),
+      per_page: @per_page,
+      has_more?: has_more?,
+      cursor: cursor,
+      next_before: next_before,
+      beyond_end?: groups == [] and total > 0,
+      empty?: groups == []
+    })
+    |> stream(:groups, groups, reset: true)
   end
 
   # The default order is the absence of a sort parameter: a filter event that
@@ -416,13 +413,13 @@ defmodule TriageWeb.FindingLive.Index do
               </td>
               <td>
                 <div data-field="packages">
-                  {g.packages} {if g.packages == 1, do: "package", else: "packages"}
+                  <.counted count={g.packages} singular="package" />
                 </div>
                 <div data-field="images">
-                  {g.images} {if g.images == 1, do: "image", else: "images"}
+                  <.counted count={g.images} singular="image" />
                 </div>
                 <div data-field="occurrences" class="supporting">
-                  {g.occurrences} {if g.occurrences == 1, do: "occurrence", else: "occurrences"}
+                  <.counted count={g.occurrences} singular="occurrence" />
                 </div>
               </td>
               <td data-field="fix">
@@ -434,7 +431,7 @@ defmodule TriageWeb.FindingLive.Index do
                 <% end %>
               </td>
               <td><.timestamp value={g.first_seen} /></td>
-              <td data-field="teams">{g.teams} {if g.teams == 1, do: "team", else: "teams"}</td>
+              <td data-field="teams"><.counted count={g.teams} singular="team" /></td>
             </tr>
           </tbody>
         </table>

@@ -13,6 +13,7 @@ defmodule Triage.ImportConcurrencyTest do
   """
 
   use ExUnit.Case, async: false
+  @moduletag :db
 
   alias Triage.{Import, Repo}
   alias Triage.Inventory.{Finding, FindingEvent, Image}

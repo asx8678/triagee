@@ -78,6 +78,14 @@ defmodule Triage.MixProject do
   #     $ mix setup
   #
   # See the documentation for `Mix` for more info on aliases.
+  # Database-free runs neither prepare PostgreSQL nor start Triage.Application.
+  # test_helper starts just the dependencies, PubSub and a non-listening endpoint.
+  defp test_alias do
+    if System.get_env("TRIAGE_SKIP_DB_SETUP") in ["1", "true"],
+      do: ["assets.setup", "test --no-start --exclude db"],
+      else: ["ecto.create --quiet", "ecto.migrate --quiet", "assets.setup", "test"]
+  end
+
   defp aliases do
     # Only development convenience commands implicitly load synthetic data.
     # Test setup/reset must leave an empty inventory; SQL sandbox rollback
@@ -89,7 +97,7 @@ defmodule Triage.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.seed": ["run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"] ++ seed_tasks,
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "assets.setup", "test"],
+      test: test_alias(),
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",

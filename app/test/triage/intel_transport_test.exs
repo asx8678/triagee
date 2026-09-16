@@ -1,6 +1,8 @@
 defmodule Triage.IntelTransportTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureLog
+
   alias Triage.Intel.Client
 
   setup do
@@ -15,6 +17,79 @@ defmodule Triage.IntelTransportTest do
         do: Application.put_env(:triage, :intel, previous_intel),
         else: Application.delete_env(:triage, :intel)
     end)
+  end
+
+  test "runtime cap is used for real Req streaming and final admission, with a safe diagnostic" do
+    body = Jason.encode!(%{"vulnerabilities" => []})
+    max = byte_size(body)
+    Application.put_env(:triage, :intel, enabled: true, max_response_bytes: max)
+    respond(200, body)
+    assert Client.fetch(:kev) == {:ok, []}
+    assert_received {:request, request}
+
+    initial = {request, Req.Response.new(body: "")}
+    assert {:cont, state} = request.into.({:data, body}, initial)
+    assert {:halt, {_request, response}} = request.into.({:data, "private-secret"}, state)
+    assert response.body == :triage_response_too_large
+    respond(200, response.body)
+
+    log =
+      capture_log(fn ->
+        assert Client.fetch(:kev) == {:error, {:response_too_large, max}}
+      end)
+
+    assert log =~ "source=kev max_bytes=#{max}"
+    refute log =~ "private-secret"
+
+    Application.put_env(:triage, :intel, enabled: true, max_response_bytes: max - 1)
+    respond(200, body)
+    assert Client.fetch(:kev) == {:error, {:response_too_large, max - 1}}
+    Application.put_env(:triage, :intel, enabled: true, max_response_bytes: max + 1)
+    assert Client.fetch(:kev) == {:ok, []}
+  end
+
+  test "injected bodies use the same cap and it cannot change during a fetch" do
+    body = Jason.encode!(%{"vulnerabilities" => []})
+    max = byte_size(body)
+    Application.put_env(:triage, :intel, max_response_bytes: max)
+
+    changing = %{
+      req: fn _ ->
+        Application.put_env(:triage, :intel, max_response_bytes: max - 1)
+        {:ok, body}
+      end
+    }
+
+    assert Client.fetch(:kev, changing) == {:ok, []}
+
+    assert Client.fetch(:kev, %{req: fn _ -> {:ok, body} end}) ==
+             {:error, {:response_too_large, max - 1}}
+
+    log =
+      capture_log(fn ->
+        assert Client.fetch({:nvd, "CVE-2024-3094"}, %{req: fn _ -> {:ok, body} end}) ==
+                 {:error, {:response_too_large, max - 1}}
+      end)
+
+    assert log =~ "source=nvd max_bytes=#{max - 1}"
+  end
+
+  test "invalid limits and malformed transports make zero requests" do
+    transport = %{req: fn _ -> flunk("invalid limit reached transport") end}
+
+    for bad <- [0, -1, nil, "8", :infinity] do
+      Application.put_env(:triage, :intel, enabled: true, max_response_bytes: bad)
+      assert Client.fetch(:kev, transport) == {:error, {:invalid_config, :max_response_bytes}}
+      assert Client.fetch(:kev) == {:error, {:invalid_config, :max_response_bytes}}
+    end
+
+    Application.put_env(:triage, :intel, enabled: true)
+
+    for bad <- [nil, false, %{}] do
+      assert Client.fetch(:kev, bad) == {:error, :no_transport}
+    end
+
+    refute_received {:request, _}
   end
 
   # Exercise the real Req pipeline and its options, without any socket/network.

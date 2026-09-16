@@ -98,6 +98,21 @@ defmodule Triage.RiskTest do
       assert Risk.aggregate([high, low]) == high
     end
 
+    test "all published priorities have a strict rank and ties keep the first result" do
+      for {priority, index} <- Enum.with_index(Risk.priorities()) do
+        winner = %Risk{priority: priority, reasons: ["first"]}
+        tie = %Risk{priority: priority, reasons: ["second"]}
+        lower = Enum.map(Enum.drop(Risk.priorities(), index + 1), &%Risk{priority: &1})
+        assert Risk.aggregate(lower ++ [winner, tie]) == winner
+      end
+    end
+
+    test "an invalid priority never silently becomes low urgency" do
+      assert_raise KeyError, fn ->
+        Risk.aggregate([%Risk{priority: "unexpected"}, %Risk{priority: "low"}])
+      end
+    end
+
     test "aggregate of empty is nil" do
       assert Risk.aggregate([]) == nil
     end

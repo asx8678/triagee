@@ -55,7 +55,7 @@ defmodule TriageWeb.CvePresentationTest do
     })
   end
 
-  defp placement!(image, owner, environment, opts \\ []) do
+  defp placement!(image, owner, environment, opts) do
     Repo.insert!(%ImagePlacement{
       image_id: image.id,
       namespace: Keyword.get(opts, :namespace, "web"),
@@ -66,8 +66,6 @@ defmodule TriageWeb.CvePresentationTest do
       last_seen: @now
     })
   end
-
-  defp feed!(seed), do: feed!(seed, [])
 
   defp feed!(seed, opts) do
     image = image!(seed)

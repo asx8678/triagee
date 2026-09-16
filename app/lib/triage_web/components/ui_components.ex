@@ -13,6 +13,22 @@ defmodule TriageWeb.UIComponents do
     end
   end
 
+  @doc "A count and its noun, with an explicit plural for irregular words."
+  attr :count, :integer, required: true
+  attr :singular, :string, required: true
+  attr :plural, :string, default: nil
+
+  def counted(assigns) do
+    noun =
+      if assigns.count == 1, do: assigns.singular, else: assigns.plural || assigns.singular <> "s"
+
+    assigns = assign(assigns, :noun, noun)
+
+    ~H"""
+    {@count} {@noun}
+    """
+  end
+
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil
   attr :eyebrow, :string, default: nil

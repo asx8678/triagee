@@ -14,13 +14,13 @@ defmodule Triage.Intel.Client do
   loopback fakes.
   """
 
-  alias Triage.Intel.Sanitize
+  require Logger
 
-  # The KEV feed is a single multi-megabyte JSON document that grows as CISA adds
-  # entries. The bound stays enforced before decode — but it must not fail a
-  # legitimate feed closed, and truncating the feed instead would make "not in
-  # the cache" indistinguishable from "not known exploited".
-  @max_response_bytes 8_000_000
+  alias Triage.Intel.{Config, Sanitize}
+
+  # CISA's feed grows over time. Snapshot the runtime-configured cap once per
+  # fetch, for both streaming and final admission. Never truncate a feed into
+  # partial success: that would turn missing entries into false reassurance.
   @deadline_ms 20_000
 
   @kev_url "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
@@ -34,17 +34,17 @@ defmodule Triage.Intel.Client do
   Returns `{:ok, rows}` (normalized plain maps) — errors are terminal and
   never silently partial. Text fields are already sanitized.
   """
-  def fetch(kind, transport \\ default_transport())
+  def fetch(kind, transport \\ :default_transport)
 
   def fetch(:kev, transport) do
-    with {:ok, body} <- get(@kev_url, transport) do
+    with {:ok, body} <- get(@kev_url, :kev, transport) do
       parse_kev(body)
     end
   end
 
   def fetch({:nvd, cve_id}, transport) do
     with :ok <- nvd_safe_cve(cve_id),
-         {:ok, body} <- get(@nvd_url <> "?cveId=" <> URI.encode(cve_id), transport) do
+         {:ok, body} <- get(@nvd_url <> "?cveId=" <> URI.encode(cve_id), :nvd, transport) do
       parse_nvd(body, cve_id)
     end
   end
@@ -53,24 +53,18 @@ defmodule Triage.Intel.Client do
 
   ## Transport
 
-  defp default_transport do
-    if Triage.Intel.Config.enabled?() do
-      %{req: &req_get/1}
+  defp default_transport(max) do
+    if Config.enabled?() do
+      %{req: &req_get(&1, max)}
     else
       %{req: fn _url -> {:error, :intel_disabled} end}
     end
   end
 
-  defp req_get(url) do
+  defp req_get(url, max) do
     case URI.parse(url) do
       %URI{scheme: "https", host: host} when host in ["www.cisa.gov", "services.nvd.nist.gov"] ->
-        case Req.get(url,
-               redirect: false,
-               retry: false,
-               connect_options: [timeout: @deadline_ms],
-               receive_timeout: @deadline_ms,
-               decode_body: false
-             ) do
+        case Req.get(url, Triage.HTTP.options(timeout: @deadline_ms, max_bytes: max)) do
           {:error, reason} -> {:error, {:request_failed, sanitize_error(reason)}}
           result -> result
         end
@@ -80,13 +74,19 @@ defmodule Triage.Intel.Client do
     end
   end
 
-  defp if_byte_size_ok(body) when is_binary(body) do
-    if byte_size(body) <= @max_response_bytes,
-      do: {:ok, body},
-      else: {:error, {:response_too_large, @max_response_bytes}}
-  end
+  defp if_byte_size_ok(body, max, source) do
+    case Triage.HTTP.bounded_body(body, max) do
+      {:ok, body} ->
+        {:ok, body}
 
-  defp if_byte_size_ok(_other), do: {:error, {:unexpected_body, :other}}
+      {:error, :too_large} ->
+        Logger.warning("intel response exceeds byte limit source=#{source} max_bytes=#{max}")
+        {:error, {:response_too_large, max}}
+
+      {:error, :invalid_body} ->
+        {:error, {:unexpected_body, :other}}
+    end
+  end
 
   ## Parsers — all produce sanitized plain maps
 
@@ -195,10 +195,17 @@ defmodule Triage.Intel.Client do
   # the byte bound — so an injected fake and the real transport are held to the same
   # limits and no non-200 or oversized body can reach a parser. Both documented
   # result shapes are accepted; a non-200 result never carries its body forward.
-  defp get(url, %{req: req_fun}) when is_function(req_fun, 1) do
+  defp get(url, source, transport) do
+    with {:ok, max} <- Config.max_response_bytes() do
+      selected = if transport == :default_transport, do: default_transport(max), else: transport
+      do_get(url, selected, max, source)
+    end
+  end
+
+  defp do_get(url, %{req: req_fun}, max, source) when is_function(req_fun, 1) do
     case req_fun.(url) do
       {:ok, %{status: 200, body: body}} ->
-        if_byte_size_ok(body)
+        if_byte_size_ok(body, max, source)
 
       {:ok, %{status: status}} when is_integer(status) and status in 300..399 ->
         # Terminal: never follow Location, never leak it.
@@ -208,7 +215,7 @@ defmodule Triage.Intel.Client do
         {:error, {:http_status, status}}
 
       {:ok, body} ->
-        if_byte_size_ok(body)
+        if_byte_size_ok(body, max, source)
 
       {:error, reason} ->
         {:error, reason}
@@ -222,7 +229,7 @@ defmodule Triage.Intel.Client do
     :exit, _ -> {:error, :request_raised}
   end
 
-  defp get(_url, _other), do: {:error, :no_transport}
+  defp do_get(_url, _other, _max, _source), do: {:error, :no_transport}
 
   defp host_of(url) do
     case URI.parse(url) do

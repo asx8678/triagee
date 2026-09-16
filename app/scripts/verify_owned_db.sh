@@ -11,6 +11,8 @@ case "${MIX_ENV-}" in ""|test) ;; *) echo "verify-owned-db: refuse non-test MIX_
 [ -z "${MIX_TEST_PARTITION+x}" ] || { echo "verify-owned-db: refuse ambient MIX_TEST_PARTITION" >&2; exit 65; }
 [ -z "${TRIAGE_IMPORT_CONCURRENCY_DB+x}" ] || { echo "verify-owned-db: refuse ambient concurrency opt-in" >&2; exit 65; }
 
+[ -z "${TRIAGE_SKIP_DB_SETUP+x}" ] || { echo "verify-owned-db: refuse DB-free test override" >&2; exit 65; }
+
 # Never inherit connection redirects, credential lookup controls, or listeners.
 unset DATABASE_URL PHX_SERVER DNS_CLUSTER_QUERY
 for pg_name in $(env | sed -n 's/^\(PG[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$pg_name"; done
