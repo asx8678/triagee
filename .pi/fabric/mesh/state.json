@@ -469,12 +469,12 @@
         "model": "zro/deepseek-v4.1-flash",
         "thinking": "high",
         "startedAt": 1789560491524,
-        "updatedAt": 1789560611552,
+        "updatedAt": 1789560647907,
         "pendingMessages": false,
         "local": false
       },
-      "version": 32,
-      "updatedAt": 1789560611555,
+      "version": 70,
+      "updatedAt": 1789560647908,
       "updatedBy": {
         "id": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "name": "main",
@@ -505,13 +505,13 @@
         "model": "zro/deepseek-v4.1-flash",
         "thinking": "high",
         "startedAt": 1789560491524,
-        "updatedAt": 1789560611552,
+        "updatedAt": 1789560647907,
         "pendingMessages": false,
         "controlProtocol": "v1",
         "label": "TRI-20"
       },
-      "version": 32,
-      "updatedAt": 1789560611559,
+      "version": 70,
+      "updatedAt": 1789560647909,
       "updatedBy": {
         "id": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "name": "main",
@@ -532,11 +532,11 @@
           "sessionId": "01a0aa1e-0b01-71ea-a8e4-d6d30e077666"
         },
         "startedAt": 1789560491524,
-        "updatedAt": 1789560611561,
-        "expiresAt": 1789560626561
+        "updatedAt": 1789560647910,
+        "expiresAt": 1789560662910
       },
-      "version": 32,
-      "updatedAt": 1789560611562,
+      "version": 70,
+      "updatedAt": 1789560647910,
       "updatedBy": {
         "id": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "name": "main",
@@ -555,6 +555,49 @@
         "ownerIdentityId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "parentId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "name": "Prewalk trajectory executor",
+        "status": "completed",
+        "residency": "session",
+        "runner": "pi",
+        "transport": "process",
+        "capabilities": [],
+        "cwd": "/Users/adam2/projects/triagee",
+        "sessionId": "15045",
+        "model": "zro/kimi-k3",
+        "thinking": "high",
+        "startedAt": 1789560605650,
+        "updatedAt": 1789560635492,
+        "finishedAt": 1789560635492,
+        "turns": 2,
+        "toolCalls": 1,
+        "usage": {
+          "input": 12705,
+          "output": 467,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "cost": 0.037366500000000004
+        },
+        "controlProtocol": "v1"
+      },
+      "version": 8,
+      "updatedAt": 1789560635599,
+      "updatedBy": {
+        "id": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a0aa1e-0b01-71ea-a8e4-d6d30e077666"
+      }
+    },
+    "topology/participants/559f8562452e9305c5a2c97029ca38e5297f0d57ba62a4f3607ac97f0a35366b": {
+      "key": "topology/participants/559f8562452e9305c5a2c97029ca38e5297f0d57ba62a4f3607ac97f0a35366b",
+      "value": {
+        "format": 1,
+        "id": "9c6a0433afbc4d67bf9abe53e9392774",
+        "kind": "agent",
+        "rootId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
+        "ownerHostId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
+        "ownerIdentityId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
+        "parentId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
+        "name": "Prewalk trajectory executor",
         "status": "running",
         "residency": "session",
         "runner": "pi",
@@ -565,24 +608,25 @@
           "stop"
         ],
         "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "15045",
+        "sessionId": "16750",
         "model": "zro/kimi-k3",
         "thinking": "high",
-        "startedAt": 1789560605650,
-        "updatedAt": 1789560607044,
+        "startedAt": 1789560638200,
+        "updatedAt": 1789560647870,
+        "currentTool": "fabric_exec",
         "turns": 0,
-        "toolCalls": 0,
+        "toolCalls": 1,
         "usage": {
-          "input": 0,
-          "output": 0,
+          "input": 6291,
+          "output": 325,
           "cacheRead": 0,
           "cacheWrite": 0,
-          "cost": 0
+          "cost": 0.019627500000000003
         },
         "controlProtocol": "v1"
       },
-      "version": 3,
-      "updatedAt": 1789560607193,
+      "version": 4,
+      "updatedAt": 1789560647910,
       "updatedBy": {
         "id": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "name": "main",
@@ -590,29 +634,29 @@
         "sessionId": "01a0aa1e-0b01-71ea-a8e4-d6d30e077666"
       }
     },
-    "topology/hosts/10e7b72315e3accce6291494731b20082eb03c20633186ca25bc4884573e4966": {
-      "key": "topology/hosts/10e7b72315e3accce6291494731b20082eb03c20633186ca25bc4884573e4966",
+    "topology/hosts/ff8aad2961a46c682712249e56243848399230d800e4290005fc45f5b1d5c37b": {
+      "key": "topology/hosts/ff8aad2961a46c682712249e56243848399230d800e4290005fc45f5b1d5c37b",
       "value": {
         "format": 1,
-        "id": "runtime:01a0aa1f-caf7-71ea-a8e4-d6d52481b536",
+        "id": "runtime:01a0aa20-4a97-71ea-a8e4-d6d7536d8a85",
         "rootId": "session:01a0aa1e-0b01-71ea-a8e4-d6d30e077666",
         "identity": {
-          "id": "2d674d17222b402faffdd69f533e3e73",
+          "id": "9c6a0433afbc4d67bf9abe53e9392774",
           "name": "Prewalk trajectory executor",
           "kind": "agent",
-          "sessionId": "01a0aa1f-caf7-71ea-a8e4-d6d52481b536"
+          "sessionId": "01a0aa20-4a97-71ea-a8e4-d6d7536d8a85"
         },
-        "startedAt": 1789560606988,
-        "updatedAt": 1789560611994,
-        "expiresAt": 1789560626994
+        "startedAt": 1789560639151,
+        "updatedAt": 1789560644158,
+        "expiresAt": 1789560659158
       },
       "version": 2,
-      "updatedAt": 1789560611995,
+      "updatedAt": 1789560644159,
       "updatedBy": {
-        "id": "2d674d17222b402faffdd69f533e3e73",
+        "id": "9c6a0433afbc4d67bf9abe53e9392774",
         "name": "Prewalk trajectory executor",
         "kind": "agent",
-        "sessionId": "01a0aa1f-caf7-71ea-a8e4-d6d52481b536"
+        "sessionId": "01a0aa20-4a97-71ea-a8e4-d6d7536d8a85"
       }
     }
   },
@@ -685,11 +729,15 @@
     "sessions/01a0aa19-a5a7-7030-a8c8-de949cd68b83": 1,
     "topology/participants/9d4178af10689105458479879d9738f10dac60d92378185ef3cbcfd6ec336487": 2,
     "topology/hosts/9d4178af10689105458479879d9738f10dac60d92378185ef3cbcfd6ec336487": 2,
-    "sessions/01a0aa1e-0b01-71ea-a8e4-d6d30e077666": 32,
-    "topology/participants/a82981c2fe9469db4530bc3c6a4dc5fd418893991bf3dc79095f834f9e3fafe4": 32,
-    "topology/hosts/a82981c2fe9469db4530bc3c6a4dc5fd418893991bf3dc79095f834f9e3fafe4": 32,
-    "topology/participants/6c5766a688b31a0fe804528ec0818fa9325a7bd2cac93eb8d4509782434c3e04": 3,
-    "topology/hosts/10e7b72315e3accce6291494731b20082eb03c20633186ca25bc4884573e4966": 2
+    "sessions/01a0aa1e-0b01-71ea-a8e4-d6d30e077666": 70,
+    "topology/participants/a82981c2fe9469db4530bc3c6a4dc5fd418893991bf3dc79095f834f9e3fafe4": 70,
+    "topology/hosts/a82981c2fe9469db4530bc3c6a4dc5fd418893991bf3dc79095f834f9e3fafe4": 70,
+    "topology/participants/6c5766a688b31a0fe804528ec0818fa9325a7bd2cac93eb8d4509782434c3e04": 8,
+    "topology/hosts/10e7b72315e3accce6291494731b20082eb03c20633186ca25bc4884573e4966": 16,
+    "topology/participants/b95583c1641b1c38a307cff2fab66e85de07efac022b222f66d7c9dcace90c91": 6,
+    "topology/hosts/816f9eff25dc9120ec4f7a3e3862084dabff04dd28cbf4ddaf929ecdfb7250b6": 6,
+    "topology/participants/559f8562452e9305c5a2c97029ca38e5297f0d57ba62a4f3607ac97f0a35366b": 4,
+    "topology/hosts/ff8aad2961a46c682712249e56243848399230d800e4290005fc45f5b1d5c37b": 2
   },
   "tombstoneOrder": [
     "sessions/01a086d8-7f8d-7685-8581-5a8068f51d9d",
@@ -746,6 +794,9 @@
     "topology/hosts/9d4178af10689105458479879d9738f10dac60d92378185ef3cbcfd6ec336487",
     "sessions/01a0aa19-792b-7545-ab1f-95b7ef377610",
     "topology/participants/9319794920b519aded7f2afd82ba894e44a8bcc32cade2c2cfb44fb8be48b588",
-    "topology/hosts/9319794920b519aded7f2afd82ba894e44a8bcc32cade2c2cfb44fb8be48b588"
+    "topology/hosts/9319794920b519aded7f2afd82ba894e44a8bcc32cade2c2cfb44fb8be48b588",
+    "topology/hosts/816f9eff25dc9120ec4f7a3e3862084dabff04dd28cbf4ddaf929ecdfb7250b6",
+    "topology/participants/b95583c1641b1c38a307cff2fab66e85de07efac022b222f66d7c9dcace90c91",
+    "topology/hosts/10e7b72315e3accce6291494731b20082eb03c20633186ca25bc4884573e4966"
   ]
 }
