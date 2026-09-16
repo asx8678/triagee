@@ -79,8 +79,8 @@ defmodule TriageWeb.TimelineLive.Chart do
                 viewBox="0 0 10 10"
                 refX="10"
                 refY="5"
-                markerWidth="10"
-                markerHeight="10"
+                markerWidth="6.5"
+                markerHeight="6.5"
                 markerUnits="userSpaceOnUse"
                 orient="auto"
               >
