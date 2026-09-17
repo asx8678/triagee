@@ -81,7 +81,7 @@ defmodule Triage.InventoryTest do
 
     assert group
     assert group.suppressed_occurrences == 1
-    assert Inventory.summary_counts().suppressed == 3
+    assert Inventory.summary_counts().suppressed == 4
   end
 
   test "resolved findings never appear in the active list" do
@@ -94,7 +94,7 @@ defmodule Triage.InventoryTest do
   test "reopened fixture keeps full appeared → resolved → reopened history" do
     reopened =
       Repo.one!(
-        from f in Finding, where: f.cve == "CVE-2026-57236" and f.package_version == "1.3"
+        from f in Finding, where: f.cve == "CVE-2026-57236" and f.package_version == "1.18.9"
       )
 
     {:ok, data} = Inventory.fetch_finding(reopened.id)

@@ -56,6 +56,7 @@ defmodule Triage.DataCase do
   # checked at the end of the statement, so deleting the whole table at once is
   # valid.
   @reset_statements [
+    "DELETE FROM remediation_requests",
     "DELETE FROM review_case_events",
     "UPDATE review_cases SET current_snapshot_id = NULL",
     "DELETE FROM review_reviews",

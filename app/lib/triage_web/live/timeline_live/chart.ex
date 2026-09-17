@@ -23,7 +23,7 @@ defmodule TriageWeb.TimelineLive.Chart do
   # The width the fit calculation aims at. The server cannot measure the browser,
   # so it fits the window to a desktop content width and leaves the region
   # scrollable at narrower viewports rather than guessing per request.
-  @assumed_viewport 1000
+  # Measured container width is supplied by the resize hook.
   @gutter 152
   @row_height 26
   @axis_height 64
@@ -33,11 +33,35 @@ defmodule TriageWeb.TimelineLive.Chart do
   attr :chart, :map, required: true
   attr :lanes, :map, required: true
   attr :scale, :string, default: "fit"
+  attr :width, :integer, default: 1000
+  attr :action_paths, :map, default: %{}
+  attr :selected_cve, :string, default: nil
 
   def lane_chart(assigns) do
+    chart = assigns.chart
+
+    selected =
+      Enum.find(
+        Map.get(chart, :available_tracks, chart.tracks),
+        &(&1.cve == assigns.selected_cve)
+      )
+
+    tracks =
+      if selected && not Enum.any?(chart.tracks, &(&1.cve == selected.cve)) do
+        Enum.take(chart.tracks, max(length(chart.tracks) - 1, 0)) ++ [selected]
+      else
+        chart.tracks
+      end
+
+    assigns = assign(assigns, :chart, %{chart | tracks: tracks})
+
     assigns =
       assign(assigns,
-        layout: layout(assigns.chart, day_width(assigns.scale, length(assigns.chart.dates)))
+        layout:
+          layout(
+            assigns.chart,
+            day_width(assigns.scale, length(assigns.chart.dates), assigns.width)
+          )
       )
 
     ~H"""
@@ -59,6 +83,8 @@ defmodule TriageWeb.TimelineLive.Chart do
       <figure class="tl-chart-figure">
         <div
           id="tl-chart-scroll"
+          phx-hook="TimelineWidth"
+          data-selected-cve={@selected_cve}
           class="table-region tl-chart-region"
           role="region"
           tabindex="0"
@@ -157,11 +183,16 @@ defmodule TriageWeb.TimelineLive.Chart do
               </text>
             </g>
 
-            <g :for={track <- @layout.tracks} id={"tl-track-" <> track.cve} class="tl-chart-track">
+            <g
+              :for={track <- @layout.tracks}
+              id={"tl-track-" <> track.cve}
+              class={["tl-chart-track", track.cve == @selected_cve && "tl-selected"]}
+              aria-current={if track.cve == @selected_cve, do: "true"}
+            >
               <title>{track.span_label}</title>
 
               <rect
-                :if={track.band?}
+                :if={track.band? or track.cve == @selected_cve}
                 class="tl-c-band"
                 x={@layout.gutter}
                 y={track.y - div(@layout.row_height, 2)}
@@ -186,6 +217,7 @@ defmodule TriageWeb.TimelineLive.Chart do
                 {track.severity_chip.letter}
               </text>
 
+              <a href={Map.get(@action_paths, track.cve, ~p"/cves/#{track.cve}")} aria-label={if Map.has_key?(@action_paths, track.cve), do: "Triage #{track.cve} — action required", else: "View #{track.cve}"}>
               <text
                 class="tl-chart-cve"
                 x={@layout.gutter - 10}
@@ -194,6 +226,7 @@ defmodule TriageWeb.TimelineLive.Chart do
               >
                 {track.cve}
               </text>
+              </a>
 
               <line
                 :if={track.entry_x}
@@ -260,16 +293,6 @@ defmodule TriageWeb.TimelineLive.Chart do
               {text}
             </li>
           </ul>
-        </div>
-        <div class="tl-chart-legend-group">
-          <h3 class="tl-chart-legend-title">Severity chips — current scanner severity</h3>
-          <ul class="tl-chart-legend">
-            <li :for={{class, letter, text} <- legend_severities()}>
-              <span class={["tl-c-key-chip", class]} aria-hidden="true">{letter}</span>
-              {text}
-            </li>
-          </ul>
-          <p class="supporting">Scanner severity is not assessed impact.</p>
         </div>
         <div class="tl-chart-legend-group">
           <h3 class="tl-chart-legend-title">Lines — drawn only between two recorded days</h3>
@@ -370,26 +393,15 @@ defmodule TriageWeb.TimelineLive.Chart do
     ]
   end
 
-  defp legend_severities do
-    [
-      {"tl-c-sev-critical", "C", "Critical"},
-      {"tl-c-sev-high", "H", "High"},
-      {"tl-c-sev-medium", "M", "Medium"},
-      {"tl-c-sev-low", "L", "Low"},
-      {"tl-c-sev-unknown", "?", "No recorded severity"}
-    ]
-  end
-
   ## Layout
 
   # Fit never widens a short window past day-sized spacing, and a day is never
   # drawn narrower than the floor. The control changes scale, not the window: the
   # days drawn and the gaps between them are the same in both modes.
-  defp day_width("detail", _days), do: @detail_day_width
+  defp day_width("detail", _days, _width), do: @detail_day_width
 
-  defp day_width(_fit, days) do
-    per_day = div(max(@assumed_viewport - @gutter, 0), max(days, 1))
-    per_day |> min(@detail_day_width) |> max(@min_fit_day_width)
+  defp day_width(_fit, days, width) do
+    max((width - @gutter - 8) / max(days, 1), @min_fit_day_width)
   end
 
   defp layout(chart, day_width) do
@@ -398,7 +410,7 @@ defmodule TriageWeb.TimelineLive.Chart do
       |> Enum.with_index()
       |> Map.new(fn {date, index} ->
         %{
-          x: @gutter + index * day_width + div(day_width, 2),
+          x: @gutter + index * day_width + day_width / 2,
           left: @gutter + index * day_width
         }
         |> then(&{date.iso_date, &1})
@@ -410,7 +422,7 @@ defmodule TriageWeb.TimelineLive.Chart do
       |> Enum.map(fn {track, index} -> track_layout(track, index, xs) end)
 
     %{
-      width: @gutter + length(chart.dates) * day_width + 8,
+      width: round(@gutter + length(chart.dates) * day_width + 8),
       height: @axis_height + length(tracks) * @row_height + 4,
       gutter: @gutter,
       row_height: @row_height,

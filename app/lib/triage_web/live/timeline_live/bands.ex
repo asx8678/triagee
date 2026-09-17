@@ -15,8 +15,12 @@ defmodule TriageWeb.TimelineLive.Bands do
 
   attr :days, :list, required: true
   attr :filters, :map, required: true
+  attr :action_paths, :map, default: %{}
+  attr :selected_cve, :string, default: nil
 
   def waterfall(assigns) do
+    assigns = assign(assigns, :groups, Enum.chunk_by(assigns.days, &empty_day?/1))
+
     ~H"""
     <section id="tl-bands" class="tl-section" aria-labelledby="tl-bands-title">
       <div class="section-header">
@@ -29,78 +33,124 @@ defmodule TriageWeb.TimelineLive.Bands do
       </div>
 
       <ol id="tl-band-list" class="tl-band-list">
-        <li
-          :for={day <- @days}
-          id={"tl-band-" <> day.iso_date}
-          class={["tl-band", band_class(day)]}
-        >
-          <div class="tl-band-date">
-            <h3 class="tl-band-label"><time datetime={day.iso_date}>{day.label}</time></h3>
-            <p class="supporting tl-band-counts">{day_counts(day)}</p>
-          </div>
-
-          <div class="tl-band-track">
-            <p
-              :if={not day.observed?}
-              id={"tl-band-empty-" <> day.iso_date}
-              class="tl-band-none supporting"
-            >
-              No recorded observation on this day. An empty day is not a clean day.
-            </p>
-
-            <ul :if={day.observed?} class="tl-rows">
-              <li :for={row <- day.rows} id={"tl-row-" <> row_key(row, day)} class="tl-row">
-                <span class={["tl-arrow", arrow_class(row)]} aria-hidden="true">{arrow_glyph(row)}</span>
-                <span class="sr-only">{arrow_text(row)}</span>
-                <span
-                  :if={row.continued_from?}
-                  class="tl-connector tl-connector-up"
-                  aria-hidden="true"
-                ></span>
-                <span :if={row.continues?} class="tl-connector tl-connector-down" aria-hidden="true"></span>
-
-                <div class="tl-row-main">
-                  <p class="tl-row-title">
-                    <strong>{row.cve}</strong>
-                    <.status_badge label={display_value(row.severity)} kind="severity" />
-                    <span class="supporting">{event_label(row.kind)}</span>
-                  </p>
-                  <p class="supporting">
-                    {row.package_name} <code>{row.package_version}</code>
-                    <span :if={row.fix}> · recorded fix {row.fix}</span>
-                    <span> · recorded observation time <.timestamp value={row.occurred_at} /></span>
-                  </p>
-                  <p class="supporting">
-                    {state_label(row)}<span :if={row.suppressed}> · suppression flag currently set from the imported scanner data (no recorded date or author)</span>
-                  </p>
-                </div>
-
-                <div class="tl-row-actions">
-                  <.link
-                    id={"tl-open-" <> row_key(row, day)}
-                    patch={TimelineFilters.path(@filters, %{cve: row.cve})}
-                    class="button button-secondary"
-                  >
-                    Timeline detail
-                  </.link>
-                  <.link
-                    id={"tl-advisory-" <> row_key(row, day)}
-                    navigate={~p"/cves/#{row.cve}"}
-                    class="button button-secondary"
-                  >
-                    CVE detail
-                  </.link>
-                </div>
-              </li>
-            </ul>
-
-            <p :if={day.truncated_count > 0} class="supporting">
-              {day.truncated_count} further recorded event(s) on this day are not shown.
-            </p>
-          </div>
-        </li>
+        <%= for group <- @groups do %>
+          <%= if empty_day?(hd(group)) and length(group) > 1 do %>
+            <li class="tl-gap">
+              <details id={"tl-gap-" <> hd(group).iso_date}>
+                <summary>
+                  {List.last(group).label} – {hd(group).label} · No observations recorded on {length(
+                    group
+                  )} days · Expand
+                </summary>
+                <ol class="tl-band-list">
+                  <.day_band
+                    :for={day <- group}
+                    day={day}
+                    filters={@filters}
+                    selected_cve={@selected_cve} action_paths={@action_paths}
+                  />
+                </ol>
+              </details>
+            </li>
+          <% else %>
+            <.day_band :for={day <- group} day={day} filters={@filters} selected_cve={@selected_cve} action_paths={@action_paths} />
+          <% end %>
+        <% end %>
       </ol>
     </section>
+    """
+  end
+
+  defp empty_day?(day), do: not day.observed? and day.judged_count == 0
+
+  attr :action_paths, :map, default: %{}
+  attr :selected_cve, :string, default: nil
+  attr :day, :map, required: true
+  attr :filters, :map, required: true
+
+  defp day_band(assigns) do
+    ~H"""
+    <li
+      id={"tl-band-" <> @day.iso_date}
+      class={["tl-band", band_class(@day)]}
+    >
+      <div class="tl-band-date">
+        <h3 class="tl-band-label">
+          <time datetime={@day.iso_date}>
+            <span class="tl-band-weekday">{Calendar.strftime(Date.from_iso8601!(@day.iso_date), "%A")}</span>
+            <span class="tl-band-calendar">{Calendar.strftime(
+              Date.from_iso8601!(@day.iso_date),
+              "%d %b %Y"
+            )}</span>
+          </time>
+        </h3>
+        <p class="supporting tl-band-counts">{day_counts(@day)}</p>
+      </div>
+
+      <div class="tl-band-track">
+        <p
+          :if={not @day.observed?}
+          id={"tl-band-empty-" <> @day.iso_date}
+          class="tl-band-none supporting"
+        >
+          No recorded observation on this day. An empty day is not a clean day.
+        </p>
+
+        <ul :if={@day.observed?} class="tl-rows">
+          <li
+            :for={row <- @day.rows}
+            id={"tl-row-" <> row_key(row, @day)}
+            class="tl-row"
+          >
+            <span class={["tl-arrow", arrow_class(row)]} aria-hidden="true">{arrow_glyph(row)}</span>
+            <span class="sr-only">{arrow_text(row)}</span>
+            <span
+              :if={row.continued_from?}
+              class="tl-connector tl-connector-up"
+              aria-hidden="true"
+            ></span>
+            <span :if={row.continues?} class="tl-connector tl-connector-down" aria-hidden="true"></span>
+
+            <div class="tl-row-main">
+              <p class="tl-row-title">
+                <strong><.link navigate={Map.get(@action_paths, row.cve, ~p"/cves/#{row.cve}")}>{row.cve}</.link></strong>
+                <.status_badge label={display_value(row.severity)} kind="severity" />
+                <span class="supporting">{event_label(row.kind)}</span>
+              </p>
+              <p class="supporting">
+                {row.package_name} <code>{row.package_version}</code>
+                <span :if={row.fix}> · recorded fix {row.fix}</span>
+                <span> · recorded observation time <.timestamp value={row.occurred_at} /></span>
+              </p>
+              <p class="supporting">
+                {state_label(row)}<span :if={row.suppressed}> · suppression flag currently set from the imported scanner data (no recorded date or author)</span>
+              </p>
+            </div>
+
+            <div class="tl-row-actions">
+              <.link
+                id={"tl-open-" <> row_key(row, @day)}
+                patch={TimelineFilters.path(@filters, %{cve: row.cve})}
+                class="button button-secondary"
+              >
+                Timeline detail
+              </.link>
+              <.link
+                id={"tl-advisory-" <> row_key(row, @day)}
+                navigate={~p"/cves/#{row.cve}"}
+                class="button button-secondary"
+              >
+                CVE detail
+              </.link>
+            </div>
+          </li>
+        </ul>
+
+        <p :if={@day.truncated_count > 0} class="supporting">
+          {@day.truncated_count} further recorded event(s) on this day are not shown.
+        </p>
+      </div>
+    </li>
     """
   end
 

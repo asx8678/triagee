@@ -34,11 +34,12 @@ defmodule TriageWeb.Layouts do
           >
             <summary id="navigation-toggle" aria-controls="primary-navigation">Navigation</summary>
             <nav id="primary-navigation" class="triage-nav" aria-label="Primary">
-              <div
+              <details
                 :for={{group, links} <- navigation_groups()}
+                open={group == "Workspace" or group_active?(links, @active_page)}
                 class={["nav-group", nav_group_class(group)]}
               >
-                <p class="nav-group-label">{group}</p>
+                <summary class="nav-group-label">{group}</summary>
                 <.link
                   :for={{key, label, path} <- links}
                   id={"nav-#{key}"}
@@ -48,7 +49,7 @@ defmodule TriageWeb.Layouts do
                 >
                   {label}
                 </.link>
-              </div>
+              </details>
             </nav>
           </details>
         </div>
@@ -99,6 +100,13 @@ defmodule TriageWeb.Layouts do
     """
   end
 
+  # A group stays open when it holds the page on screen, so the current
+  # destination is never hidden behind a collapsed disclosure and its
+  # aria-current marking stays visible.
+  defp group_active?(links, active_page) do
+    Enum.any?(links, fn {key, _label, _path} -> key == active_page end)
+  end
+
   defp nav_group_class("Data tools"), do: "nav-group-tools"
   defp nav_group_class(_other), do: "nav-group-primary"
 
@@ -106,14 +114,13 @@ defmodule TriageWeb.Layouts do
     [
       {"Workspace",
        [
-         {"home", "Overview", ~p"/"},
-         {"triage", "Triage", ~p"/triage"},
-         {"findings", "Findings", ~p"/findings"},
-         {"timeline", "Timeline", ~p"/timeline"},
-         {"statistics", "Statistics", ~p"/statistics"}
+         {"findings", "Vulnerabilities", ~p"/"},
+         {"triage", "Review", ~p"/triage"},
+         {"timeline", "Timeline", ~p"/timeline"}
        ]},
       {"Data tools",
        [
+         {"statistics", "Statistics", ~p"/statistics"},
          {"imports", "Imports", ~p"/imports"},
          {"replay", "Replay", ~p"/replay"},
          {"intel", "Intel", ~p"/intel"}

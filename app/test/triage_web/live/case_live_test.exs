@@ -257,6 +257,12 @@ defmodule TriageWeb.CaseLiveTest do
   end
 
   test "hostile rationale text renders literally in the timeline", %{conn: conn} do
+    id = finding_id("openssh-client")
+
+    Repo.update_all(from(f in Finding, where: f.id == ^id),
+      set: [description: "<script>alert(1)</script> never as markup"]
+    )
+
     {to, cview} = open_case(conn)
     case_id = case_id_of(to)
     snapshot_id = snapshot_id_of(case_id)
@@ -439,7 +445,10 @@ defmodule TriageWeb.CaseLiveTest do
 
     # Valid navigation afterwards recovers the saved current case scope on
     # the back link, including preserved search and suppressed filters.
-    render_patch(view, path_b <> "?owner=beta&environment=#{@env}&q=curl&suppressed=1")
+    render_patch(
+      view,
+      path_b <> "?owner=beta&environment=#{@env}&q=openssh-sftp-server&suppressed=1"
+    )
 
     assert {:error, {:live_redirect, %{to: back}}} =
              view |> element("#back-to-finding") |> render_click()

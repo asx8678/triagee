@@ -84,20 +84,20 @@ defmodule Triage.TimelineTest do
         assert {:ok, _view} = Timeline.list_timeline(weeks: weeks)
       end
 
-      assert Timeline.default_weeks() == 8
+      assert Timeline.default_weeks() == 12
     end
   end
 
   describe "window" do
-    test "defaults to eight Monday-aligned weeks ending today" do
+    test "defaults to twelve Monday-aligned weeks ending today" do
       assert {:ok, view} = Timeline.list_timeline()
-      assert view.window.weeks == 8
-      assert length(view.days) == window_days(8)
+      assert view.window.weeks == 12
+      assert length(view.days) == window_days(12)
       assert Date.day_of_week(view.window.from) == 1
       assert view.window.to == today()
       assert view.days |> hd() |> Map.fetch!(:date) == today()
       assert view.days |> List.last() |> Map.fetch!(:date) == view.window.from
-      assert length(view.grid.weeks) == 8
+      assert length(view.grid.weeks) == 12
     end
 
     test "honours the 4 and 12 week windows" do
@@ -113,7 +113,7 @@ defmodule Triage.TimelineTest do
       assert {:ok, view} = Timeline.list_timeline()
       assert view.summary.events == 0
       assert view.summary.observed_days == 0
-      assert view.summary.empty_days == window_days(8)
+      assert view.summary.empty_days == window_days(12)
       assert view.lanes.total == 0
       assert view.lanes.rows == []
       assert Enum.all?(view.days, &(&1.observed? == false))
@@ -146,7 +146,7 @@ defmodule Triage.TimelineTest do
       refute two_days_ago.observed?
       assert two_days_ago.rows == []
       assert view.summary.observed_days == 2
-      assert view.summary.empty_days == window_days(8) - 2
+      assert view.summary.empty_days == window_days(12) - 2
     end
 
     test "adjacent observations are joined by a connector in both directions" do

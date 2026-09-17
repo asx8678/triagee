@@ -14,14 +14,14 @@ defmodule TriageWeb.FindingLiveTest do
   test "index lists grouped advisories", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings")
 
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#groups > tr")
     refute has_element?(view, "#groups", "CVE-2026-61625")
   end
 
   test "index honours the team filter from the URL", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha")
 
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#groups > tr")
     # beta-only suppressed advisory stays hidden without include_suppressed
     refute has_element?(view, "#groups", "CVE-2026-48931")
   end
@@ -39,7 +39,7 @@ defmodule TriageWeb.FindingLiveTest do
     view |> element("form") |> render_change(%{"owner" => "beta"})
 
     assert_patch(view, ~p"/findings?owner=beta")
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#groups > tr")
   end
 
   test "detail renders hostile third-party text as text, never markup", %{conn: conn} do
@@ -47,6 +47,10 @@ defmodule TriageWeb.FindingLiveTest do
       Repo.one!(
         from f in Finding, where: f.cve == "CVE-2026-60002" and f.package_name == "openssh-client"
       )
+
+    Repo.update_all(from(f in Finding, where: f.id == ^finding.id),
+      set: [description: "<script>alert(1)</script> never as markup"]
+    )
 
     {:ok, view, html} = live(conn, ~p"/findings/#{finding.id}")
 

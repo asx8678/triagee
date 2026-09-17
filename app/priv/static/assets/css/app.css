@@ -11,7 +11,9 @@
   --triage-accent: #234fba;
   --triage-focus: #174cbd;
   --triage-brand: #ba501d;
-  --triage-radius: 4px;
+  --triage-radius: 7px;
+  --text-primary: .875rem;
+  --text-secondary: .8125rem;
   --space-1: .25rem;
   --space-2: .5rem;
   --space-3: .75rem;
@@ -22,7 +24,7 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 html { font-size: 100%; scroll-padding-block: 1rem; }
-html body { margin: 0; background: var(--triage-bg); color: var(--triage-text); font-family: var(--font-sans); font-size: .9375rem; line-height: 1.45; }
+html body { margin: 0; background: var(--triage-bg); color: var(--triage-text); font-family: var(--font-sans); font-size: var(--text-primary); line-height: 1.45; }
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 a { color: var(--triage-accent); text-underline-offset: .2em; }
@@ -46,14 +48,23 @@ button, a, summary { touch-action: manipulation; }
 .triage-skip-link:focus { top: 1rem; }
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 .triage-topbar { background: var(--triage-header); color: #ecf1f8; }
-.topbar-inner { display: flex; align-items: center; flex-wrap: wrap; gap: .125rem 1.25rem; max-width: 112rem; margin-inline: auto; padding: 0 1rem; }
+.topbar-inner { display: flex; align-items: center; flex-wrap: wrap; gap: .125rem 1.25rem; max-width: 112rem; margin-inline: auto; padding: 0 1.5rem; min-height: 3.5rem; }
 .triage-brand { display: block; padding: .25rem 0; flex-shrink: 0; }
-.triage-brand-logo { display: block; height: 1.375rem; width: auto; }
+.triage-brand-logo { display: block; height: 1.625rem; width: auto; }
 .navigation-disclosure { flex: 1 1 auto; min-width: 0; }
 .triage-nav { display: flex; align-items: center; flex-wrap: wrap; gap: .125rem 1rem; }
 .nav-group { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem; }
 .nav-group-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .nav-group-tools { margin-left: auto; }
+/* The data-tools group is collapsed by default, so its toggle has to be
+   visible: a disclosure whose summary is screen-reader-only leaves Statistics,
+   Imports, Replay and Intel with no visible entry point. The workspace group's
+   links are always shown, so its own label stays for screen readers only. */
+.nav-group-tools > .nav-group-label { position: static; width: auto; height: auto; padding: .25rem .5rem; margin: 0; overflow: visible; clip: auto; display: inline-flex; align-items: center; gap: .375rem; min-height: 2rem; color: #c3d0e2; font-size: .8125rem; font-weight: 600; border: 1px solid transparent; border-radius: var(--triage-radius); }
+.nav-group-tools > .nav-group-label::before { content: none; }
+.nav-group-tools > .nav-group-label::after { content: ""; flex: 0 0 auto; width: .375rem; height: .375rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translate(-1px, -1px); }
+.nav-group-tools[open] > .nav-group-label::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.nav-group-tools > .nav-group-label:hover { background: #243954; color: #fff; }
 .nav-group-tools .triage-nav-link { color: #c3d0e2; }
 .triage-nav-link { display: inline-flex; align-items: center; min-height: 1.75rem; padding: .25rem .5rem; border-radius: 4px; color: #e6edf7; font-size: .8125rem; text-decoration: none; overflow-wrap: anywhere; }
 .triage-nav-link:hover { background: #243954; color: #fff; }
@@ -61,13 +72,13 @@ button, a, summary { touch-action: manipulation; }
 .triage-topbar :focus-visible { outline-color: #abcaff; }
 .navigation-disclosure > summary { display: none; }
 .app-body { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
-.environment-notice { display: flex; flex-wrap: wrap; align-items: baseline; gap: .125rem 1rem; padding: .25rem 1rem; background: #edf1f6; border-bottom: 1px solid var(--triage-border); color: #3e4e62; font-size: .75rem; }
+.environment-notice { display: flex; flex-wrap: wrap; align-items: baseline; gap: .125rem 1rem; padding: .375rem 1.5rem; background: #edf1f6; border-bottom: 1px solid var(--triage-border); color: #3e4e62; font-size: .75rem; }
 .environment-notice .cluster { gap: .25rem 1rem; }
 .environment-notice summary { min-height: 1.5rem; padding-block: .125rem; width: fit-content; }
 .environment-notice details:not([open]) { margin-left: auto; }
 .environment-notice details[open] { flex-basis: 100%; }
 .environment-notice details[open] > .stack { margin-top: .75rem; gap: .5rem; }
-.triage-main { min-width: 0; padding: .75rem 1rem 1.5rem; }
+.triage-main { min-width: 0; padding: 1rem 1.5rem 1.5rem; }
 .triage-content { width: 100%; max-width: 112rem; margin-inline: auto; min-width: 0; overflow-wrap: anywhere; }
 .triage-content > * + * { margin-top: .5rem; }
 .triage-content > #flash-group + .page-header { margin-top: 0; }
@@ -81,7 +92,7 @@ button, a, summary { touch-action: manipulation; }
 #flash-group:empty { display: none; }
 #flash-group:empty + * { margin-top: 0; }
 #flash-group:has(> :not([hidden])) { margin-bottom: 1rem; }
-.triage-content h1 { font-size: 1.375rem; line-height: 1.2; font-weight: 650; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.triage-content h1 { font-size: 1.625rem; line-height: 1.2; font-weight: 650; letter-spacing: -.015em; overflow-wrap: anywhere; }
 .triage-content h2 { font-size: 1.0625rem; line-height: 1.3; font-weight: 650; }
 .triage-content h3 { font-size: .9375rem; line-height: 1.35; font-weight: 600; }
 
@@ -95,17 +106,16 @@ button, a, summary { touch-action: manipulation; }
 .page-header .supporting { margin-top: .125rem; }
 .section-header { align-items: baseline; }
 .eyebrow, .triage-case-eyebrow, .triage-section-label { font-size: .75rem; color: var(--triage-muted); font-weight: 600; margin-bottom: .125rem; }
-.supporting, .muted, .triage-muted, .triage-note, .triage-panel-meta, .triage-case-subtitle, .triage-case-scopebar-note, .triage-fact-note { font-size: .75rem; color: var(--triage-muted); line-height: 1.4; }
-.triage-content .text-xs, .triage-content .text-sm { font-size: .8125rem; }
+.supporting, .muted, .triage-muted, .triage-note, .triage-panel-meta, .triage-case-subtitle, .triage-case-scopebar-note, .triage-fact-note { font-size: var(--text-secondary); color: var(--triage-muted); line-height: 1.4; }
+.triage-content .text-xs { font-size: var(--text-secondary); }
+.triage-content .text-sm { font-size: var(--text-primary); }
 .triage-content :is(.opacity-70, .opacity-80) { opacity: 1; color: var(--triage-muted); }
 .triage-prose { max-width: 72ch; }
 .triage-break, .triage-mono { overflow-wrap: anywhere; }
 .triage-mono { font-family: var(--font-mono); font-size: .8125rem; }
 
-/* Controls: explicit colors and compact 28px targets. WCAG 2.2 AA target size
-   (2.5.8) is 24x24 CSS px, so this stays compliant; no rule fixes heights at
-   text zoom, and the numeric links below keep their 24px target box. */
-.triage-content .button, .triage-content .btn { display: inline-flex; align-items: center; justify-content: center; gap: .25rem; min-height: 1.75rem; height: auto; padding: .25rem .5rem; border: 1px solid var(--triage-accent); border-radius: var(--triage-radius); background: var(--triage-accent); color: #fff; font-size: .8125rem; line-height: 1.35; font-weight: 600; white-space: normal; text-align: center; text-decoration: none; box-shadow: none; }
+/* Controls use 36px minimum heights and grow with text zoom. */
+.triage-content .button, .triage-content .btn { display: inline-flex; align-items: center; justify-content: center; gap: .25rem; min-height: 2.25rem; height: auto; padding: .25rem .5rem; border: 1px solid var(--triage-accent); border-radius: var(--triage-radius); background: var(--triage-accent); color: #fff; font-size: .8125rem; line-height: 1.35; font-weight: 600; white-space: normal; text-align: center; text-decoration: none; box-shadow: none; }
 .triage-content .button-secondary, .triage-content .btn-soft { background: #fff; color: var(--triage-accent); border-color: var(--triage-control-border); }
 .triage-content .button:hover, .triage-content .btn:hover { background: #173c92; color: #fff; }
 .triage-content .button-secondary:hover, .triage-content .btn-soft:hover { background: #edf2fb; color: #173c92; }
@@ -113,7 +123,7 @@ button, a, summary { touch-action: manipulation; }
 .triage-content label { display: block; min-width: 0; }
 .triage-content .label, .triage-content legend { display: block; color: var(--triage-text); font-size: .75rem; font-weight: 600; white-space: normal; padding: 0; margin-bottom: .25rem; }
 .triage-content .label:has(input[type="checkbox"]) { display: flex; align-items: flex-start; gap: .375rem; min-height: 1.75rem; padding-block: .25rem; font-weight: 400; }
-.triage-content :is(.input, .select, .textarea), .triage-content input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), .triage-content select, .triage-content textarea { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 1.75rem; height: auto; padding: .25rem .5rem; border: 1px solid var(--triage-control-border); border-radius: var(--triage-radius); background-color: #fff; color: var(--triage-text); font-size: .8125rem; line-height: 1.4; box-shadow: none; }
+.triage-content :is(.input, .select, .textarea), .triage-content input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), .triage-content select, .triage-content textarea { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 2.25rem; height: auto; padding: .25rem .5rem; border: 1px solid var(--triage-control-border); border-radius: var(--triage-radius); background-color: #fff; color: var(--triage-text); font-size: .8125rem; line-height: 1.4; box-shadow: none; }
 .triage-content select { padding-right: 2rem; }
 .triage-content textarea { min-height: 5rem; resize: vertical; }
 .triage-content input::placeholder, .triage-content textarea::placeholder { color: var(--triage-muted); opacity: 1; }
@@ -132,17 +142,27 @@ button, a, summary { touch-action: manipulation; }
 .filter-toolbar > form.cluster { align-items: end; flex: 1 1 24rem; }
 .filter-toolbar > form.cluster > .fieldset { flex: 1 1 10rem; margin-bottom: 0; }
 .filter-toolbar > a:not(.button):not(.btn) { padding-block: .375rem; }
-.filter-toolbar .fieldset:has(input[type="search"]) { flex-basis: 14rem; max-width: none; }
+.filter-toolbar .fieldset:has(input[type="search"]) { flex-basis: 18rem; max-width: none; }
 .filter-summary { display: flex; flex-wrap: wrap; gap: .25rem .75rem; color: var(--triage-muted); font-size: .75rem; }
 .filter-toolbar + .filter-summary { margin-top: .5rem; }
 .filter-toolbar > .filter-summary { flex: 1 1 20rem; align-self: center; margin: 0; }
+/* Active filters: one removable chip per narrowing choice, so the applied scope
+   is readable and undoable without reopening each select. The chip text states
+   the choice; the × is a real link with its own accessible name. */
+.filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
+.filter-chips-label { font-size: var(--text-secondary); color: var(--triage-muted); }
+.filter-chips-list { display: flex; flex-wrap: wrap; gap: .25rem .375rem; margin: 0; padding: 0; list-style: none; }
+.filter-chip { display: inline-flex; align-items: center; gap: .125rem; min-height: 1.5rem; padding-left: .5rem; border: 1px solid var(--triage-border); border-radius: 999px; background: var(--triage-surface); font-size: var(--text-secondary); }
+.filter-chip-key { color: var(--triage-muted); font-weight: 600; }
+.triage-content a.filter-chip-remove:not(.button) { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; min-height: 1.5rem; border-radius: 999px; color: var(--triage-accent); font-size: 1rem; line-height: 1; font-weight: 700; text-decoration: none; }
+.triage-content a.filter-chip-remove:not(.button):hover { background: #edf2fb; }
 /* Reset and any further bar actions travel together, after the controls. */
 .filter-bar-actions { display: flex; align-items: end; gap: .375rem; }
 
 /* Tables remain genuinely two-dimensional inside their named keyboard regions. */
 .table-region, .triage-table-wrap { position: relative; max-width: 100%; min-width: 0; overflow-x: auto; background: #fff; border: 1px solid var(--triage-border); border-radius: var(--triage-radius); }
-.triage-content :is(.data-table, .table, .triage-preview-table) { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: .8125rem; line-height: 1.4; }
-.triage-content :is(.data-table, .table, .triage-preview-table) :is(th, td) { padding: .25rem .5rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--triage-border); white-space: normal; overflow-wrap: anywhere; }
+.triage-content :is(.data-table, .table, .triage-preview-table) { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: var(--text-primary); line-height: 1.4; }
+.triage-content :is(.data-table, .table, .triage-preview-table) :is(th, td) { padding: .5rem .75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--triage-border); white-space: normal; overflow-wrap: anywhere; }
 .triage-content :is(.data-table, .table, .triage-preview-table) th { color: #34465d; background: #edf1f6; font-size: .75rem; font-weight: 600; text-transform: none; letter-spacing: normal; }
 .triage-content :is(.data-table, .table) tbody tr:hover { background: #f6f8fc; }
 .triage-content :is(.data-table, .table) tr:last-child td { border-bottom: 0; }
@@ -159,15 +179,14 @@ button, a, summary { touch-action: manipulation; }
 time { font-variant-numeric: tabular-nums; }
 
 /* Status colors encode reported severity only; workflow remains neutral.
-   The severity ramp is distinguishable without color: fill, border
-   style/weight and text weight all differ. Every badge text/background and
-   border/background pair is >= 4.5:1 (see evidence/ui_improvements/leaf-w1.md). */
-.status-badge, .triage-content .badge, .triage-badge { display: inline-flex; align-items: center; gap: .1875rem; max-width: 100%; height: auto; padding: .0625rem .3125rem; border: 1px solid #3b4c62; border-radius: 4px; background: #edf1f6; color: #3b4c62; font-size: .6875rem; line-height: 1.4; font-weight: 600; white-space: normal; }
+   Explicit text labels distinguish levels without relying on color.
+   Borders remain solid and consistent; fills are deliberately restrained. */
+.status-badge, .triage-content .badge, .triage-badge { display: inline-flex; align-items: center; gap: .1875rem; max-width: 100%; height: auto; padding: .0625rem .3125rem; border: 1px solid #3b4c62; border-radius: 4px; background: #edf1f6; color: #3b4c62; font-size: var(--text-secondary); line-height: 1.4; font-weight: 600; white-space: normal; }
 .status-badge-neutral { border: 1px solid #3b4c62; }
-.status-badge-critical, .triage-sev-critical { background: #fbdde0; color: #7a1119; border: 2px solid #7a1119; font-weight: 700; }
-.status-badge-high, .triage-sev-high { background: #ffe9dd; color: #6f2a0f; border: 2px solid #6f2a0f; }
-.status-badge-medium, .status-badge-warning, .triage-sev-medium, .triage-badge-warn { background: #fff5dc; color: #5c3d00; border: 2px dashed #5c3d00; }
-.status-badge-low, .triage-sev-low { background: #eaf1fb; color: #23406b; border: 2px dotted #23406b; }
+.status-badge-critical, .triage-sev-critical { background: #fbdde0; color: #7a1119; border: 1px solid #7a1119; font-weight: 700; }
+.status-badge-high, .triage-sev-high { background: #ffe9dd; color: #6f2a0f; border: 1px solid #6f2a0f; }
+.status-badge-medium, .status-badge-warning, .triage-sev-medium, .triage-badge-warn { background: #fff5dc; color: #5c3d00; border: 1px solid #5c3d00; }
+.status-badge-low, .triage-sev-low { background: #eaf1fb; color: #23406b; border: 1px solid #23406b; }
 
 /* Workflow and assessment state are not severity levels, so they never borrow
    the severity ramp's dashes, fill or weight. A dot marks a state, which keeps
@@ -202,6 +221,27 @@ time { font-variant-numeric: tabular-nums; }
 .flash-close { min-width: 1.75rem; min-height: 1.75rem; border: 1px solid currentColor; border-radius: 4px; padding: .125rem .375rem; }
 .empty-state { padding: .75rem; border: 1px dashed #9aa9bc; border-radius: var(--triage-radius); background: #fff; }
 .empty-state > * + * { margin-top: .5rem; }
+
+/* Advisory aggregate detail: affected packages and placements carry the wide
+   column; priority rationale, intelligence status and the next action sit in the
+   narrower column. DOM order is the mobile order, so the reading order is never
+   a surprise at narrow widths. */
+.cve-workspace { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; gap: .75rem 1rem; }
+.cve-workspace-side { grid-column: 2; grid-row: 1; display: grid; gap: .625rem; min-width: 0; }
+.cve-workspace-main { grid-column: 1; grid-row: 1; display: grid; gap: .75rem; min-width: 0; }
+.cve-side-panel { min-width: 0; padding: .625rem .75rem; background: var(--triage-surface); border: 1px solid var(--triage-border); border-radius: var(--triage-radius); }
+/* Evidence state is stated in words; the tone only reinforces it, so no state is
+   conveyed by colour alone. */
+.intel-state { min-width: 0; padding: .5rem .625rem; background: var(--triage-surface); border: 1px solid var(--triage-border); border-left: 3px solid var(--triage-control-border); border-radius: var(--triage-radius); }
+.intel-state dd > * + * { margin-top: .1875rem; }
+.intel-state dd p { max-width: none; }
+.intel-state-unknown { border-left-color: #a8821f; }
+.intel-state-failed { border-left-color: #b42318; }
+.intel-state-stated { border-left-color: #23406b; }
+@media (max-width: 1100px) {
+  .cve-workspace { grid-template-columns: minmax(0, 1fr); }
+  .cve-workspace-side, .cve-workspace-main { grid-column: auto; grid-row: auto; }
+}
 
 /* Flat workspaces, with summary / assessment / details in mobile DOM order. */
 .case-workspace { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; gap: .75rem; }
@@ -377,11 +417,24 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
 /* Timeline: read-only CVE timeline. Shape and text carry the meaning; colour only reinforces it. */
 .tl-section + .tl-section, .tl-drawer + .tl-section { margin-top: 1rem; }
 .tl-band-list { list-style: none; margin: .25rem 0 0; padding: 0; border-top: 1px solid var(--triage-border); }
-.tl-band { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: .25rem .75rem; min-width: 0; padding: .375rem 0; border-bottom: 1px solid var(--triage-border); }
+.tl-band { display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: .75rem 1.25rem; min-width: 0; padding: 1rem .75rem; border-bottom: 1px solid var(--triage-border); }
+.tl-band-observed { background: var(--triage-surface); }
 .tl-band-judged { background: #f2f7f4; }
-.tl-band-date { min-width: 0; }
-.tl-band-label { margin: 0; font-size: .8125rem; font-weight: 650; }
-.tl-band-counts { margin: .125rem 0 0; }
+.tl-band-date { min-width: 0; padding-left: .75rem; border-left: 3px solid #536b91; }
+.tl-band-label { margin: 0; font-weight: 700; line-height: 1.4; }
+.tl-band-label time { display: grid; gap: .125rem; }
+.tl-band-weekday { display: block; font-size: .875rem; color: #344866; }
+.tl-band-calendar { display: block; font-size: 1.125rem; color: #18263d; font-variant-numeric: tabular-nums; }
+.tl-band-counts { margin: .5rem 0 0; line-height: 1.5; }
+.tl-band-empty .tl-band-date { border-left-color: #a5afbe; }
+.tl-gap { padding: .5rem .75rem; background: #edf1f6; border-bottom: 1px solid var(--triage-border); }
+.tl-gap > details > summary { padding: .5rem 0; color: #344866; line-height: 1.6; cursor: pointer; }
+.tl-gap > details > summary:focus-visible { outline: 2px solid var(--triage-focus); outline-offset: 2px; }
+.tl-row.tl-selected, #tl-lanes-table tr.tl-selected > * { background: #e8efff; box-shadow: inset 4px 0 #365acb; }
+.tl-row.tl-selected { border-radius: .4rem; outline: 2px solid #365acb; outline-offset: 2px; }
+.tl-selection-label { display: inline-block; margin-left: .5rem; padding: .125rem .5rem; border-radius: 1rem; background: #2848a3; color: #fff; font-size: .75rem; font-weight: 700; }
+.tl-chart-track.tl-selected .tl-c-band { fill: #dbe7ff; stroke: #365acb; stroke-width: 2; }
+.tl-chart-track.tl-selected .tl-chart-cve { fill: #2848a3; font-weight: 800; text-decoration: underline; }
 .tl-band-track { position: relative; min-width: 0; }
 .tl-band-none { margin: 0; }
 .tl-rows { list-style: none; display: grid; gap: .25rem; margin: 0; padding: 0; }
@@ -439,9 +492,10 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
 .tl-chart-figure { margin: 0; }
 .tl-chart-region { padding: .25rem; }
 .tl-chart { display: block; }
-/* Fit uses the actual available desktop width; narrow screens retain legible
-   labels in a named scroll region instead of shrinking them into unreadable text. */
-.tl-chart-fit { width: 100%; min-width: 56rem; height: auto; }
+/* Keep fit geometry at its native SVG dimensions: stretching to a wide desktop
+   enlarges every label, marker and row. Narrow screens use the scroll region
+   rather than shrinking the chart's text. */
+.tl-chart-fit { width: auto; max-width: none; height: auto; }
 .tl-chart-fit .tl-c-grid:not(.tl-c-grid-week), .tl-chart-fit .tl-c-tick:not(.tl-c-tick-week) { opacity: .25; }
 .tl-chart-truncation { max-width: none; margin: .25rem 0 .5rem; }
 .tl-chart-mobile-hint { display: none; }
@@ -499,7 +553,32 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
 .tl-c-key-line { flex: 0 0 auto; width: 34px; height: 10px; }
 
 
-/* Statistics view: headline cards and green/red local-target chips. */
+/* Statistics view: detection and response timing are primary information. */
+.statistics-table-scroll { max-width: 100%; min-width: 0; overflow-x: auto; border: 1px solid var(--triage-border); border-radius: var(--triage-radius); background: var(--triage-surface); }
+.triage-content .statistics-timing-table { min-width: 48rem; table-layout: fixed; }
+.statistics-timing-table th:nth-child(1) { width: 24%; }
+.statistics-timing-table th:nth-child(2) { width: 23%; }
+.statistics-timing-table th:nth-child(3) { width: 23%; }
+.statistics-timing-table th:nth-child(4) { width: 30%; }
+.statistics-timing-table td { padding-block: 1rem; vertical-align: top; }
+.statistics-cve > a { font-size: 1.05rem; font-weight: 750; white-space: nowrap; }
+.statistics-severity { font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.statistics-context { margin-top: .65rem; font-size: .8125rem; }
+.statistics-context summary { cursor: pointer; color: var(--triage-accent); }
+.statistics-action-label { display: inline-block; padding: .3rem .55rem; border-radius: .35rem; font-size: 1rem; line-height: 1.4; }
+.statistics-action-decision { color: #1849a9; background: #eff4ff; border: 1px solid #b2ccff; }
+.statistics-action-observed { color: #344054; background: #f2f4f7; border: 1px solid #d0d5dd; }
+.statistics-action-pending, .statistics-action-suppressed { color: #93370d; background: #fffaeb; border: 1px solid #fedf89; }
+.statistics-timing-table .supporting { display: block; margin-top: .3rem; }
+.statistics-timing-table .statistics-detected { min-width: 11rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.statistics-detected .supporting { font-weight: 400; }
+.statistics-duration { display: block; margin-bottom: .3rem; font-size: 1.125rem; line-height: 1.35; font-variant-numeric: tabular-nums; color: var(--triage-text); }
+.statistics-decisions { min-width: 17rem; }
+.statistics-decisions summary { cursor: pointer; padding: .25rem; }
+.statistics-decision-history { padding-left: 1.25rem; }
+.statistics-decision-history li { padding-block: .5rem; border-top: 1px solid var(--triage-border); }
+#statistics-response-cards .stat-card { border-top: 3px solid var(--triage-accent); }
+/* Headline cards and green/red local-target chips. */
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: .75rem; margin-block: 1rem; }
 .stat-card { padding: .625rem .875rem; border: 1px solid var(--triage-border); border-radius: .5rem; background: #fff; }
 .stat-card-value { margin: 0; font-size: 1.375rem; font-weight: 700; line-height: 1.2; }
@@ -508,3 +587,89 @@ progress { width: 100%; height: 1rem; accent-color: var(--triage-accent); }
 .stat-chip { display: inline-block; padding: .1rem .45rem; border: 1.5px solid; border-radius: 4px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
 .stat-chip-good { border-color: #1a7f37; background: #e7f6ec; color: #1a7f37; }
 .stat-chip-bad { border-color: #b42318; background: #fdeceb; color: #b42318; }
+
+/* Advisory investigation: related evidence remains beside affected inventory.
+   Narrow layouts use DOM order and tables retain independent scroll regions. */
+.advisory-workspace { display: grid; gap: 1rem; min-width: 0; }
+.advisory-workspace > section { min-width: 0; padding: 1rem; background: var(--triage-surface); border: 1px solid var(--triage-border); border-radius: var(--triage-radius); }
+.advisory-workspace ul { padding-left: 1.25rem; }
+@media (min-width: 1200px) {
+  .advisory-workspace { grid-template-columns: minmax(0, 2fr) minmax(20rem, 1fr); grid-template-areas: "packages priority" "placements intel" "teams intel" "history history"; align-items: start; }
+  .advisory-workspace #cve-packages { grid-area: packages; }
+  .advisory-workspace #cve-placements { grid-area: placements; }
+  .advisory-workspace #cve-priority { grid-area: priority; }
+  .advisory-workspace #cve-intel { grid-area: intel; }
+  .advisory-workspace #cve-teams { grid-area: teams; }
+  .advisory-workspace #cve-lifecycle { grid-area: history; }
+}
+
+/* Guided review is a work queue, not another vulnerability table. */
+.review-queue { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; margin-block: 1rem 2rem; }
+.review-card, .review-step-panel { background: var(--triage-surface); border: 1px solid var(--triage-border); border-radius: .75rem; padding: 1.5rem; }
+.review-card { border-top: 4px solid var(--triage-accent); display: flex; flex-direction: column; align-items: flex-start; gap: .6rem; }
+.review-card > p, .review-card h3 { margin: 0; }
+/* Review history is secondary to the guided action queue. Keep identifiers and
+   status labels intact, with technical coverage available on demand. */
+.review-history-table .triage-cve, .review-card-heading h3 { white-space: nowrap; overflow-wrap: normal; }
+.review-history-table { min-width: 64rem; }
+.review-history-table th, .review-history-table td { padding: 1rem; vertical-align: top; }
+.review-history-status .status-badge-state, .review-history-status .status-badge-neutral,
+.review-card-heading .status-badge-state { display: inline-flex; align-items: center; white-space: nowrap; border: 0; border-radius: 999px; background: #edf2fb; color: #304e80; padding: .3rem .65rem; font-size: .75rem; font-weight: 600; }
+.review-coverage-details > summary, .review-history-table .triage-scope-picker > summary { font-weight: 500; color: var(--triage-muted); white-space: normal; }
+.review-coverage-details[open] > summary { margin-bottom: .5rem; }
+.review-history-table .review-triage-action { margin-bottom: .65rem; white-space: nowrap; }
+.review-history-table .triage-scope-list { padding-left: 1rem; margin-block: .5rem; }
+.review-history-table .triage-scope-action { background: transparent; color: var(--triage-accent); border-color: var(--triage-border); }
+.review-card-heading { width: 100%; justify-content: space-between; }
+@media (max-width: 600px) { .review-card, .review-step-panel { padding: 1rem; } }
+
+.review-card > .button { margin-top: auto; }
+.review-queue.review-queue-compact { display: block; width: 100%; border-block: 1px solid var(--triage-border); }
+.review-queue-heading, .review-queue-row { display: grid; grid-template-columns: 10.5rem 5.5rem minmax(10rem, 1fr) minmax(7rem, .4fr) minmax(7rem, .4fr) 8rem; align-items: center; gap: 1rem; }
+.review-queue-heading { padding: .5rem .75rem; color: var(--triage-muted); font-size: .75rem; font-weight: 600; }
+.review-queue-heading + .review-queue { margin-top: 0; }
+.review-queue-row { padding: .65rem .75rem; background: var(--triage-surface); border-bottom: 1px solid var(--triage-border); }
+.review-queue-row:last-child { border-bottom: 0; }
+.review-queue-row:hover { background: #f0f4fb; }
+.review-queue-row:focus-within { background: #edf3fc; box-shadow: inset 3px 0 var(--triage-accent); }
+.review-queue-row > .button { width: 100%; box-sizing: border-box; white-space: nowrap; }
+.review-queue-row h3, .review-queue-row p { margin: 0; min-width: 0; }
+.review-queue-row h3 { white-space: nowrap; overflow-wrap: normal; }
+.review-queue-row p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .8125rem; }
+.review-row-priority { justify-self: start; border-radius: 999px; padding: .2rem .5rem; font-size: .75rem; font-weight: 700; color: #435269; background: #edf2f7; }
+.review-priority-critical { color: #a52219; background: #fdeceb; }
+.review-priority-high { color: #884400; background: #fff1df; }
+.review-priority-medium { color: #304e80; background: #edf3fc; }
+.review-steps .is-previous { border-color: #748296; color: #344866; }
+#review-progress { margin-top: 1rem; font-variant-numeric: tabular-nums; }
+.review-step-navigation { max-width: 76rem; align-items: center; flex-wrap: wrap; }
+.review-step-navigation #review-next { margin-left: auto; }
+#guided-triage .review-step-panel > section > p { max-width: 78ch; line-height: 1.65; }
+#guided-triage .button:disabled, #guided-triage .button:disabled:hover { cursor: not-allowed; background: #edf1f6; color: #596779; border-color: var(--triage-border); }
+@media (max-width: 1000px) {
+  .review-queue-heading { display: none; }
+  .review-queue-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: .5rem; }
+  .review-row-description { grid-column: 1 / -1; grid-row: 2; }
+  .review-queue-row p { white-space: normal; overflow-wrap: anywhere; }
+  .review-queue-row p[data-label]::before { content: attr(data-label) ": "; font-weight: 600; color: var(--triage-muted); }
+}
+@media (max-width: 520px) {
+  .review-queue-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .review-queue-row > .button { grid-column: 1 / -1; }
+}
+.tl-chart-cve-link { cursor: pointer; }
+.tl-chart-cve-link:hover text, .tl-chart-cve-link:focus text { fill: var(--triage-accent); text-decoration: underline; }
+.review-card-heading { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.review-steps { display: grid; grid-template-columns: repeat(4, 1fr); list-style: none; padding: 0; gap: .75rem; margin-block: 1.5rem; }
+.review-steps li { padding: .75rem; border-bottom: 3px solid var(--triage-border); color: var(--triage-muted); }
+.review-steps .is-current { border-color: var(--triage-accent); color: var(--triage-text); font-weight: 700; background: #edf3fc; }
+.review-step-panel { max-width: 76rem; overflow-wrap: anywhere; }
+.review-step-panel h3 { margin-top: 0; font-size: 1.4rem; }
+.review-scope { padding: 1rem; margin-block: .75rem; border: 1px solid var(--triage-border); border-radius: .5rem; background: var(--triage-surface); }
+.review-scope h4 { margin: 0 0 .5rem; }
+.review-scope p { margin-block: .5rem; }
+.review-priority { font-size: 1.5rem; font-weight: 700; }
+.review-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.review-step-navigation { display: flex; gap: .75rem; margin-block: 1rem; }
+.review-ticket-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .875rem; }
+@media (max-width: 760px) { .review-steps { grid-template-columns: repeat(2, 1fr); } .review-action-grid { grid-template-columns: 1fr; } .review-step-panel { padding: 1rem; } }

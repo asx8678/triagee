@@ -44,8 +44,14 @@ defmodule TriageWeb.TriageLiveTest do
     placement!(image, "beta", "staging")
     finding = finding!(image, "CVE-2026-7199", severity: "CRITICAL")
 
-    {:ok, view, html} = live(conn, ~p"/triage")
-    assert has_element?(view, "details#triage-scopes-CVE-2026-7199 > summary", "Choose scope (2)")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
+
+    assert has_element?(
+             view,
+             "details#triage-scopes-CVE-2026-7199 > summary",
+             "Team reviews (2)"
+           )
+
     refute has_element?(view, "details#triage-scopes-CVE-2026-7199[open]")
     links = html |> LazyHTML.from_document() |> LazyHTML.query(".triage-scope-action")
     assert Enum.count(links) == 2
@@ -77,7 +83,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "the shown count leads and the unpaged total is scoped to local inventory", %{conn: conn} do
     critical!("counts-intake", "CVE-2026-7101")
 
-    {:ok, view, html} = live(conn, ~p"/triage")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
     document = LazyHTML.from_document(html)
 
     # The primary number is the work in front of the operator, named with the
@@ -99,7 +105,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "the reading definitions sit behind a disclosure, not in front of the rows", %{conn: conn} do
     critical!("defs-intake", "CVE-2026-7102")
 
-    {:ok, view, html} = live(conn, ~p"/triage")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
     document = LazyHTML.from_document(html)
 
     # The gate that decides whether a row belongs here stays visible.
@@ -114,7 +120,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "a compacted row keeps every count as its own labelled field", %{conn: conn} do
     critical!("row-intake", "CVE-2026-7103")
 
-    {:ok, view, _html} = live(conn, ~p"/triage")
+    {:ok, view, _html} = live(conn, ~p"/triage/history")
 
     # Packing three counts onto two lines is a presentation change only: each
     # count keeps its own hook, so nothing became unaddressable.
@@ -135,7 +141,7 @@ defmodule TriageWeb.TriageLiveTest do
     affected = critical!("mixed-affected", "CVE-2026-7091")
     assess!(affected, review_attrs())
 
-    {:ok, view, _} = live(conn, ~p"/triage?filter=all")
+    {:ok, view, _} = live(conn, ~p"/triage/history?filter=all")
     assert has_element?(view, "#triage-lane-intake #triage-row-CVE-2026-7090")
     assert has_element?(view, "#triage-lane-applicability #triage-row-CVE-2026-7091")
     refute has_element?(view, "#triage-lane-intake #triage-row-CVE-2026-7091")
@@ -156,7 +162,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "an unassessed critical advisory appears in the intake lane", %{conn: conn} do
     finding = critical!("live-intake", "CVE-2026-7001")
 
-    {:ok, view, html} = live(conn, ~p"/triage")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
     document = LazyHTML.from_document(html)
 
     assert has_element?(view, "#nav-triage[aria-current='page']")
@@ -166,7 +172,23 @@ defmodule TriageWeb.TriageLiveTest do
     refute has_element?(view, "#triage-lane-handled")
     assert has_element?(view, "#triage-scopes-CVE-2026-7001")
 
-    assert text(document, "#triage-state-CVE-2026-7001") =~ "Not assessed"
+    assert text(document, "#triage-state-CVE-2026-7001") =~ "Needs review"
+    refute html =~ "Not assessed"
+
+    assert has_element?(
+             view,
+             "#history-triage-CVE-2026-7001[href='/triage/CVE-2026-7001']",
+             "Triage issue"
+           )
+
+    assert has_element?(
+             view,
+             ".review-history-table .review-coverage-details > summary",
+             "Review progress"
+           )
+
+    refute has_element?(view, ".review-coverage-details[open]")
+    refute has_element?(view, ".triage-scope-evidence[open]")
     assert text(document, "#triage-coverage-CVE-2026-7001") =~ "0 of 1 scope assessed"
 
     # The only place a case can be opened is the finding page, so an unassessed
@@ -207,7 +229,7 @@ defmodule TriageWeb.TriageLiveTest do
     finding = critical!("live-impact", "CVE-2026-7002")
     cse = assess!(finding, review_attrs())
 
-    {:ok, view, html} = live(conn, ~p"/triage")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
     document = LazyHTML.from_document(html)
 
     assert has_element?(view, "#triage-lane-applicability")
@@ -234,16 +256,23 @@ defmodule TriageWeb.TriageLiveTest do
     attrs = Map.put(review_attrs(), "applicability", "not_affected_with_evidence")
     assess!(finding, attrs)
 
-    {:ok, active_view, _html} = live(conn, ~p"/triage")
-    assert has_element?(active_view, "#triage-empty")
+    {:ok, active_view, _html} = live(conn, ~p"/triage/history")
+    assert has_element?(active_view, "#triage-empty", "Nothing to review — all done!")
+    assert has_element?(active_view, "#triage-empty img[src='/images/review-complete.svg'][alt]")
 
-    {:ok, handled_view, handled_html} = live(conn, ~p"/triage?filter=handled")
+    assert has_element?(
+             active_view,
+             "#triage-empty",
+             "does not mean your inventory has no vulnerabilities"
+           )
+
+    {:ok, handled_view, handled_html} = live(conn, ~p"/triage/history?filter=handled")
     assert has_element?(handled_view, "#triage-lane-handled")
 
     assert text(LazyHTML.from_document(handled_html), "#triage-state-CVE-2026-7003") =~
              "Not affected"
 
-    {:ok, _all_view, all_html} = live(conn, ~p"/triage?filter=all")
+    {:ok, _all_view, all_html} = live(conn, ~p"/triage/history?filter=all")
 
     assert LazyHTML.from_document(all_html)
            |> LazyHTML.query("#triage-lane-handled")
@@ -253,7 +282,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "an invalid filter is a visible error, never a silent default", %{conn: conn} do
     critical!("live-invalid", "CVE-2026-7004")
 
-    {:ok, view, _html} = live(conn, ~p"/triage?filter=bogus")
+    {:ok, view, _html} = live(conn, ~p"/triage/history?filter=bogus")
 
     assert has_element?(view, "#triage-invalid-filter")
     refute has_element?(view, "#triage-lane-intake")
@@ -264,13 +293,13 @@ defmodule TriageWeb.TriageLiveTest do
   test "choosing a filter patches the URL instead of reposting the page", %{conn: conn} do
     critical!("live-patch", "CVE-2026-7005")
 
-    {:ok, view, _html} = live(conn, ~p"/triage")
+    {:ok, view, _html} = live(conn, ~p"/triage/history")
 
     view
     |> form("#triage-filter-form", %{"filter" => "handled"})
     |> render_change()
 
-    assert_patch(view, ~p"/triage?filter=handled")
+    assert_patch(view, ~p"/triage/history?filter=handled")
     assert has_element?(view, "#triage-lane-handled") == false
   end
 
@@ -279,7 +308,7 @@ defmodule TriageWeb.TriageLiveTest do
   } do
     critical!("live-decision", "CVE-2026-7006")
 
-    {:ok, view, _html} = live(conn, ~p"/triage")
+    {:ok, view, _html} = live(conn, ~p"/triage/history")
     assert has_element?(view, "#triage-lane-intake")
     assert has_element?(view, "#triage-decision-form")
 
@@ -302,7 +331,7 @@ defmodule TriageWeb.TriageLiveTest do
     refute has_element?(view, "#triage-lane-decision")
     assert render(view) =~ "Accepted risk recorded for CVE-2026-7006"
 
-    {:ok, whitelisted_view, _html} = live(conn, ~p"/triage?filter=whitelisted")
+    {:ok, whitelisted_view, _html} = live(conn, ~p"/triage/history?filter=whitelisted")
     assert has_element?(whitelisted_view, "#triage-lane-decision")
     whitelisted = LazyHTML.from_document(render(whitelisted_view))
 
@@ -314,7 +343,7 @@ defmodule TriageWeb.TriageLiveTest do
 
     # A decision removes the advisory from the work list, never from the
     # inventory: the all-critical view still shows it, in the decision lane.
-    {:ok, all_view, _html} = live(conn, ~p"/triage?filter=all")
+    {:ok, all_view, _html} = live(conn, ~p"/triage/history?filter=all")
     assert has_element?(all_view, "#triage-lane-decision")
 
     # The finding itself is untouched: only this work list changed.
@@ -325,7 +354,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "a refused decision explains itself and records nothing", %{conn: conn} do
     critical!("live-decision-refused", "CVE-2026-7007")
 
-    {:ok, view, _html} = live(conn, ~p"/triage")
+    {:ok, view, _html} = live(conn, ~p"/triage/history")
 
     view
     |> form("#triage-decision-form",
@@ -349,7 +378,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "an unparseable expiry is refused instead of recorded as no expiry", %{conn: conn} do
     critical!("live-decision-bad-date", "CVE-2026-7008")
 
-    {:ok, view, _html} = live(conn, ~p"/triage")
+    {:ok, view, _html} = live(conn, ~p"/triage/history")
 
     view
     |> form("#triage-decision-form",
@@ -370,7 +399,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "a decision for an absent advisory is refused visibly", %{conn: conn} do
     critical!("live-decision-unknown", "CVE-2026-7009")
 
-    {:ok, view, _html} = live(conn, ~p"/triage")
+    {:ok, view, _html} = live(conn, ~p"/triage/history")
 
     view
     |> form("#triage-decision-form",
@@ -399,7 +428,7 @@ defmodule TriageWeb.TriageLiveTest do
     assert {:ok, _} =
              Impact.record(placement.id, "high", "live:operator declared", DateTime.utc_now())
 
-    {:ok, view, html} = live(conn, ~p"/triage")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
     document = LazyHTML.from_document(html)
 
     assert has_element?(view, ".triage-scope-impact[data-finding-id='#{finding.id}']")
@@ -416,7 +445,7 @@ defmodule TriageWeb.TriageLiveTest do
   test "a placement with no impact evidence says so rather than implying none", %{conn: conn} do
     finding = critical!("live-no-impact-evidence", "CVE-2026-7011")
 
-    {:ok, view, html} = live(conn, ~p"/triage")
+    {:ok, view, html} = live(conn, ~p"/triage/history")
     document = LazyHTML.from_document(html)
 
     refute has_element?(view, ".triage-scope-impact[data-finding-id='#{finding.id}']")

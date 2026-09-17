@@ -26,6 +26,7 @@ defmodule TriageWeb.TimelineLive do
     {:ok,
      socket
      |> assign(:page_title, "Timeline")
+     |> assign(:plot_width, 1000)
      |> assign(:raw_params, %{})
      |> assign(:filter_form, to_form(%{}))
      |> assign(:options, %{owners: [], environments: []})
@@ -47,10 +48,16 @@ defmodule TriageWeb.TimelineLive do
     parsed = TimelineFilters.parse_event(params)
 
     if parsed.invalid == [] do
-      {:noreply, push_patch(socket, to: TimelineFilters.path(parsed))}
+      {:noreply,
+       push_patch(socket, to: TimelineFilters.path(parsed, %{cve: socket.assigns.selected_cve}))}
     else
       {:noreply, view_error(socket, parsed)}
     end
+  end
+
+  def handle_event("plot_width", %{"width" => width}, socket)
+      when is_integer(width) and width >= 240 and width <= 7680 do
+    {:noreply, assign(socket, :plot_width, width)}
   end
 
   # An unrecognized event changes nothing: the current URL state is re-read
@@ -72,6 +79,7 @@ defmodule TriageWeb.TimelineLive do
           socket
           |> assign(:view_error, nil)
           |> assign(:timeline, timeline)
+          |> assign(:action_paths, Map.new(Triage.GuidedReview.queue(), fn row -> {row.cve, ~p"/triage/#{row.cve}"} end))
           |> assign(:filters, parsed)
           |> assign(:options, Timeline.filter_options())
           |> assign(:filter_form, to_form(filter_params(timeline, parsed)))
@@ -187,8 +195,17 @@ defmodule TriageWeb.TimelineLive do
       <.page_header
         title="Timeline"
         subtitle="Recorded local observations over time — not verified remediation."
-      />
-
+      >
+        <:actions>
+          <.link
+            id="timeline-observation-timing"
+            navigate={~p"/statistics"}
+            class="button button-secondary"
+          >
+            Summary statistics
+          </.link>
+        </:actions>
+      </.page_header>
       <.filter_bar id="timeline-form" form={@filter_form} change="filter">
         <.input
           field={@filter_form[:owner]}
@@ -312,20 +329,24 @@ defmodule TriageWeb.TimelineLive do
         <Drawer.cve_drawer
           :if={@detail}
           detail={@detail}
+          action_paths={@action_paths}
           selected_cve={@selected_cve}
           filters={@filters}
         />
 
         <Chart.lane_chart
           :if={@timeline.chart.tracks != []}
+          width={@plot_width}
           scale={@filters.scale || "fit"}
           chart={@timeline.chart}
           lanes={@timeline.lanes}
+          action_paths={@action_paths}
+          selected_cve={@selected_cve}
         />
 
-        <Bands.waterfall days={@timeline.days} filters={@filters} />
+        <Lanes.lane_table action_paths={@action_paths} lanes={@timeline.lanes} filters={@filters} selected_cve={@selected_cve} />
+        <Bands.waterfall action_paths={@action_paths} days={@timeline.days} filters={@filters} selected_cve={@selected_cve} />
         <Grid.weekday_grid grid={@timeline.grid} />
-        <Lanes.lane_table lanes={@timeline.lanes} filters={@filters} />
       </div>
     </Layouts.app>
     """

@@ -17,6 +17,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
   alias TriageWeb.TimelineFilters
 
   attr :detail, :map, required: true
+  attr :action_paths, :map, default: %{}
   attr :selected_cve, :string, required: true
   attr :filters, :map, required: true
 
@@ -24,7 +25,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
     ~H"""
     <aside id="tl-drawer" class="tl-drawer" aria-labelledby="tl-drawer-title">
       <div class="section-header">
-        <h2 id="tl-drawer-title">{@selected_cve} · recorded history</h2>
+        <h2 id="tl-drawer-title"><.link navigate={Map.get(@action_paths, @selected_cve, ~p"/cves/#{@selected_cve}")}>{@selected_cve}</.link> · recorded history</h2>
         <.link
           id="tl-drawer-close"
           patch={TimelineFilters.path(@filters, %{cve: nil})}

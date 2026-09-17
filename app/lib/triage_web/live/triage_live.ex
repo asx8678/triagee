@@ -28,7 +28,7 @@ defmodule TriageWeb.TriageLive do
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> assign(:page_title, "Triage")
+      |> assign(:page_title, "Review")
       |> assign(:decision_options, decision_options())
       |> assign(:decision_form, decision_form(%{}))
       |> assign(:decision_errors, [])
@@ -58,8 +58,8 @@ defmodule TriageWeb.TriageLive do
       {:ok, %{filter: filter}} ->
         target =
           if filter == Triage.default_filter(),
-            do: ~p"/triage",
-            else: ~p"/triage?#{[filter: filter]}"
+            do: ~p"/triage/history",
+            else: ~p"/triage/history?#{[filter: filter]}"
 
         {:noreply, push_patch(socket, to: target)}
 
@@ -228,7 +228,7 @@ defmodule TriageWeb.TriageLive do
       },
       %{
         id: "triage-lane-intake",
-        title: "Awaiting assessment",
+        title: "Needs review",
         note: "Critical and active, with no saved human review yet.",
         detail:
           "This lane exists because a case can only be opened from a finding, so a list of already-assessed advisories could never admit its first row.",
@@ -261,7 +261,7 @@ defmodule TriageWeb.TriageLive do
   defp filter_label(_other), do: "active"
 
   defp state_label(:applicability_confirmed), do: "applicability: affected"
-  defp state_label(:awaiting_assessment), do: "Not assessed"
+  defp state_label(:awaiting_assessment), do: "Needs review"
   defp state_label(:decision_recorded), do: "Covered by a decision"
   defp state_label(:assessed_no_impact), do: "Not affected"
 
@@ -274,7 +274,7 @@ defmodule TriageWeb.TriageLive do
 
   defp item_label(:assessed), do: "Assessed"
   defp item_label(:assessment_superseded), do: "Assessment on earlier evidence"
-  defp item_label(:awaiting_assessment), do: "Not assessed"
+  defp item_label(:awaiting_assessment), do: "Needs review"
 
   defp item_kind(:assessed), do: :neutral
   defp item_kind(_assessment), do: :state
@@ -294,9 +294,14 @@ defmodule TriageWeb.TriageLive do
     ~H"""
     <Layouts.app flash={@flash} active_page="triage">
       <.page_header
-        title="Triage"
-        subtitle="Review critical advisories in their team and environment scope."
+        title="Previous assessments"
+        subtitle="Legacy critical-advisory assessments and decision history."
       />
+
+      <div class="cluster">
+        <.link navigate={~p"/triage"} class="button">Go to action queue</.link>
+        <.link href={~p"/cases"}>Saved reviews</.link>
+      </div>
 
       <p id="triage-banner" class="supporting">
         Critical and active only: unresolved, unsuppressed, with an active placement.
@@ -381,8 +386,26 @@ defmodule TriageWeb.TriageLive do
         so it shows the most recently observed {@limit}. The total above is the unpaged count.
       </p>
 
+      <section
+        :if={@empty? and is_nil(@error) and @filter == "active"}
+        id="triage-empty"
+        class="empty-state"
+      >
+        <img
+          src={~p"/images/review-complete.svg"}
+          width="240"
+          height="180"
+          alt="Congratulations — a checkmark surrounded by confetti"
+        />
+        <h2>Nothing to review — all done!</h2>
+        <p>
+          No critical vulnerabilities need review in this local queue. This does not mean your inventory has no vulnerabilities or that fixes are verified.
+        </p>
+        <.link href={~p"/"}>Browse vulnerabilities</.link>
+      </section>
+
       <.empty_state
-        :if={@empty? and is_nil(@error)}
+        :if={@empty? and is_nil(@error) and @filter != "active"}
         id="triage-empty"
         title="No critical advisories in this filter"
         description="An empty result is not proof of a clean estate: it means no critical, unresolved, unsuppressed finding with an active placement matches, in local inventory only."
@@ -401,15 +424,15 @@ defmodule TriageWeb.TriageLive do
         <p :if={is_nil(lane.detail)} class="supporting">{lane.note}</p>
 
         <div class="table-region" role="region" tabindex="0" aria-label={lane.title}>
-          <table class="data-table">
+          <table class="data-table review-history-table">
             <thead>
               <tr>
                 <th scope="col">Advisory</th>
-                <th scope="col">Present in active scopes</th>
-                <th scope="col">Human coverage</th>
-                <th scope="col">Assessment state</th>
+                <th scope="col">Affected inventory</th>
+                <th scope="col">Review details</th>
+                <th scope="col">Status</th>
                 <th scope="col">Last observed</th>
-                <th scope="col">Review scope</th>
+                <th scope="col">Next step</th>
               </tr>
             </thead>
             <tbody id={"#{lane.id}-rows"}>
@@ -444,28 +467,31 @@ defmodule TriageWeb.TriageLive do
                   </div>
                 </td>
                 <td>
-                  <div id={"triage-coverage-#{row.cve}"}>{coverage_label(row)}</div>
-                  <div :if={row.scopes_reviewed > row.scopes_assessed} class="supporting">
-                    {row.scopes_reviewed - row.scopes_assessed} recorded on earlier evidence
-                  </div>
-                  <div class="supporting">
-                    <span data-field="applicable">
-                      {row.scopes_applicable} {if row.scopes_applicable == 1,
-                        do: "scope says affected",
-                        else: "scopes say affected"}
-                    </span>
-                    <span :if={row.scopes_with_impact > 0}>
-                      ·
-                      <span data-field="impact">
-                        {row.scopes_with_impact} {if row.scopes_with_impact == 1,
-                          do: "scope has impact evidence",
-                          else: "scopes have impact evidence"}
+                  <details class="review-coverage-details">
+                    <summary>Review progress</summary>
+                    <div id={"triage-coverage-#{row.cve}"}>{coverage_label(row)}</div>
+                    <div :if={row.scopes_reviewed > row.scopes_assessed} class="supporting">
+                      {row.scopes_reviewed - row.scopes_assessed} recorded on earlier evidence
+                    </div>
+                    <div class="supporting">
+                      <span data-field="applicable">
+                        {row.scopes_applicable} {if row.scopes_applicable == 1,
+                          do: "scope says affected",
+                          else: "scopes say affected"}
                       </span>
-                    </span>
-                  </div>
+                      <span :if={row.scopes_with_impact > 0}>
+                        ·
+                        <span data-field="impact">
+                          {row.scopes_with_impact} {if row.scopes_with_impact == 1,
+                            do: "scope has impact evidence",
+                            else: "scopes have impact evidence"}
+                        </span>
+                      </span>
+                    </div>
+                  </details>
                 </td>
                 <td>
-                  <span id={"triage-state-#{row.cve}"}>
+                  <span id={"triage-state-#{row.cve}"} class="review-history-status">
                     <.status_badge label={state_label(row.state)} kind={state_kind(row.state)} />
                   </span>
                   <div :if={row.decision} id={"triage-decision-#{row.cve}"} class="supporting">
@@ -481,6 +507,12 @@ defmodule TriageWeb.TriageLive do
                 </td>
                 <td><.timestamp value={row.last_seen} /></td>
                 <td>
+                  <.link
+                    :if={row.state in [:awaiting_assessment, :applicability_confirmed]}
+                    navigate={~p"/triage/#{row.cve}"}
+                    class="button review-triage-action"
+                    id={"history-triage-#{row.cve}"}
+                  >Triage issue →</.link>
                   <div :if={length(row.work_items) == 1} id={"triage-scopes-#{row.cve}"}>
                     <.scope_work_items row={row} />
                   </div>
@@ -489,7 +521,7 @@ defmodule TriageWeb.TriageLive do
                     id={"triage-scopes-#{row.cve}"}
                     class="triage-scope-picker"
                   >
-                    <summary>Choose scope ({row.scopes_total})</summary>
+                    <summary>Team reviews ({row.scopes_total})</summary>
                     <.scope_work_items row={row} />
                   </details>
                 </td>

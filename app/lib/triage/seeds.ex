@@ -14,7 +14,7 @@ defmodule Triage.Seeds do
   package, which is affected by this real advisory" — never a claim that the
   real project was shipped or fixed here.
 
-  Fleet shape (61 findings, 58 distinct advisories):
+  Fleet shape (69 findings, 64 distinct advisories):
 
     * 30 CRITICAL advisories (containerd, Traefik, Jupyter Enterprise Gateway,
       Budibase, Flowise, Apache NiFi, n8n, Perl, PJSIP, Casdoor, froxlor,
@@ -33,7 +33,11 @@ defmodule Triage.Seeds do
       ecosystem), one of which disappeared from a complete unfiltered
       collection: disappearance is not proof of remediation;
     * an image with unknown deployment context (namespace `(unknown)`;
-    * four demo images across prod, staging and dev environments with
+    * eight demo images, including edge gateway, search service, background worker
+      and media processor with curl/libcurl, Log4j Core, OpenSSL, zlib, libwebp
+      and glibc examples; the additional library descriptions are concise public
+      advisory summaries, with illustrative deployments;
+    * demo images across prod, staging and dev environments with
       operator-declared exposure and impact evidence.
 
   Running `seed/1` again updates `last_seen` timestamps but never duplicates
@@ -69,6 +73,27 @@ defmodule Triage.Seeds do
   # image, lifecycle role, description}. Descriptions are the vendors'/CNAs'
   # own text as published by NVD.
   @fleet [
+    # Additional real library advisories. Descriptions are concise summaries of
+    # https://cveawg.mitre.org/api/cve/<CVE-ID>; curl uses its vendor advisory:
+    # https://curl.se/docs/CVE-2023-38545.html
+    # Infrastructure placements are illustrative, not discovered deployments.
+    {"CVE-2023-38545", "libcurl", "8.3.0", "8.4.0", "HIGH", :edge, "open",
+     "SOCKS5 heap buffer overflow in curl and libcurl. A long hostname during a slow SOCKS5 proxy handshake can overflow a heap buffer when remote hostname resolution is requested. Affects 7.69.0 through 8.3.0; fixed in 8.4.0."},
+    {"CVE-2023-38545", "curl", "8.3.0", "8.4.0", "HIGH", :x, nil,
+     "curl shares the vulnerable SOCKS5 handshake implementation with libcurl. Long hostnames and a slow SOCKS5 handshake can trigger a heap buffer overflow. Fixed in 8.4.0."},
+    {"CVE-2021-44228", "log4j-core", "2.14.1", "2.17.1", "CRITICAL", :search, "open",
+     "Log4Shell: attacker-controlled log messages can trigger JNDI lookups and remote code execution in vulnerable Apache Log4j Core configurations. This affects log4j-core, not log4j-api alone. The demo upgrade target is 2.17.1, which also includes subsequent Log4j security fixes."},
+    {"CVE-2022-0778", "libssl", "3.0.1", "3.0.2", "HIGH", :edge, "open",
+     "OpenSSL certificate parsing can enter an infinite loop in BN_mod_sqrt when processing crafted elliptic-curve parameters, causing denial of service before certificate signature verification. Fixed in the 3.0 branch by 3.0.2."},
+    {"CVE-2022-0778", "libcrypto", "3.0.1", "3.0.2", "HIGH", :worker, nil,
+     "OpenSSL BN_mod_sqrt can loop indefinitely on attacker-controlled non-prime moduli. Applications parsing malicious certificates or elliptic-curve keys can suffer denial of service. Fixed in OpenSSL 3.0.2."},
+    {"CVE-2022-37434", "zlib", "1.2.12", nil, "HIGH", :worker, "open",
+     "A large gzip header extra field can trigger a heap buffer over-read or overflow in zlib inflate. Only applications calling inflateGetHeader are affected; library presence alone does not prove exploitability."},
+    {"CVE-2023-4863", "libwebp", "1.3.1", "1.3.2", "HIGH", :media, "open",
+     "Heap buffer overflow in libwebp decoding permits out-of-bounds memory writes when processing crafted WebP content. The vulnerable library is used by browsers and image-processing services. Fixed in libwebp 1.3.2."},
+    {"CVE-2023-4911", "glibc", "2.37", nil, "HIGH", :worker, "supp",
+     "Looney Tunables: a buffer overflow in the GNU C Library dynamic loader while processing GLIBC_TUNABLES can allow local privilege escalation when launching set-user-ID binaries. Distribution backports determine the appropriate fixed package version."},
+
     # CVE-2026-53492 — CRITICAL 9.6, published 2026-07-01
     {"CVE-2026-53492", "containerd", "2.2.4", "2.3.2", "CRITICAL", :a, nil,
      "containerd is an open-source container runtime. In Versions prior to 2.3.2, 2.2.5 and 2.1.9, the CRI implementation improperly trusts Container Device Interface (CDI) annotations found within untrusted checkpoint image metadata during container restoration. When restoring a container from a checkpoint, containerd preserves CDI-related annotations from the checkpoint archive rather than relying solely on the pod's create-time specification. This allows a user with pod creation permissions to bypass standard Kubernetes resource allocation and device plugin enforcement, injecting arbitrary CDI edits (such as device nodes and host mounts) into the restored container. Successful exploitation requires that the node has CDI enabled and contains a matching host CDI specification for the requested device; environments where CDI is disabled or lacking sensitive device specifications are not affected. This issue has been fixed in versions 2.3.2, 2.2.5 and 2.1.9."},
@@ -347,7 +372,29 @@ defmodule Triage.Seeds do
       # severity, namespace or exposure.
       seed_impact!(image_a, "web", "alpha", @env_prod, "critical", "seed:operator declared", now)
 
-      images = %{a: image_a, b: image_b, c: image_c, x: image_x}
+      infrastructure =
+        for {key, digit, service, namespace, owner} <- [
+              {:edge, "e", "edge-gateway", "ingress", "platform"},
+              {:search, "f", "search-service", "search", "data"},
+              {:worker, "1", "background-worker", "jobs", "platform"},
+              {:media, "2", "media-processor", "media", "media"}
+            ],
+            into: %{} do
+          image =
+            image!(
+              "sha256:" <> String.duplicate(digit, 64),
+              "registry.internal/" <> service,
+              "demo-1.0",
+              "Demo infrastructure: " <> service <> " (illustrative affected libraries)",
+              now
+            )
+
+          placement!(image, namespace, owner, @env_prod, now)
+          placement!(image, namespace, owner, @env_staging, now)
+          {key, image}
+        end
+
+      images = Map.merge(%{a: image_a, b: image_b, c: image_c, x: image_x}, infrastructure)
 
       for {cve, package, version, fix, severity, image, life, description} <- @fleet do
         finding =

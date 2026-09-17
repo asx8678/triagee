@@ -29,7 +29,7 @@ defmodule TriageWeb.FindingLive.InputTest do
       {:ok, view, _html} = live(conn, path)
 
       assert has_element?(view, "#invalid-filters")
-      refute has_element?(view, "#groups", "CVE-2026-60002")
+      refute has_element?(view, "#groups > tr")
       refute has_element?(view, "#groups", "CVE-2026-53492")
     end
   end
@@ -89,7 +89,7 @@ defmodule TriageWeb.FindingLive.InputTest do
       {:ok, view, _html} = live(conn, path)
 
       assert has_element?(view, "#invalid-filters")
-      refute has_element?(view, "#groups", "CVE-2026-60002")
+      refute has_element?(view, "#groups > tr")
     end
 
     {:ok, view, _html} = live(conn, ~p"/findings")
@@ -103,7 +103,7 @@ defmodule TriageWeb.FindingLive.InputTest do
     })
 
     assert has_element?(view, "#invalid-filters")
-    refute has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups > tr")
 
     view
     |> element("#filter-form")
@@ -123,7 +123,7 @@ defmodule TriageWeb.FindingLive.InputTest do
     |> render_change(%{"owner" => %{"x" => "prod"}, "q" => "openssh-client"})
 
     assert has_element?(view, "#invalid-filters")
-    refute has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups > tr")
   end
 
   @tag :capture_log
@@ -135,14 +135,14 @@ defmodule TriageWeb.FindingLive.InputTest do
     |> render_change(%{"filters" => %{"owner" => %{"x" => "prod"}}})
 
     assert has_element?(view, "#invalid-filters")
-    refute has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups > tr")
   end
 
   @tag :capture_log
   test "a doubly nested filters wrapper is rejected instead of unwrapping to All", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/findings?owner=alpha")
 
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#groups > tr")
 
     view
     |> element("#filter-form")
@@ -150,7 +150,7 @@ defmodule TriageWeb.FindingLive.InputTest do
 
     assert has_element?(view, "#invalid-filters")
     # neither the prior alpha scope nor an unscoped All list may render
-    refute has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups > tr")
     refute has_element?(view, "#groups", "CVE-2026-48931")
   end
 
@@ -159,7 +159,7 @@ defmodule TriageWeb.FindingLive.InputTest do
     conn: conn
   } do
     {:ok, view, _html} = live(conn, ~p"/findings")
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#groups > tr")
 
     # Simulates a raw channel pushEvent("filter", []) — a non-map body that
     # used to crash the LiveView with a FunctionClauseError before
@@ -169,16 +169,16 @@ defmodule TriageWeb.FindingLive.InputTest do
     render_hook(view, "filter", [])
 
     assert has_element?(view, "#invalid-filters")
-    refute has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups > tr")
 
     # the connection stays alive and a valid event recovers to a filtered patch
     view
     |> element("#filter-form")
     |> render_change(%{"owner" => "beta", "q" => "openssh-sftp-server"})
 
-    assert_patch(view, ~p"/findings?owner=beta&q=curl")
+    assert_patch(view, ~p"/findings?owner=beta&q=openssh-sftp-server")
     refute has_element?(view, "#invalid-filters")
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert has_element?(view, "#group-CVE-2026-60002")
   end
 
   @tag :capture_log
@@ -190,7 +190,7 @@ defmodule TriageWeb.FindingLive.InputTest do
     |> render_change(%{"filters" => "not-a-map"})
 
     assert has_element?(view, "#invalid-filters")
-    refute has_element?(view, "#groups", "CVE-2026-60002")
+    refute has_element?(view, "#groups > tr")
   end
 
   test "valid nested filters wrapper still patches the URL and filters", %{conn: conn} do
@@ -202,8 +202,8 @@ defmodule TriageWeb.FindingLive.InputTest do
       "filters" => %{"owner" => "beta", "q" => "openssh-sftp-server", "suppressed" => "on"}
     })
 
-    assert_patch(view, ~p"/findings?owner=beta&q=curl&suppressed=1")
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert_patch(view, ~p"/findings?owner=beta&q=openssh-sftp-server&suppressed=1")
+    assert has_element?(view, "#group-CVE-2026-60002")
   end
 
   test "a realistic flat filter-form event patches the URL with all four params", %{conn: conn} do
@@ -219,8 +219,12 @@ defmodule TriageWeb.FindingLive.InputTest do
       "_target" => ["owner"]
     })
 
-    assert_patch(view, ~p"/findings?environment=prod&owner=beta&q=curl&suppressed=1")
-    assert has_element?(view, "#groups", "CVE-2026-60002")
+    assert_patch(
+      view,
+      ~p"/findings?environment=prod&owner=beta&q=openssh-sftp-server&suppressed=1"
+    )
+
+    assert has_element?(view, "#group-CVE-2026-60002")
   end
 
   test "finding ids are bounded by the actual bigint column, not int4", %{conn: conn} do

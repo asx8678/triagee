@@ -15,7 +15,7 @@ defmodule TriageWeb.FilterBarTest do
 
   # Path, the bar's form id, and the reset control this page pairs with it.
   @bars [
-    {"/triage", "#triage-filter-form", nil, "#triage-summary"},
+    {"/triage/history", "#triage-filter-form", nil, "#triage-summary"},
     {"/findings", "#filter-form", "#reset-findings", "#findings-summary"},
     {"/timeline", "#timeline-form", "#timeline-reset", nil},
     {"/whats-new", "#whats-new-form", "#reset-activity", nil}

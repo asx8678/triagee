@@ -29,7 +29,7 @@ defmodule TriageWeb.FindingLive.Index do
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> assign(:page_title, "Findings")
+      |> assign(:page_title, "Vulnerabilities")
       |> assign(:invalid_filters, [])
       |> stream_configure(:groups, dom_id: &"group-#{&1.cve}")
 
@@ -37,14 +37,14 @@ defmodule TriageWeb.FindingLive.Index do
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
     parsed = FindingFilters.parse(params)
     invalid = parsed.invalid != []
 
     # Invalid values are never normalized into a scope, truncated or dropped:
     # nothing is queried and the state is surfaced visibly instead.
     unknown_team? = not invalid and team_unknown?(parsed.owner)
-    sort = parsed.sort || default_sort()
+    sort = parsed.sort || if(URI.parse(uri).path == "/", do: "newest", else: default_sort())
 
     scope_opts = [
       owner: parsed.owner,
@@ -187,6 +187,35 @@ defmodule TriageWeb.FindingLive.Index do
 
   defp sort_note("cve"), do: "Sorted by advisory id (A–Z)."
 
+  # One chip per filter actually narrowing the list. Removing a chip keeps every
+  # other choice and drops the keyset position, because a position only means
+  # something in the filter set and order it was issued with.
+  defp filter_chips(filters) do
+    [
+      {:owner, "Team", filters[:owner]},
+      {:environment, "Environment", filters[:environment]},
+      {:q, "Search", filters[:search]},
+      {:severity, "Severity", severity_chip(filters[:severity])},
+      {:include_suppressed, "Suppressed",
+       if(filters[:include_suppressed], do: "included", else: nil)}
+    ]
+    |> Enum.reject(fn {_key, _label, value} -> is_nil(value) end)
+  end
+
+  defp severity_chip(severity) when is_binary(severity) do
+    severity |> String.downcase() |> String.capitalize()
+  end
+
+  defp severity_chip(_other), do: nil
+
+  defp drop_filter(filters, :owner), do: %{filters | owner: nil}
+  defp drop_filter(filters, :environment), do: %{filters | environment: nil}
+  defp drop_filter(filters, :q), do: %{filters | search: nil}
+  defp drop_filter(filters, :severity), do: %{filters | severity: nil}
+  defp drop_filter(filters, :include_suppressed), do: %{filters | include_suppressed: false}
+
+  defp sort_label(sort), do: Map.get(@sort_labels, sort || default_sort(), sort)
+
   # The canonical list query. The default order and the newest slice stay out of
   # the URL so a shared link keeps its shortest form; both are still applied.
   #
@@ -237,7 +266,7 @@ defmodule TriageWeb.FindingLive.Index do
     ~H"""
     <Layouts.app flash={@flash} active_page="findings">
       <.page_header
-        title="Findings"
+        title="Vulnerabilities"
         subtitle="Advisories grouped across affected packages and images in local inventory."
       />
 
@@ -305,7 +334,7 @@ defmodule TriageWeb.FindingLive.Index do
         <.input field={@filter_form[:suppressed]} type="checkbox" label="Include suppressed" />
         <:actions>
           <.link id="reset-findings" patch={~p"/findings"} class="button button-secondary">
-            Reset
+            Clear filters
           </.link>
         </:actions>
         <:summary>
@@ -318,9 +347,37 @@ defmodule TriageWeb.FindingLive.Index do
             <span>· {if @filters[:include_suppressed],
               do: "Including suppressed",
               else: "Suppressed excluded"}</span>
+            <span id="findings-active-sort">· Order: {sort_label(@filters[:sort])}</span>
           </div>
         </:summary>
       </.filter_bar>
+
+      <div
+        :if={@invalid_filters == [] and filter_chips(@filters) != []}
+        id="active-filters"
+        class="filter-chips"
+        role="group"
+        aria-label="Active filters"
+      >
+        <span class="filter-chips-label">Filtered by</span>
+        <ul class="filter-chips-list">
+          <li :for={{key, label, value} <- filter_chips(@filters)}>
+            <span class="filter-chip">
+              <span class="filter-chip-text">
+                <span class="filter-chip-key">{label}</span>
+                {value}
+              </span>
+              <.link
+                patch={list_path(drop_filter(@filters, key), :start)}
+                class="filter-chip-remove"
+                aria-label={"Remove filter: #{label} #{value}"}
+              >
+                ×
+              </.link>
+            </span>
+          </li>
+        </ul>
+      </div>
 
       <p :if={@invalid_filters != []} id="invalid-filters" class="notice" role="alert">
         Invalid filter value{if length(@invalid_filters) == 1, do: "", else: "s"} for
@@ -382,7 +439,9 @@ defmodule TriageWeb.FindingLive.Index do
               <th scope="col">
                 Scanner severity <span class="supporting">· highest in group</span>
               </th>
-              <th scope="col">Present in scope</th>
+              <th scope="col">
+                Affected inventory <span class="supporting">· in scope</span>
+              </th>
               <th scope="col">Reported fix</th>
               <th scope="col">First seen</th>
               <th scope="col">Teams</th>
@@ -391,9 +450,12 @@ defmodule TriageWeb.FindingLive.Index do
           <tbody id="groups" phx-update="stream">
             <tr :for={{id, g} <- @streams.groups} id={id}>
               <th scope="row">
-                <.link navigate={detail_path(g.first_occurrence_id, @filters)}>{g.cve}</.link>
+                <.link navigate={~p"/cves/#{g.cve}?#{list_query(@filters, nil)}"}>{g.cve}</.link>
                 <div class="supporting">
-                  <.link navigate={~p"/cves/#{g.cve}"}>All occurrences</.link>
+                  <.link
+                    navigate={detail_path(g.first_occurrence_id, @filters)}
+                    aria-label={"View occurrence of #{g.cve}"}
+                  >View occurrence</.link>
                 </div>
                 <div class="cluster">
                   <.status_badge :if={g.reopened > 0} label="Reopened" />
@@ -422,10 +484,11 @@ defmodule TriageWeb.FindingLive.Index do
               </td>
               <td data-field="fix">
                 <%= if g.fixable > 0 do %>
-                  {g.fixable} of {g.occurrences} occurrences
-                  <span class="supporting">Not verified fixed</span>
+                  <div>{g.fixable} of {g.occurrences} occurrences have a reported fix</div>
+                  <div class="supporting">Not verified deployed</div>
                 <% else %>
-                  Not reported
+                  <div>Not reported</div>
+                  <div class="supporting">No occurrence has a reported fix in local data</div>
                 <% end %>
               </td>
               <td><.timestamp value={g.first_seen} /></td>
@@ -463,8 +526,8 @@ defmodule TriageWeb.FindingLive.Index do
         </.link>
       </nav>
       <p class="supporting">
-        A CVE link opens one occurrence, not a representative package or a review of the whole advisory.
-        Related occurrences are available on its detail page.
+        A CVE link opens the aggregate advisory. “View occurrence” opens a specific package/image
+        occurrence; neither action records an assessment.
       </p>
     </Layouts.app>
     """

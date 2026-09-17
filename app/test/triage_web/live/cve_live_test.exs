@@ -27,6 +27,26 @@ defmodule TriageWeb.CveLiveTest do
     assert html =~ "Lifecycle"
   end
 
+  test "real library advisories show descriptions, versions and infrastructure", %{conn: conn} do
+    for {cve, packages, description, service} <- [
+          {"CVE-2023-38545", ["curl", "libcurl"], "SOCKS5", "edge-gateway"},
+          {"CVE-2021-44228", ["log4j-core"], "Log4Shell", "search-service"},
+          {"CVE-2022-0778", ["libssl", "libcrypto"], "BN_mod_sqrt", "background-worker"},
+          {"CVE-2022-37434", ["zlib"], "inflateGetHeader", "background-worker"},
+          {"CVE-2023-4863", ["libwebp"], "WebP", "media-processor"},
+          {"CVE-2023-4911", ["glibc"], "GLIBC_TUNABLES", "background-worker"}
+        ] do
+      {:ok, view, html} = live(conn, "/cves/#{cve}")
+      assert html =~ description
+      assert html =~ service
+      assert has_element?(view, "#cve-placement-rows", "prod")
+
+      for package <- packages do
+        assert has_element?(view, "#cve-package-rows", package)
+      end
+    end
+  end
+
   test "internet-exposed placement shows escalated priority", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-53492")
 
@@ -70,9 +90,25 @@ defmodule TriageWeb.CveLiveTest do
   end
 
   test "absent KEV cache entry is explicit, not reassuring", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/cves/CVE-2026-60002")
+    {:ok, view, html} = live(conn, ~p"/cves/CVE-2026-60002")
 
-    assert html =~ "No cached KEV entry" or html =~ "never fetched"
+    # Never fetched is an unknown, stated as one, and never shown as a finding
+    # about the world ("no known exploitation").
+    assert html =~ "has not been fetched"
+    assert has_element?(view, "#cve-intel-kev", "Unknown")
+    refute html =~ "Not exploited"
+  end
+
+  test "intelligence evidence distinguishes failed refresh from successful absence", %{conn: conn} do
+    {:ok, _} = Intel.record_receipt("kev", false, nil, "offline")
+    {:ok, view, _} = live(conn, ~p"/cves/CVE-2026-60002")
+    assert has_element?(view, "#cve-intel-evidence", "Latest refresh failed")
+    assert has_element?(view, "#cve-intel-evidence", "no retained matching data")
+
+    {:ok, _} = Intel.record_receipt("kev", true, 0)
+    render_patch(view, ~p"/cves/CVE-2026-60002")
+    assert has_element?(view, "#cve-intel-evidence", "Refresh succeeded with no matching entry")
+    refute has_element?(view, "#cve-intel-evidence", "Latest refresh failed")
   end
 
   test "priority is derived per placement, not from the advisory's worst severity", %{conn: conn} do
@@ -142,7 +178,9 @@ defmodule TriageWeb.CveLiveTest do
     assert html2 =~ "NVD entries: 1"
     assert has_element?(view2, "#cve-nvd-list", "NVD single-source severity claim")
     refute has_element?(view2, "#cve-kev-list", "NVD single-source severity claim")
-    assert html2 =~ "KEV cache match: No cached entry"
+    # No KEV refresh has been recorded here, so the honest state is "not
+    # fetched" — not an absence claim about the KEV catalog.
+    assert html2 =~ "KEV cache match: Unknown — KEV data has not been fetched"
 
     # The conflicting claim changed nothing the evidence supports.
     assert has_element?(view2, row, "medium")

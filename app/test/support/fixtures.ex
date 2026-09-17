@@ -58,6 +58,7 @@ defmodule Triage.Fixtures do
       package_version: Keyword.get(opts, :package_version, "1.0.0"),
       severity: Keyword.get(opts, :severity, "HIGH"),
       fix: Keyword.get(opts, :fix),
+      description: Keyword.get(opts, :description),
       suppressed: Keyword.get(opts, :suppressed, false),
       first_seen: first_seen,
       last_seen: Keyword.get(opts, :last_seen, first_seen),

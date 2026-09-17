@@ -53,7 +53,6 @@ defmodule TriageWeb.TimelineReadabilityTest do
           "fix applied",
           "verified fixed",
           "added to the whitelist",
-          "whitelisted on",
           "whitelisted by",
           "has been approved",
           "approved by",
@@ -124,7 +123,7 @@ defmodule TriageWeb.TimelineReadabilityTest do
 
     assert document
            |> LazyHTML.query("#tl-grid-table thead th[scope='col']")
-           |> Enum.count() == 9
+           |> Enum.count() == 13
 
     assert document
            |> LazyHTML.query("#tl-grid-table tbody th[scope='row']")
@@ -197,9 +196,10 @@ defmodule TriageWeb.TimelineReadabilityTest do
 
     assert document
            |> LazyHTML.query("#tl-lanes-table thead th[scope='col']")
-           |> Enum.count() == 7
+           |> Enum.count() == 6
 
-    assert LazyHTML.text(document) =~ "not verified production coverage"
+    assert LazyHTML.text(document) =~ "not necessarily the whole CVE"
+    assert LazyHTML.text(document) =~ "not a verified repair"
   end
 
   test "the page names the local operator identity it actually has", %{conn: conn} do

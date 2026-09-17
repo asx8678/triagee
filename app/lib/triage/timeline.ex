@@ -1,5 +1,5 @@
 defmodule Triage.Timeline do
-  @default_weeks 8
+  @default_weeks 12
   @min_weeks 1
   @max_weeks 12
   @day_row_limit 25
@@ -473,6 +473,7 @@ defmodule Triage.Timeline do
     by_cve = chart_days_by_cve(events)
 
     %{
+      available_tracks: Enum.map(lanes.rows, &chart_track(&1, by_cve, req)),
       lane_limit: @chart_lane_limit,
       shown: min(lanes.total, @chart_lane_limit),
       total: lanes.total,
@@ -581,13 +582,41 @@ defmodule Triage.Timeline do
 
     {shown, rest} = Enum.split(rows, @lane_limit)
     cases = cases_by_cve(Enum.map(shown, & &1.cve), req)
+    decisions = lane_decisions(Enum.map(shown, & &1.cve), req)
 
     %{
       total: total,
       shown: length(shown),
       truncated_count: length(rest),
-      rows: Enum.map(shown, fn lane -> enrich_lane(lane, Map.get(cases, lane.cve, [])) end)
+      rows:
+        Enum.map(shown, fn lane ->
+          lane
+          |> enrich_lane(Map.get(cases, lane.cve, []))
+          |> Map.put(:decisions, Map.get(decisions, lane.cve, []))
+        end)
     }
+  end
+
+  defp lane_decisions(cves, req) do
+    query =
+      from(d in Triage.Decisions.Decision,
+        left_join: p in ImagePlacement,
+        on: p.id == d.placement_id,
+        where: d.cve in ^cves,
+        order_by: [asc: d.decided_at, asc: d.id]
+      )
+
+    query =
+      if req.owner,
+        do: where(query, [d, p], is_nil(d.placement_id) or p.owner == ^req.owner),
+        else: query
+
+    query =
+      if req.environment,
+        do: where(query, [d, p], is_nil(d.placement_id) or p.environment == ^req.environment),
+        else: query
+
+    Repo.all(query) |> Enum.group_by(& &1.cve)
   end
 
   defp lane(cve, findings_rows, events, req) do

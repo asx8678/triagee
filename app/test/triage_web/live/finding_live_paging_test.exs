@@ -72,6 +72,54 @@ defmodule TriageWeb.FindingLive.PagingTest do
     assert render(view) =~ "later slice"
   end
 
+  test "removing a filter preserves other choices and resets only the page position", %{
+    conn: conn
+  } do
+    {:ok, view, _} = live(conn, ~p"/findings?owner=alpha&severity=HIGH&sort=cve&suppressed=1")
+    view |> element("#older-advisories") |> render_click()
+    assert has_element?(view, "#newest-advisories")
+    assert has_element?(view, "#findings-active-sort", "Advisory id (A–Z)")
+
+    view
+    |> element("#active-filters a[aria-label='Remove filter: Severity High']")
+    |> render_click()
+
+    assert_patch(view, ~p"/findings?owner=alpha&sort=cve&suppressed=1")
+    refute has_element?(view, "#newest-advisories")
+    refute has_element?(view, "#active-filters a[aria-label='Remove filter: Severity High']")
+    assert has_element?(view, "#active-filters a[aria-label='Remove filter: Team alpha']")
+
+    assert has_element?(
+             view,
+             "#active-filters a[aria-label='Remove filter: Suppressed included']"
+           )
+
+    view |> element("#reset-findings") |> render_click()
+    assert_patch(view, ~p"/findings")
+    refute has_element?(view, "#active-filters")
+  end
+
+  test "aggregate and occurrence links retain the full paginated list context", %{conn: conn} do
+    {:ok, view, _} = live(conn, ~p"/findings?owner=alpha&severity=HIGH&sort=cve&suppressed=1")
+    view |> element("#older-advisories") |> render_click()
+
+    aggregate = link_href(view, "#groups > tr:first-child th > a[href^='/cves/']")
+    occurrence = link_href(view, "#groups > tr:first-child a[aria-label^='View occurrence']")
+    assert URI.parse(aggregate).path =~ "/cves/"
+    assert URI.parse(occurrence).path =~ "/findings/"
+    assert URI.parse(aggregate).query == URI.parse(occurrence).query
+    query = URI.decode_query(URI.parse(aggregate).query)
+    assert query["owner"] == "alpha"
+    assert query["severity"] == "HIGH"
+    assert query["sort"] == "cve"
+    assert query["suppressed"] == "1"
+    assert query["before"] != nil
+
+    {:ok, detail, _} = live(conn, aggregate)
+    back = link_href(detail, "#cve-back-to-list")
+    assert URI.decode_query(URI.parse(back).query) == query
+  end
+
   test "following only the positions it hands out walks the whole list exactly once", %{
     conn: conn
   } do

@@ -39,7 +39,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
     counts = Inventory.summary_counts()
     {:ok, view, _html} = live(conn, ~p"/findings?q=openssh-client")
 
-    assert has_element?(view, "h1", "Findings")
+    assert has_element?(view, "h1", "Vulnerabilities")
     assert has_element?(view, "#findings-summary", "1 matching advisory")
     assert has_element?(view, "#findings-summary", "openssh-client")
     assert has_element?(view, "#group-CVE-2026-60002 [data-field='packages']", "3 packages")
@@ -64,7 +64,7 @@ defmodule TriageWeb.InventoryReadabilityTest do
     {:ok, view, _html} = live(conn, ~p"/findings?suppressed=1")
 
     expected = Enum.map(Inventory.list_groups(include_suppressed: true), &"group-#{&1.cve}")
-    assert row_ids(view, "#groups > tr") == expected
+    assert row_ids(view, "#groups > tr") == Enum.take(expected, 25)
 
     assert has_element?(
              view,
@@ -72,7 +72,9 @@ defmodule TriageWeb.InventoryReadabilityTest do
            )
 
     assert has_element?(view, ".data-table th[scope='col']", "Scanner severity")
+    render_patch(view, ~p"/findings?suppressed=1&q=CVE-2026-57236")
     assert has_element?(view, "#group-CVE-2026-57236", "Reopened")
+    render_patch(view, ~p"/findings?suppressed=1&q=CVE-2026-48931")
     assert has_element?(view, "#group-CVE-2026-48931", "1 suppressed")
     assert has_element?(view, "#group-CVE-2026-48931 [data-field='fix']", "Not reported")
     assert has_element?(view, "#findings-order-details", "affected image count")

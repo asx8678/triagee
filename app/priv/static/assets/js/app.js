@@ -2,6 +2,50 @@
 // Hooks never own assessment form DOM and never store evidence or drafts.
 const draftMessage = "Leave this case and discard unsaved assessment changes?";
 
+const TimelineWidth = {
+  mounted() {
+    this.measure = () => {
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => {
+        const style = getComputedStyle(this.el);
+        const width = Math.max(240, Math.min(7680, Math.floor(this.el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight))));
+        if (width !== this.width) {
+          this.width = width;
+          this.pushEvent("plot_width", {width});
+        }
+      }, 100);
+    };
+    this.observer = new ResizeObserver(this.measure);
+    this.observer.observe(this.el);
+    this.measure();
+    this.reveal = () => {
+      const selected = this.el.querySelector(".tl-chart-track.tl-selected");
+      const target = selected || this.el;
+      this.el.focus({preventScroll: true});
+      target.scrollIntoView({behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center", inline: "nearest"});
+    };
+    this.onDetail = (event) => {
+      const link = event.target.closest?.("a[id^='tl-open-'], a[id^='tl-lane-open-']");
+      if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const cve = new URL(link.href, location.href).searchParams.get("cve");
+      if (cve && cve === this.el.dataset.selectedCve) this.reveal();
+    };
+    document.addEventListener("click", this.onDetail);
+    this.selected = this.el.dataset.selectedCve;
+    if (this.selected) this.reveal();
+  },
+  updated() {
+    const selected = this.el.dataset.selectedCve;
+    if (selected && selected !== this.selected) this.reveal();
+    this.selected = selected;
+  },
+  destroyed() {
+    clearTimeout(this.timer);
+    this.observer.disconnect();
+    document.removeEventListener("click", this.onDetail);
+  }
+};
+
 const CopyValue = {
   mounted() {
     this.copy = async () => {
@@ -128,7 +172,7 @@ if (typeof Phoenix === "undefined" || typeof LiveView === "undefined") {
 } else {
   const liveSocket = new LiveView.LiveSocket("/live", Phoenix.Socket, {
     params: { _csrf_token: csrfToken },
-    hooks: { CopyValue, DirtyDraft, FocusReturn },
+    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth },
   });
   window.liveSocket = liveSocket;
   liveSocket.connect();

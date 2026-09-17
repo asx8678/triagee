@@ -140,17 +140,17 @@ defmodule TriageWeb.UIComponentsTest do
     assert count(doc, "#empty .page-actions a[href='/findings']") == 1
   end
 
-  test "shell has one persistent notice, native mobile disclosure and all eight stable URLs" do
+  test "shell has one persistent notice, native mobile disclosure and three workspace destinations and collapsed tools" do
     doc = component(&shell/1, %{})
     assert count(doc, "a[href='#main-content']") == 1
     assert count(doc, "main#main-content[tabindex='-1']") == 1
     assert count(doc, "#navigation-menu > summary[aria-controls='primary-navigation']") == 1
     # Replay History is not a second tab: the replay section carries one global
     # entry and distinguishes its own routes with a local subnavigation.
-    assert count(doc, "nav[aria-label='Primary'] a") == 8
-    assert count(doc, "#nav-home[aria-current='page']") == 1
-    assert text(doc, "#nav-home") == "Overview"
-    assert text(doc, "#nav-triage") == "Triage"
+    assert count(doc, "nav[aria-label='Primary'] a") == 7
+    assert count(doc, "#nav-findings[aria-current='page']") == 1
+    assert text(doc, "#nav-findings") == "Vulnerabilities"
+    assert text(doc, "#nav-triage") == "Review"
     assert text(doc, "#nav-timeline") == "Timeline"
     assert count(doc, "#environment-notice") == 1
     assert count(doc, "#environment-notice .environment-summary") == 1
@@ -202,7 +202,7 @@ defmodule TriageWeb.UIComponentsTest do
 
   defp shell(assigns) do
     ~H"""
-    <Layouts.app flash={%{}} active_page="home">
+    <Layouts.app flash={%{}} active_page="findings">
       <h1>Overview</h1>
     </Layouts.app>
     """

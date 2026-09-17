@@ -17,9 +17,11 @@ defmodule TriageWeb.Router do
   scope "/", TriageWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", FindingLive.Index
 
-    live "/triage", TriageLive
+    live "/triage", GuidedReviewLive
+    live "/triage/history", TriageLive
+    live "/triage/:cve", GuidedReviewLive
     live "/intel", IntelLive
 
     live "/cves/:id", CveLive.Show

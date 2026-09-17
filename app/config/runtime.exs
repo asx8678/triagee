@@ -88,3 +88,21 @@ if config_env() == :prod do
     url: [host: host, port: 443, scheme: "https"],
     secret_key_base: secret_key_base
 end
+
+# Optional guided-review integrations. Secrets stay server-side; no integration
+# is enabled merely by visiting the queue. Team keys are exact inventory owners.
+review_teams =
+  case System.get_env("TRIAGE_AZURE_TEAMS_JSON") do
+    nil -> %{}
+    value ->
+      case Jason.decode(value) do
+        {:ok, teams} when is_map(teams) -> teams
+        _ -> raise "TRIAGE_AZURE_TEAMS_JSON must be a JSON object keyed by inventory team"
+      end
+  end
+
+config :triage, Triage.ReviewIntegrations,
+  organization: System.get_env("TRIAGE_AZURE_ORGANIZATION"),
+  token: System.get_env("TRIAGE_AZURE_PAT"),
+  teams: review_teams,
+  ai_executable: System.get_env("TRIAGE_AI_EXECUTABLE")

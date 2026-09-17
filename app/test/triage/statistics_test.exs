@@ -57,6 +57,51 @@ defmodule Triage.StatisticsTest do
   defp days_before(days), do: DateTime.add(@now, -days * 86_400, :second)
   defp row_for(rows, cve), do: Enum.find(rows, &(&1.cve == cve))
 
+  test "decision timing preserves scope, expiry and history without claiming resolution" do
+    image = image!("a")
+    placement = placement!(image, "prod")
+    finding!(image, cve: "CVE-DECISION", first_seen: days_before(10), reopen_count: 1)
+
+    {:ok, _} =
+      Triage.Decisions.record(%{
+        cve: "CVE-DECISION",
+        placement_id: placement.id,
+        decision: "not_affected",
+        actor: "tester",
+        reason: "Scoped evidence",
+        decided_at: days_before(9)
+      })
+
+    {:ok, _} =
+      Triage.Decisions.record(%{
+        cve: "CVE-DECISION",
+        decision: "accepted_risk",
+        actor: "tester",
+        reason: "Time limited",
+        decided_at: days_before(7),
+        expires_at: days_before(1)
+      })
+
+    [row] = Statistics.advisory_lifecycles(@now)
+    assert row.open?
+    assert row.reopened_count == 1
+    assert row.first_advisory_decision_seconds == 3 * 86_400
+    assert [scoped, expired] = row.decision_timings
+    assert scoped.placement_id == placement.id
+    assert scoped.elapsed_seconds == 86_400
+    assert expired.state == :expired
+    assert Statistics.summarize([row]).median_decision_days == 3.0
+    assert Statistics.summarize([row]).decisions_recorded == 1
+  end
+
+  test "missing and reversed dates are unknown rather than zero-day responses" do
+    assert Statistics.elapsed_seconds(nil, @now) == nil
+    assert Statistics.elapsed_seconds(@now, nil) == nil
+    assert Statistics.elapsed_seconds(@now, days_before(1)) == nil
+    assert Statistics.elapsed_seconds(@now, @now) == 0
+    assert Statistics.elapsed_seconds(DateTime.add(@now, -3600), @now) == 3600
+  end
+
   test "empty inventory yields no rows and a zeroed summary" do
     assert Statistics.advisory_lifecycles(@now) == []
 
@@ -64,7 +109,9 @@ defmodule Triage.StatisticsTest do
              total: 0,
              open: 0,
              past_target: 0,
-             median_clear_days: nil
+             median_clear_days: nil,
+             median_decision_days: nil,
+             decisions_recorded: 0
            }
   end
 

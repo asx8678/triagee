@@ -33,6 +33,30 @@ defmodule TriageWeb.TimelineLiveTest do
     |> String.to_integer()
   end
 
+  test "fit responds to container width without changing the selected history", %{conn: conn} do
+    image = image!("responsive-chart")
+    placement!(image, "alpha", "prod")
+    finding = finding!(image, "CVE-2026-8001")
+    event!(finding, "appeared", at(0, ~T[09:00:00]))
+    {:ok, view, _} = live(conn, ~p"/timeline")
+    assert has_element?(view, "#tl-chart-scroll[phx-hook='TimelineWidth']")
+    assert has_element?(view, "select[name='weeks'] option[value='12'][selected]")
+
+    for width <- [1390, 1870, 1000] do
+      html = render_hook(view, "plot_width", %{"width" => width})
+
+      [actual] =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("svg.tl-chart")
+        |> LazyHTML.attribute("width")
+
+      {measured, _} = Float.parse(actual)
+      assert abs(measured - width) < 0.01
+      assert has_element?(view, "select[name='weeks'] option[value='12'][selected]")
+    end
+  end
+
   describe "a window with recorded observations" do
     setup do
       image = image!("live-bands")
@@ -50,6 +74,55 @@ defmodule TriageWeb.TimelineLiveTest do
       %{continuing: continuing, single: single}
     end
 
+    test "selection highlights the upper chart, not dated rows, and persists until another selection",
+         %{
+           conn: conn,
+           continuing: continuing,
+           single: single
+         } do
+      {:ok, view, _} = live(conn, ~p"/timeline")
+      refute has_element?(view, ".tl-selected")
+      view |> element("#tl-open-#{continuing.id}-#{Date.to_iso8601(today())}") |> render_click()
+
+      for selector <- [
+            "#tl-lane-CVE-2026-5001",
+            "#tl-track-CVE-2026-5001"
+          ] do
+        assert has_element?(view, selector <> ".tl-selected[aria-current='true']")
+      end
+
+      assert has_element?(view, "#tl-lane-CVE-2026-5001 .tl-selection-label", "Selected")
+      render_hook(view, "plot_width", %{"width" => 1200})
+      assert has_element?(view, "#tl-track-CVE-2026-5001.tl-selected")
+
+      render_change(view, "filter", %{
+        "weeks" => "12",
+        "scale" => "detail",
+        "owner" => "",
+        "environment" => ""
+      })
+
+      assert has_element?(view, "#tl-track-CVE-2026-5001.tl-selected")
+      {:ok, refreshed, _} = live(conn, ~p"/timeline?cve=CVE-2026-5001&scale=detail")
+      assert has_element?(refreshed, "#tl-track-CVE-2026-5001.tl-selected")
+      view |> element("#tl-lane-open-CVE-2026-5002") |> render_click()
+      refute has_element?(view, "#tl-track-CVE-2026-5001.tl-selected")
+      refute has_element?(view, "#tl-lane-CVE-2026-5001.tl-selected")
+
+      refute has_element?(
+               view,
+               "#tl-row-#{continuing.id}-#{Date.to_iso8601(today())}.tl-selected"
+             )
+
+      assert has_element?(view, "#tl-track-CVE-2026-5002.tl-selected")
+      assert has_element?(view, "#tl-lane-CVE-2026-5002.tl-selected")
+      refute has_element?(view, "#tl-row-#{single.id}-#{Date.to_iso8601(today())}.tl-selected")
+      assert has_element?(view, "#tl-chart-scroll[data-selected-cve='CVE-2026-5002']")
+      refute has_element?(view, "#tl-bands .tl-selected")
+      view |> element("#timeline-reset") |> render_click()
+      refute has_element?(view, ".tl-selected")
+    end
+
     test "renders the bands, the grid, the summary, the lanes and the tab", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/timeline")
       document = LazyHTML.from_document(html)
@@ -62,7 +135,8 @@ defmodule TriageWeb.TimelineLiveTest do
       assert has_element?(view, "#tl-chart")
 
       # One band per day of the window: empty days are rendered explicitly.
-      assert document |> LazyHTML.query("#tl-band-list > li") |> Enum.count() == window_days(8)
+      assert document |> LazyHTML.query("#tl-band-list li.tl-band") |> Enum.count() ==
+               window_days(12)
 
       # Both wide tables live in their own scroll region, so the page itself
       # never scrolls horizontally at a narrow viewport (WCAG 2.2 SC 1.4.10).
@@ -85,7 +159,7 @@ defmodule TriageWeb.TimelineLiveTest do
       {:ok, view, html} = live(conn, ~p"/timeline")
       document = LazyHTML.from_document(html)
 
-      first_band = document |> LazyHTML.query("#tl-band-list > li") |> Enum.at(0)
+      first_band = document |> LazyHTML.query("#tl-band-list li.tl-band") |> Enum.at(0)
       assert LazyHTML.attribute(first_band, "id") == ["tl-band-#{Date.to_iso8601(today())}"]
 
       assert has_element?(view, "#tl-band-#{Date.to_iso8601(today())}.tl-band-observed")
@@ -138,7 +212,7 @@ defmodule TriageWeb.TimelineLiveTest do
                "a#tl-lane-open-CVE-2026-5001[href='/timeline?cve=CVE-2026-5001']"
              )
 
-      assert element(view, "#tl-lane-CVE-2026-5001") |> render() =~ "Open in local inventory"
+      assert element(view, "#tl-lane-CVE-2026-5001") |> render() =~ "Awaiting action"
     end
 
     test "clicking a lane opens the drawer, which then closes", %{conn: conn} do
@@ -182,7 +256,7 @@ defmodule TriageWeb.TimelineLiveTest do
 
       # The form submits every field, so the patched URL states the whole view
       # rather than only the field that changed.
-      assert_patch(view, "/timeline?owner=alpha&weeks=8")
+      assert_patch(view, "/timeline?owner=alpha&weeks=12")
       assert has_element?(view, "#tl-lane-CVE-2026-5001")
     end
 
@@ -191,8 +265,8 @@ defmodule TriageWeb.TimelineLiveTest do
 
       assert html
              |> LazyHTML.from_document()
-             |> LazyHTML.query("#tl-band-list > li")
-             |> Enum.count() == window_days(8)
+             |> LazyHTML.query("#tl-band-list li.tl-band")
+             |> Enum.count() == window_days(12)
 
       view
       |> form("#timeline-form", %{"weeks" => "4"})
@@ -202,7 +276,7 @@ defmodule TriageWeb.TimelineLiveTest do
 
       assert render(view)
              |> LazyHTML.from_document()
-             |> LazyHTML.query("#tl-band-list > li")
+             |> LazyHTML.query("#tl-band-list li.tl-band")
              |> Enum.count() == window_days(4)
     end
 
@@ -290,10 +364,10 @@ defmodule TriageWeb.TimelineLiveTest do
       assert detail_html
              |> LazyHTML.from_document()
              |> LazyHTML.query("#tl-chart .tl-c-weekday")
-             |> Enum.count() == window_days(8)
+             |> Enum.count() == window_days(12)
 
-      # Eight week starts plus the gutter's own CVE label.
-      assert document |> LazyHTML.query("#tl-chart .tl-c-week-label") |> Enum.count() == 9
+      # Twelve week starts plus the gutter's own CVE label.
+      assert document |> LazyHTML.query("#tl-chart .tl-c-week-label") |> Enum.count() == 13
       assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-today") |> Enum.count() == 1
 
       # One marker and one description per recorded day, and one arrowhead
@@ -349,20 +423,9 @@ defmodule TriageWeb.TimelineLiveTest do
       assert html =~ "hidden from screen readers"
       assert has_element?(view, "#tl-chart figcaption")
 
-      # The C/H/M/L chips are explained: colour and letter are a key, not a guess.
-      assert html =~ "Severity chips — current scanner severity"
-      assert html =~ "Scanner severity is not assessed impact"
-      assert html =~ "No recorded severity"
-
-      assert has_element?(
-               view,
-               "#tl-chart .tl-chart-legend-groups .tl-c-key-chip.tl-c-sev-critical"
-             )
-
-      assert has_element?(
-               view,
-               "#tl-chart .tl-chart-legend-groups .tl-c-key-chip.tl-c-sev-unknown"
-             )
+      refute html =~ "Severity chips — current scanner severity"
+      refute html =~ "Scanner severity is not assessed impact"
+      refute has_element?(view, "#tl-chart .tl-chart-legend-groups .tl-c-key-chip")
     end
 
     test "a lane recorded before the window starts with an entry tick", %{conn: conn} do

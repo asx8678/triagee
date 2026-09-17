@@ -143,7 +143,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
     expected_detail = ~p"/findings/#{openssh_client_id}?#{qs}"
 
     assert {:error, {:live_redirect, %{to: ^expected_detail}}} =
-             view |> element("a", "CVE-2026-60002") |> render_click()
+             view |> element("#group-CVE-2026-60002 a", "View occurrence") |> render_click()
 
     {:ok, view, _html} = live(conn, expected_detail)
 

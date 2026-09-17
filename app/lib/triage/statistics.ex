@@ -21,6 +21,8 @@ defmodule Triage.Statistics do
 
   alias Triage.Inventory.{Finding, ImagePlacement}
   alias Triage.Repo
+  alias Triage.Decisions
+  alias Triage.Decisions.Decision
 
   # Local review targets in days from first local observation, by the highest
   # scanner severity recorded for the advisory.
@@ -89,6 +91,7 @@ defmodule Triage.Statistics do
   def advisory_lifecycles(now \\ DateTime.utc_now()) do
     environments = environments_by_cve()
     now = DateTime.truncate(now, :second)
+    decisions = decisions_by_cve(now)
 
     Finding
     |> group_by([f], f.cve)
@@ -110,6 +113,7 @@ defmodule Triage.Statistics do
     })
     |> Repo.all()
     |> Enum.map(&decorate(&1, environments, now))
+    |> Enum.map(&with_decision_timing(&1, decisions))
     |> Enum.sort_by(fn row ->
       {Map.fetch!(@status_rank, row.status), -row.days, row.cve}
     end)
@@ -132,6 +136,13 @@ defmodule Triage.Statistics do
       total: length(rows),
       open: Enum.count(rows, & &1.open?),
       past_target: Enum.count(rows, &(not &1.on_target?)),
+      median_decision_days:
+        rows
+        |> Enum.map(& &1.first_advisory_decision_seconds)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.map(&(&1 / 86_400))
+        |> median(),
+      decisions_recorded: Enum.count(rows, &(&1.decision_timings != [])),
       median_clear_days:
         rows
         |> Enum.reject(& &1.open?)
@@ -175,10 +186,70 @@ defmodule Triage.Statistics do
       environments: environments |> Map.get(row.cve, []) |> Enum.sort(),
       open?: open?,
       days: days,
+      elapsed_seconds: elapsed_seconds(row.first_seen, end_at),
       target: target,
       on_target?: on_target?,
       status: status
     })
+  end
+
+  # Read the append-only history in one batch, not one query per advisory.
+  # A historical decision time is not evidence of current whole-CVE coverage.
+  defp decisions_by_cve(now) do
+    from(d in Decision, order_by: [asc: d.decided_at, asc: d.id])
+    |> Repo.all()
+    |> Enum.group_by(& &1.cve)
+    |> Map.new(fn {cve, history} ->
+      superseded = MapSet.new(history, & &1.supersedes_id)
+
+      timings =
+        Enum.map(history, fn decision ->
+          state =
+            cond do
+              MapSet.member?(superseded, decision.id) -> :superseded
+              DateTime.compare(decision.decided_at, now) == :gt -> :scheduled
+              true -> Decisions.state(decision, now)
+            end
+
+          %{
+            id: decision.id,
+            label: Decisions.label(decision.decision),
+            decided_at: decision.decided_at,
+            expires_at: decision.expires_at,
+            placement_id: decision.placement_id,
+            state: state
+          }
+        end)
+
+      {cve, timings}
+    end)
+  end
+
+  defp with_decision_timing(row, decisions) do
+    timings =
+      decisions
+      |> Map.get(row.cve, [])
+      |> Enum.map(&Map.put(&1, :elapsed_seconds, elapsed_seconds(row.first_seen, &1.decided_at)))
+
+    first_advisory_decision =
+      Enum.find(timings, &(is_nil(&1.placement_id) and &1.state != :scheduled))
+
+    Map.merge(row, %{
+      decision_timings: timings,
+      first_advisory_decision_seconds:
+        first_advisory_decision && first_advisory_decision.elapsed_seconds
+    })
+  end
+
+  @doc "Elapsed seconds when both dates exist and are chronological; otherwise unknown."
+  def elapsed_seconds(nil, _end_at), do: nil
+  def elapsed_seconds(_start_at, nil), do: nil
+
+  def elapsed_seconds(start_at, end_at) do
+    case DateTime.diff(end_at, start_at, :second) do
+      seconds when seconds >= 0 -> seconds
+      _ -> nil
+    end
   end
 
   defp days_between(nil, _end_at), do: 0
