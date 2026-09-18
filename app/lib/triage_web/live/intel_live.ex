@@ -67,12 +67,15 @@ defmodule TriageWeb.IntelLive do
         subtitle="Cached public advisories and news, with their provenance and freshness."
       />
 
-      <p id="intel-banner" class="supporting">
-        Local inventory is never written from here, and this page never downloads anything.
-        Adapters run only through <code>mix triage.intel --kev</code> (and an explicitly
-        enabled source) with operator approval; a failed refresh keeps the last good cache
-        and records a receipt. Public intelligence is not a statement about this estate.
-      </p>
+      <details id="intel-policy-help">
+        <summary>Refresh policy and limitations</summary>
+        <p id="intel-banner" class="supporting">
+          Local inventory is never written from here, and this page never downloads anything.
+          Adapters run only through <code>mix triage.intel --kev</code> (and an explicitly
+          enabled source) with operator approval; a failed refresh keeps the last good cache
+          and records a receipt. Public intelligence is not a statement about this estate.
+        </p>
+      </details>
 
       <dl class="metric-strip metric-strip-compact" aria-label="Intel cache state">
         <div>
@@ -99,12 +102,15 @@ defmodule TriageWeb.IntelLive do
         </div>
       </dl>
 
-      <p id="intel-source-policy" class="supporting">
-        Each source must be both enabled and named before it may be refreshed; an unnamed
-        source is refused, so the configuration is a restriction rather than a statement of
-        intent. This build is a local, synthetic-data demo: an empty cache is expected and
-        means nothing has been fetched, not that nothing is published.
-      </p>
+      <details id="intel-source-help">
+        <summary>Source configuration</summary>
+        <p id="intel-source-policy" class="supporting">
+          Each source must be both enabled and named before it may be refreshed; an unnamed
+          source is refused, so the configuration is a restriction rather than a statement of
+          intent. This build is a local, synthetic-data demo: an empty cache is expected and
+          means nothing has been fetched, not that nothing is published.
+        </p>
+      </details>
 
       <.notice :if={@news_error?} id="intel-news-error" kind="warning" role="alert">
         The cached news read failed. This is a read failure, not an empty cache.

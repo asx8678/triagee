@@ -12,6 +12,17 @@ defmodule TriageWeb.OverviewReadabilityTest do
     assert has_element?(view, "#nav-findings[aria-current='page']")
   end
 
+  test "filters are quiet by default but visible for active or invalid input", %{conn: conn} do
+    {:ok, view, _} = live(conn, "/")
+    assert has_element?(view, "#inventory-filters:not([open])")
+    assert has_element?(view, "#inventory-search-details:not([open])")
+
+    for query <- ["severity=HIGH", "sort=cve", "owner[]=invalid"] do
+      {:ok, filtered, _} = live(conn, "/?" <> query)
+      assert has_element?(filtered, "#inventory-filters[open]")
+    end
+  end
+
   test "old inventory bookmark still opens the same workspace", %{conn: conn} do
     {:ok, view, _} = live(conn, "/findings")
     assert has_element?(view, "h1", "Vulnerabilities")

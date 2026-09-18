@@ -411,16 +411,20 @@ defmodule TriageWeb.CveLive.Show do
 
           <section id="cve-triage" class="assessment-panel stack" aria-labelledby="cve-triage-title">
             <h2 id="cve-triage-title">Triage / action required</h2>
-            <p>
-              Choose the package, team and environment to assess. Open assessment exposes
-              applicability, priority, next action and rationale. Each case covers only this
-              occurrence and scope — never every occurrence of the CVE.
-            </p>
-            <p class="supporting">
-              Local exceptions never lower scanner severity or remove inventory/report rows. Status is checked on page load.
-              Opening an existing case keeps its evidence and history. Opening a new case
-              captures local evidence; simply viewing this page writes nothing.
-            </p>
+            <p>Choose a package, team and environment. Each assessment covers only that scope.</p>
+            <details id="cve-assessment-help" class="disclosure">
+              <summary>How assessments work</summary>
+              <p>
+                Choose the package, team and environment to assess. Open assessment exposes
+                applicability, priority, next action and rationale. Each case covers only this
+                occurrence and scope — never every occurrence of the CVE.
+              </p>
+              <p class="supporting">
+                Local exceptions never lower scanner severity or remove inventory/report rows. Status is checked on page load.
+                Opening an existing case keeps its evidence and history. Opening a new case
+                captures local evidence; simply viewing this page writes nothing.
+              </p>
+            </details>
             <p :if={@triage_error} id="cve-triage-error" class="notice" role="alert">
               {@triage_error}
             </p>

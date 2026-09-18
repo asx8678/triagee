@@ -233,36 +233,43 @@ defmodule TriageWeb.CaseLive.Index do
       <p id="queue-banner" class="supporting">
         Browsing does not open cases or write assessments. Recorded assessments are local-operator history, not approval or remediation.
       </p>
-      <section class="filter-toolbar" aria-label="Queue filters and actions">
-        <.form id="queue-filters" for={@filter_form} phx-change="filter" class="cluster">
-          <.input
-            type="select"
-            label="Team"
-            name="owner"
-            value={@filters[:owner]}
-            options={scope_options(@options[:owners], @filters[:owner], "All teams")}
-          />
-          <.input
-            type="select"
-            label="Environment"
-            name="environment"
-            value={@filters[:environment]}
-            options={
-              scope_options(@options[:environments], @filters[:environment], "All environments")
-            }
-          />
-        </.form>
-        <div class="cluster">
-          <button
-            id="reload-queue"
-            type="button"
-            phx-click="reload"
-            phx-disable-with="Reloading…"
-            class="button button-secondary"
-          >Reload queue</button>
-          <.link id="clear-filters" patch={~p"/cases"} class="button button-secondary">Clear filters</.link>
-        </div>
-      </section>
+      <details
+        id="case-filter-details"
+        class="disclosure"
+        open={@filters[:owner] != nil or @filters[:environment] != nil or @queue_error != nil}
+      >
+        <summary>Filters and queue actions</summary>
+        <section class="filter-toolbar" aria-label="Queue filters and actions">
+          <.form id="queue-filters" for={@filter_form} phx-change="filter" class="cluster">
+            <.input
+              type="select"
+              label="Team"
+              name="owner"
+              value={@filters[:owner]}
+              options={scope_options(@options[:owners], @filters[:owner], "All teams")}
+            />
+            <.input
+              type="select"
+              label="Environment"
+              name="environment"
+              value={@filters[:environment]}
+              options={
+                scope_options(@options[:environments], @filters[:environment], "All environments")
+              }
+            />
+          </.form>
+          <div class="cluster">
+            <button
+              id="reload-queue"
+              type="button"
+              phx-click="reload"
+              phx-disable-with="Reloading…"
+              class="button button-secondary"
+            >Reload queue</button>
+            <.link id="clear-filters" patch={~p"/cases"} class="button button-secondary">Clear filters</.link>
+          </div>
+        </section>
+      </details>
       <.notice :if={@queue_error} id="queue-error" kind="error" role="alert">
         Queue could not be loaded. Invalid parameters never widen scope or retain previous rows. Use plain-text filters (up to 120 characters) and a positive whole-number cursor. Correct the address, clear filters, or retry “Reload queue”.
       </.notice>

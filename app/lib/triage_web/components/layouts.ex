@@ -61,8 +61,7 @@ defmodule TriageWeb.Layouts do
           aria-label="Environment and safety"
         >
           <div class="cluster environment-summary">
-            <strong>Local workspace · No sign-in · {@runtime.binding}</strong>
-            <span>Collection disabled · Production coverage unknown</span>
+            <strong>Local · No sign-in · {@runtime.binding}</strong>
           </div>
           <details id="safety-details">
             <summary>Safety details</summary>

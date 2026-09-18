@@ -690,11 +690,14 @@ defmodule TriageWeb.CaseLive.Show do
           <section id="case-local-exception" class="assessment-panel stack">
             <h2>Local exception / action status</h2>
             <p id="case-exception-status">{Exceptions.label(@exception_status)}</p>
-            <p>
-              Remediation and investigation belong in the assessment below. To temporarily suppress
-              this occurrence or record “not affected”, use a separate scoped decision with a reason,
-              evidence and a review date. This does not change scanner severity or remote suppression.
-            </p>
+            <details id="case-exception-help" class="disclosure">
+              <summary>When to use a local exception</summary>
+              <p>
+                Remediation and investigation belong in the assessment below. To temporarily suppress
+                this occurrence or record “not affected”, use a separate scoped decision with a reason,
+                evidence and a review date. This does not change scanner severity or remote suppression.
+              </p>
+            </details>
             <.link
               id="case-exception-action"
               navigate={~p"/cases/#{@case.id}/exception"}

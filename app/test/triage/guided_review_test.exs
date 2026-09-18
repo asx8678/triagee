@@ -1,5 +1,5 @@
 defmodule Triage.GuidedReviewTest do
-  use Triage.DataCase, async: true
+  use Triage.DataCase, async: false
 
   import Triage.Fixtures
   alias Triage.{Decisions, Exposure, GuidedReview, Intel}
@@ -127,6 +127,40 @@ defmodule Triage.GuidedReviewTest do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     context.finding |> Ecto.Changeset.change(resolved_at: now) |> Repo.update!()
     assert_stale(context)
+  end
+
+  # A real second PostgreSQL session, not a sandbox-shared Task: DML takes a
+  # ROW EXCLUSIVE lock even if no row matches. No committed fixtures or cleanup
+  # are needed to prove the acceptance boundary conflicts with every writer.
+  for table <-
+        ~w(advisory_decisions exposure_evidences findings image_placements images intel_advisories remediation_requests) do
+    test "rejects acceptance while #{table} has an in-flight writer", context do
+      connection = writer_connection!()
+      Postgrex.query!(connection, "BEGIN", [])
+      Postgrex.query!(connection, "UPDATE #{unquote(table)} SET id = id WHERE id = -1", [])
+      assert_stale(context)
+      Postgrex.query!(connection, "ROLLBACK", [])
+    end
+
+    test "acceptance excludes concurrent writes to #{table} until commit", context do
+      assert {:ok, _} = accept(context)
+      connection = writer_connection!()
+      Postgrex.query!(connection, "BEGIN", [])
+
+      assert {:error, %Postgrex.Error{postgres: %{code: :lock_not_available}}} =
+               Postgrex.query(
+                 connection,
+                 "LOCK TABLE #{unquote(table)} IN ROW EXCLUSIVE MODE NOWAIT",
+                 []
+               )
+
+      Postgrex.query!(connection, "ROLLBACK", [])
+    end
+  end
+
+  defp writer_connection! do
+    options = Keyword.take(Repo.config(), [:hostname, :port, :username, :password, :database])
+    start_supervised!({Postgrex, options})
   end
 
   defp accept(context) do

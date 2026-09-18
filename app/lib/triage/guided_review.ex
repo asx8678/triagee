@@ -36,16 +36,47 @@ defmodule Triage.GuidedReview do
          true <- is_binary(expires_on),
          {:ok, date} <- Date.from_iso8601(expires_on),
          true <- Date.compare(date, Date.utc_today()) != :lt do
-      case get(cve) do
-        nil ->
-          {:error, :review_changed}
-
-        row ->
-          accept_review(row, cve, reason, date, expected_fingerprint)
-      end
+      accept_locked_review(cve, reason, date, expected_fingerprint)
     else
       _ -> {:error, :invalid_whitelist}
     end
+  end
+
+  # Query.load/1 reads all seven tables. Lock them before its first read and
+  # retain the locks through the decision insert. PostgreSQL DML automatically
+  # participates, including inserts of new scopes and direct SQL writers.
+  # This deliberately coarse boundary suits local single-operator use: unrelated
+  # writes may require a retry. NOWAIT avoids lock-upgrade deadlocks and prevents
+  # an acceptance from sitting behind a long import. Keep this list in sync with
+  # Query.load/1 when adding evidence sources.
+  @review_tables "advisory_decisions, exposure_evidences, findings, image_placements, images, intel_advisories, remediation_requests"
+
+  defp accept_locked_review(cve, reason, date, expected_fingerprint) do
+    Repo.transaction(fn ->
+      case Repo.query("LOCK TABLE #{@review_tables} IN SHARE ROW EXCLUSIVE MODE NOWAIT", [],
+             mode: :savepoint
+           ) do
+        {:ok, _} ->
+          :ok
+
+        {:error, %Postgrex.Error{postgres: %{code: :lock_not_available}}} ->
+          Repo.rollback(:review_changed)
+
+        {:error, error} ->
+          raise error
+      end
+
+      result =
+        case get(cve) do
+          nil -> {:error, :review_changed}
+          row -> accept_review(row, cve, reason, date, expected_fingerprint)
+        end
+
+      case result do
+        {:ok, decision} -> decision
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   defp accept_review(row, cve, reason, date, expected_fingerprint) do
@@ -146,23 +177,24 @@ defmodule Triage.GuidedReview do
   @doc "Atomically plans up to 25 explicitly previewed CVEs; never sends tickets or accepts risk."
   def bulk_mark_for_fix(reviews) when is_map(reviews) and map_size(reviews) in 1..25 do
     Repo.transaction(fn ->
-      plans =
-        Enum.flat_map(reviews, fn {cve, expected} ->
-          case get(cve) do
-            nil ->
-              Repo.rollback(:review_changed)
-
-            row ->
-              if review_fingerprint(row) != expected, do: Repo.rollback(:review_changed)
-              Enum.map(row.pending, &ticket_plan(row, &1))
-          end
-        end)
+      plans = Enum.flat_map(reviews, &reviewed_plans/1)
 
       Enum.map(plans, &persist/1)
     end)
   end
 
   def bulk_mark_for_fix(_), do: {:error, :invalid_selection}
+
+  defp reviewed_plans({cve, expected}) do
+    case get(cve) do
+      nil ->
+        Repo.rollback(:review_changed)
+
+      row ->
+        if review_fingerprint(row) != expected, do: Repo.rollback(:review_changed)
+        Enum.map(row.pending, &ticket_plan(row, &1))
+    end
+  end
 
   def mark_for_fix(cve) do
     with {:ok, plans} <- preview(cve) do

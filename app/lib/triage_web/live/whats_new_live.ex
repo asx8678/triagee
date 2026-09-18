@@ -202,38 +202,50 @@ defmodule TriageWeb.WhatsNewLive do
         </:actions>
       </.page_header>
 
-      <.filter_bar id="whats-new-form" form={@filter_form} change="filter">
-        <.input
-          field={@filter_form[:owner]}
-          type="select"
-          label="Team"
-          options={display_scope_options(@options[:owners], @filter_form[:owner].value, "All teams")}
-        />
-        <.input
-          field={@filter_form[:environment]}
-          type="select"
-          label="Environment"
-          options={
-            display_scope_options(
-              @options[:environments],
-              @filter_form[:environment].value,
-              "All environments"
-            )
-          }
-        />
-        <:actions>
-          <.link id="reset-activity" patch={~p"/whats-new"} class="button button-secondary">
-            Reset
-          </.link>
-        </:actions>
-      </.filter_bar>
+      <details
+        id="activity-filter-details"
+        class="disclosure"
+        open={@filters[:owner] != nil or @filters[:environment] != nil or @feed_error != nil}
+      >
+        <summary>Filters</summary>
+        <.filter_bar id="whats-new-form" form={@filter_form} change="filter">
+          <.input
+            field={@filter_form[:owner]}
+            type="select"
+            label="Team"
+            options={
+              display_scope_options(@options[:owners], @filter_form[:owner].value, "All teams")
+            }
+          />
+          <.input
+            field={@filter_form[:environment]}
+            type="select"
+            label="Environment"
+            options={
+              display_scope_options(
+                @options[:environments],
+                @filter_form[:environment].value,
+                "All environments"
+              )
+            }
+          />
+          <:actions>
+            <.link id="reset-activity" patch={~p"/whats-new"} class="button button-secondary">
+              Reset
+            </.link>
+          </:actions>
+        </.filter_bar>
+      </details>
 
-      <.notice id="feed-banner" kind="info">
-        Filters match a recorded placement on the same image, including inactive placements — not historical event ownership.
-        They never claim a past event belonged to that team at the time; display scoping is not authorization.
-        Recorded observation time is when the collector recorded the observation, not CVE publication,
-        scan completion, a verified fix, or approval. Missing events do not establish a clean estate.
-      </.notice>
+      <details id="activity-help" class="disclosure supporting">
+        <summary>Local observations · not proof of a fix. About scope and dates</summary>
+        <.notice id="feed-banner" kind="info">
+          Filters match a recorded placement on the same image, including inactive placements — not historical event ownership.
+          They never claim a past event belonged to that team at the time; display scoping is not authorization.
+          Recorded observation time is when the collector recorded the observation, not CVE publication,
+          scan completion, a verified fix, or approval. Missing events do not establish a clean estate.
+        </.notice>
+      </details>
 
       <div :if={@feed_error} id="events-error" class="notice" role="alert">
         <h2>Activity could not be loaded</h2>

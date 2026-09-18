@@ -128,9 +128,12 @@ defmodule TriageWeb.ReplayHistoryLive do
         <p id="replay-history-safety" class="supporting">
           Saved synthetic summaries, not live evidence. Non-actionable; inventory unchanged. Receipt times are local storage times, not source history. Browsing never reruns or saves a replay.
         </p>
-        <p id="replay-history-order" class="supporting">
-          Oldest retained first, by receipt ID. Up to 25 unexpired receipts per page. Receipts expire after 30 days; expired receipts are hidden. No automatic refresh.
-        </p>
+        <details id="replay-history-help" class="disclosure">
+          <summary>Retention and ordering</summary>
+          <p id="replay-history-order" class="supporting">
+            Oldest retained first, by receipt ID. Up to 25 unexpired receipts per page. Receipts expire after 30 days; expired receipts are hidden. No automatic refresh.
+          </p>
+        </details>
         <nav class="filter-toolbar" aria-label="Replay history pages">
           <%= if @cursor == 0 and is_nil(@error) do %>
             <button

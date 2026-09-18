@@ -1,7 +1,7 @@
 defmodule TriageWeb.GuidedReviewLive do
   @moduledoc "Action-required queue with a four-step, human-confirmed triage workflow."
   use TriageWeb, :live_view
-  alias Triage.{GuidedReview, ReviewIntegrations}
+  alias Triage.{GuidedReview, ReviewIntegrations, ReviewProgress}
 
   @queue_filters ~w(q team severity kev exposure)
 
@@ -39,7 +39,7 @@ defmodule TriageWeb.GuidedReviewLive do
        bulk_message: nil,
        row: row,
        review_fingerprint: if(row, do: GuidedReview.review_fingerprint(row)),
-       step: 1,
+       step: ReviewProgress.step(row),
        plans: [],
        fingerprint: nil,
        advice: nil,
@@ -120,16 +120,32 @@ defmodule TriageWeb.GuidedReviewLive do
 
   def handle_event("next", _, %{assigns: %{row: row, step: step}} = socket)
       when not is_nil(row) and step < 4 do
-    socket = assign(socket, step: step + 1, error: nil)
-    {:noreply, if(step == 3, do: preview(socket), else: socket)}
+    case ReviewProgress.save(row, step + 1) do
+      {:ok, _} ->
+        socket = assign(socket, step: step + 1, error: nil)
+        {:noreply, if(step == 3, do: preview(socket), else: socket)}
+
+      {:error, _} ->
+        {:noreply, assign(socket, error: "Review progress could not be saved. Please retry.")}
+    end
   end
 
   def handle_event("back", _, socket) do
-    {:noreply, assign(socket, step: max(1, socket.assigns.step - 1), error: nil)}
+    step = max(1, socket.assigns.step - 1)
+
+    case socket.assigns.row && ReviewProgress.save(socket.assigns.row, step) do
+      {:error, _} ->
+        {:noreply, assign(socket, error: "Review progress could not be saved. Please retry.")}
+
+      _ ->
+        {:noreply, assign(socket, step: step, error: nil)}
+    end
   end
 
   def handle_event("assess", _, %{assigns: %{step: 3, row: row, ai_busy: false}} = socket)
       when not is_nil(row) do
+    request = {:advice, row.cve, GuidedReview.review_fingerprint(row), make_ref()}
+
     input = %{
       cve: row.cve,
       descriptions: row.descriptions,
@@ -152,8 +168,8 @@ defmodule TriageWeb.GuidedReviewLive do
 
     {:noreply,
      socket
-     |> assign(ai_busy: true, advice: nil)
-     |> start_async({:advice, row.cve}, fn -> ReviewIntegrations.assess(input) end)}
+     |> assign(ai_busy: true, advice: nil, advice_request: request)
+     |> start_async(request, fn -> ReviewIntegrations.assess(input) end)}
   end
 
   def handle_event(
@@ -237,13 +253,25 @@ defmodule TriageWeb.GuidedReviewLive do
 
   def handle_event(_, _, socket), do: {:noreply, socket}
 
-  def handle_async({:advice, cve}, {:ok, result}, %{assigns: %{cve: cve}} = socket) do
-    {:noreply, assign(socket, advice: result, ai_busy: false)}
-  end
+  def handle_async(
+        {:advice, cve, fingerprint, _} = request,
+        outcome,
+        %{assigns: %{cve: cve, advice_request: request, ai_busy: true}} = socket
+      ) do
+    current = GuidedReview.get(cve)
 
-  def handle_async({:advice, cve}, {:exit, _}, %{assigns: %{cve: cve}} = socket) do
-    {:noreply,
-     assign(socket, advice: {:error, "Internal AI failed. No action was taken."}, ai_busy: false)}
+    advice =
+      if current && GuidedReview.review_fingerprint(current) == fingerprint &&
+           socket.assigns.review_fingerprint == fingerprint do
+        case outcome do
+          {:ok, result} -> result
+          _ -> {:error, "Internal AI failed. No action was taken."}
+        end
+      else
+        {:error, "Evidence changed. Review the current evidence before requesting advice again."}
+      end
+
+    {:noreply, assign(socket, advice: advice, ai_busy: false, advice_request: nil)}
   end
 
   def handle_async({:tickets, cve}, {:ok, {:ok, receipts}}, %{assigns: %{cve: cve}} = socket) do
@@ -326,118 +354,131 @@ defmodule TriageWeb.GuidedReviewLive do
     <Layouts.app flash={@flash} active_page="triage">
       <.page_header
         title="Action required"
-        subtitle="Only CVEs that still need a decision or a remediation ticket. Work through one issue at a time."
+        subtitle="Review a CVE. Decide what happens next."
       />
-      <p id="review-keyboard-help" class="supporting" phx-window-keydown="review_shortcut">
-        Keyboard: Alt + Right advances the review; Alt + Left goes back. Shortcuts never confirm actions.
-      </p>
-      <p class="supporting" id="guided-scope-note">
-        All severities · active services only. Fixed, whitelisted and fully ticketed scopes are excluded. A ticket means remediation requested, not fixed.
-      </p>
+      <details id="review-help">
+        <summary>How this queue works</summary>
+        <p id="review-keyboard-help" class="supporting" phx-window-keydown="review_shortcut">
+          Keyboard: Alt + Right advances the review; Alt + Left goes back. Shortcuts never confirm actions.
+        </p>
+        <p class="supporting" id="guided-scope-note">
+          All severities · active services only. Fixed, whitelisted and fully ticketed scopes are excluded. A ticket means remediation requested, not fixed.
+        </p>
+      </details>
       <p class="supporting">
         <.link navigate={~p"/triage/history"}>Previous assessments</.link>
         · <.link navigate={~p"/findings"}>All vulnerabilities</.link>
       </p>
 
       <section :if={is_nil(@cve)} id="action-queue" aria-label="CVEs requiring action">
-        <details class="queue-saved-views">
-          <summary>Saved views</summary>
-          <section
-            id="saved-queue-filters"
-            phx-hook="SavedQueueFilters"
-            phx-update="ignore"
-            aria-label="Saved filter combinations"
-          >
-            <p>
-              Saved on this browser only. Apply filters before saving. Saving the same name replaces it. Do not save sensitive search terms on shared devices.
-            </p>
-            <label for="saved-filter-name">View name</label>
-            <input id="saved-filter-name" maxlength="80" />
-            <button type="button" class="button button-secondary" data-saved-action="save">Save applied filters</button>
-            <label for="saved-filter-choice">Saved filters</label>
-            <select id="saved-filter-choice"><option value="">Choose saved filters</option></select>
-            <button type="button" class="button button-secondary" data-saved-action="load">Load</button>
-            <button type="button" class="button button-secondary" data-saved-action="delete">Delete</button>
-            <p role="status" aria-live="polite"></p>
-          </section>
+        <details
+          id="queue-filter-options"
+          open={Enum.any?(@queue_filters, fn {_, value} -> value != "" end)}
+        >
+          <summary>
+            Filters & saved views{if Enum.any?(@queue_filters, fn {_, value} -> value != "" end),
+              do: " · active",
+              else: ""}
+          </summary>
+          <details class="queue-saved-views">
+            <summary>Saved views</summary>
+            <section
+              id="saved-queue-filters"
+              phx-hook="SavedQueueFilters"
+              phx-update="ignore"
+              aria-label="Saved filter combinations"
+            >
+              <p>
+                Saved on this browser only. Apply filters before saving. Saving the same name replaces it. Do not save sensitive search terms on shared devices.
+              </p>
+              <label for="saved-filter-name">View name</label>
+              <input id="saved-filter-name" maxlength="80" />
+              <button type="button" class="button button-secondary" data-saved-action="save">Save applied filters</button>
+              <label for="saved-filter-choice">Saved filters</label>
+              <select id="saved-filter-choice"><option value="">Choose saved filters</option></select>
+              <button type="button" class="button button-secondary" data-saved-action="load">Load</button>
+              <button type="button" class="button button-secondary" data-saved-action="delete">Delete</button>
+              <p role="status" aria-live="polite"></p>
+            </section>
+          </details>
+          <form id="queue-filters" class="queue-filter-grid" phx-submit="filter_queue">
+            <div class="queue-filter-field">
+              <label for="queue-search">Search CVE, package or image</label>
+              <input
+                id="queue-search"
+                name="q"
+                type="search"
+                maxlength="200"
+                value={filter_value(@queue_filters, "q")}
+              />
+            </div>
+            <div class="queue-filter-field">
+              <label for="queue-team">Team (exact name)</label>
+              <input
+                id="queue-team"
+                name="team"
+                maxlength="200"
+                value={filter_value(@queue_filters, "team")}
+              />
+            </div>
+            <div class="queue-filter-field">
+              <label for="queue-severity">Scanner severity</label>
+              <select id="queue-severity" name="severity">
+                <option
+                  :for={value <- ["" | Triage.Severity.order()]}
+                  value={value}
+                  selected={filter_value(@queue_filters, "severity") == value}
+                >
+                  {if value == "", do: "All severities", else: value}
+                </option>
+              </select>
+            </div>
+            <div class="queue-filter-field">
+              <label for="queue-kev">KEV cache</label>
+              <select id="queue-kev" name="kev">
+                <option
+                  :for={
+                    {label, value} <- [
+                      {"Any KEV status", ""},
+                      {"Listed", "yes"},
+                      {"Not listed (not proof of safety)", "no"}
+                    ]
+                  }
+                  value={value}
+                  selected={filter_value(@queue_filters, "kev") == value}
+                >
+                  {label}
+                </option>
+              </select>
+            </div>
+            <div class="queue-filter-field">
+              <label for="queue-exposure">Exposure</label>
+              <select id="queue-exposure" name="exposure">
+                <option
+                  :for={
+                    {label, value} <- [
+                      {"Any exposure", ""},
+                      {"Internet exposed", "internet_exposed"},
+                      {"Internal", "internal"},
+                      {"Unknown", "unknown"}
+                    ]
+                  }
+                  value={value}
+                  selected={filter_value(@queue_filters, "exposure") == value}
+                >
+                  {label}
+                </option>
+              </select>
+            </div>
+            <div class="queue-filter-actions">
+              <button type="submit" class="button">Apply filters</button>
+              <.link patch={~p"/triage"}>Clear filters</.link>
+            </div>
+          </form>
+          <p class="supporting">
+            Highest review priority first, then CVE. Filters match active scopes; each review includes all affected teams. Restart from the first page when evidence changes.
+          </p>
         </details>
-        <form id="queue-filters" class="queue-filter-grid" phx-submit="filter_queue">
-          <div class="queue-filter-field">
-            <label for="queue-search">Search CVE, package or image</label>
-            <input
-              id="queue-search"
-              name="q"
-              type="search"
-              maxlength="200"
-              value={filter_value(@queue_filters, "q")}
-            />
-          </div>
-          <div class="queue-filter-field">
-            <label for="queue-team">Team (exact name)</label>
-            <input
-              id="queue-team"
-              name="team"
-              maxlength="200"
-              value={filter_value(@queue_filters, "team")}
-            />
-          </div>
-          <div class="queue-filter-field">
-            <label for="queue-severity">Scanner severity</label>
-            <select id="queue-severity" name="severity">
-              <option
-                :for={value <- ["" | Triage.Severity.order()]}
-                value={value}
-                selected={filter_value(@queue_filters, "severity") == value}
-              >
-                {if value == "", do: "All severities", else: value}
-              </option>
-            </select>
-          </div>
-          <div class="queue-filter-field">
-            <label for="queue-kev">KEV cache</label>
-            <select id="queue-kev" name="kev">
-              <option
-                :for={
-                  {label, value} <- [
-                    {"Any KEV status", ""},
-                    {"Listed", "yes"},
-                    {"Not listed (not proof of safety)", "no"}
-                  ]
-                }
-                value={value}
-                selected={filter_value(@queue_filters, "kev") == value}
-              >
-                {label}
-              </option>
-            </select>
-          </div>
-          <div class="queue-filter-field">
-            <label for="queue-exposure">Exposure</label>
-            <select id="queue-exposure" name="exposure">
-              <option
-                :for={
-                  {label, value} <- [
-                    {"Any exposure", ""},
-                    {"Internet exposed", "internet_exposed"},
-                    {"Internal", "internal"},
-                    {"Unknown", "unknown"}
-                  ]
-                }
-                value={value}
-                selected={filter_value(@queue_filters, "exposure") == value}
-              >
-                {label}
-              </option>
-            </select>
-          </div>
-          <div class="queue-filter-actions">
-            <button type="submit" class="button">Apply filters</button>
-            <.link patch={~p"/triage"}>Clear filters</.link>
-          </div>
-        </form>
-        <p class="supporting">
-          Highest review priority first, then CVE. Filters match active scopes; each review includes all affected teams. Restart from the first page when evidence changes.
-        </p>
         <h2>
           {length(@queue)} {if length(@queue) == 1, do: "CVE needs", else: "CVEs need"} action on this page
         </h2>
@@ -449,7 +490,11 @@ defmodule TriageWeb.GuidedReviewLive do
         <div :if={@queue != []} class="review-queue-heading" aria-hidden="true">
           <span>CVE</span><span>Priority</span><span>Description</span><span>Libraries</span><span>Teams</span><span>Review</span>
         </div>
-        <section id="bulk-remediation" aria-label="Bulk remediation planning">
+        <section
+          :if={@bulk_selection != [] or not is_nil(@bulk_message)}
+          id="bulk-remediation"
+          aria-label="Bulk remediation planning"
+        >
           <p>Select up to 25 CVEs on this page. Planning does not accept risk or send tickets.</p>
           <button
             id="bulk-preview"

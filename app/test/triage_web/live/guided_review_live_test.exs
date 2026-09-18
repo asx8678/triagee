@@ -19,6 +19,114 @@ defmodule TriageWeb.GuidedReviewLiveTest do
     %{finding: finding, image: image, placement: placement}
   end
 
+  test "unavailable progress database preserves step and requests retry" do
+    row = GuidedReview.get("CVE-2024-3094")
+
+    {:ok, repo} =
+      start_supervised(
+        {Repo,
+         name: :unavailable_progress_repo,
+         hostname: "127.0.0.1",
+         port: 1,
+         pool: DBConnection.ConnectionPool,
+         pool_size: 1,
+         queue_target: 1,
+         queue_interval: 1,
+         timeout: 50,
+         connect_timeout: 50}
+      )
+
+    previous = Repo.put_dynamic_repo(repo)
+
+    try do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, row: row, step: 2, error: nil}
+      }
+
+      assert {:noreply, updated} =
+               TriageWeb.GuidedReviewLive.handle_event("next", %{}, socket)
+
+      assert updated.assigns.step == 2
+      assert updated.assigns.error == "Review progress could not be saved. Please retry."
+    after
+      Repo.put_dynamic_repo(previous)
+    end
+  end
+
+  test "AI completion rejects changed evidence", %{finding: finding} do
+    row = GuidedReview.get("CVE-2024-3094")
+    fingerprint = GuidedReview.review_fingerprint(row)
+    request = {:advice, row.cve, fingerprint, make_ref()}
+
+    socket = %Phoenix.LiveView.Socket{
+      assigns: %{
+        __changed__: %{},
+        cve: row.cve,
+        review_fingerprint: fingerprint,
+        advice_request: request,
+        ai_busy: true,
+        advice: nil
+      }
+    }
+
+    finding |> Ecto.Changeset.change(description: "Changed during AI request") |> Repo.update!()
+
+    assert {:noreply, updated} =
+             TriageWeb.GuidedReviewLive.handle_async(
+               request,
+               {:ok, {:ok, "stale advice"}},
+               socket
+             )
+
+    assert {:error, message} = updated.assigns.advice
+    assert message =~ "Evidence changed"
+    refute updated.assigns.ai_busy
+    assert updated.assigns.advice_request == nil
+  end
+
+  test "AI completion from an older request cannot replace current advice" do
+    row = GuidedReview.get("CVE-2024-3094")
+    fingerprint = GuidedReview.review_fingerprint(row)
+    old_request = {:advice, row.cve, fingerprint, make_ref()}
+    current_request = {:advice, row.cve, fingerprint, make_ref()}
+
+    socket = %Phoenix.LiveView.Socket{
+      assigns: %{
+        __changed__: %{},
+        cve: row.cve,
+        review_fingerprint: fingerprint,
+        advice_request: current_request,
+        ai_busy: true,
+        advice: nil
+      }
+    }
+
+    assert {:noreply, ^socket} =
+             TriageWeb.GuidedReviewLive.handle_async(old_request, {:ok, {:ok, "old"}}, socket)
+  end
+
+  test "review navigation survives remount without restoring action authorization", %{conn: conn} do
+    {:ok, view, _} = live(conn, "/triage/CVE-2024-3094")
+    for _ <- 1..3, do: view |> element("#review-next") |> render_click()
+    assert Triage.ReviewProgress.step(GuidedReview.get("CVE-2024-3094")) == 4
+    GenServer.stop(view.pid)
+    {:ok, resumed, _} = live(conn, "/triage/CVE-2024-3094")
+    assert has_element?(resumed, "#review-progress", "Step 4 of 4")
+    assert has_element?(resumed, "#confirm-team-tickets[disabled]")
+    assert GuidedReview.requests("CVE-2024-3094") == []
+    render_click(resumed, "back")
+    assert Triage.ReviewProgress.step(GuidedReview.get("CVE-2024-3094")) == 3
+  end
+
+  test "changed evidence resets persisted navigation", %{conn: conn, finding: finding} do
+    {:ok, view, _} = live(conn, "/triage/CVE-2024-3094")
+    view |> element("#review-next") |> render_click()
+    finding |> Ecto.Changeset.change(description: "New evidence") |> Repo.update!()
+    GenServer.stop(view.pid)
+    {:ok, resumed, _} = live(conn, "/triage/CVE-2024-3094")
+    assert has_element?(resumed, "#review-progress", "Step 1 of 4")
+  end
+
   test "bulk planning requires preview and confirmation and never accepts risk", %{conn: conn} do
     {:ok, view, _} = live(conn, "/triage")
     render_hook(view, "bulk_confirm", %{})
@@ -58,7 +166,7 @@ defmodule TriageWeb.GuidedReviewLiveTest do
   } do
     {:ok, view, _} = live(conn, "/triage")
     render_hook(view, "bulk_toggle", %{"cve" => "CVE-FORGED"})
-    assert has_element?(view, "#bulk-preview[disabled]")
+    refute has_element?(view, "#bulk-preview")
     view |> element("#select-CVE-2024-3094") |> render_click()
     view |> element("#bulk-preview") |> render_click()
     render_hook(view, "filter_queue", %{"team" => "alpha"})
@@ -77,6 +185,9 @@ defmodule TriageWeb.GuidedReviewLiveTest do
     {:ok, view, _} = live(conn, "/triage")
     assert has_element?(view, "#saved-queue-filters[phx-hook='SavedQueueFilters']")
     assert has_element?(view, "#saved-filter-name[maxlength='80']")
+    refute has_element?(view, "#queue-filter-options[open]")
+    refute has_element?(view, "#review-help[open]")
+    assert has_element?(view, "#review-help #guided-scope-note")
 
     render_hook(view, "filter_queue", %{
       "team" => "alpha",
@@ -85,6 +196,7 @@ defmodule TriageWeb.GuidedReviewLiveTest do
     })
 
     assert_patch(view, "/triage?team=alpha")
+    assert has_element?(view, "#queue-filter-options[open]")
     assert has_element?(view, "#action-CVE-2024-3094")
   end
 

@@ -36,6 +36,37 @@ defmodule TriageWeb.ActivityReadabilityTest do
     assert has_element?(view, "#event-relative-#{resolved.id}")
   end
 
+  test "secondary controls collapse without hiding active scope", %{conn: conn} do
+    for {path, id} <- [
+          {"/cases", "case-filter-details"},
+          {"/whats-new", "activity-filter-details"}
+        ] do
+      {:ok, view, _} = live(conn, path)
+      assert has_element?(view, "details##{id}:not([open]) > summary")
+      {:ok, scoped, _} = live(conn, path <> "?owner=alpha")
+      assert has_element?(scoped, "details##{id}[open]")
+    end
+  end
+
+  test "long explanations are disclosed with visible evidence limitations", %{conn: conn} do
+    {:ok, activity, _} = live(conn, "/whats-new")
+    assert has_element?(activity, "#activity-help:not([open]) > summary", "not proof of a fix")
+    assert has_element?(activity, "#activity-help #feed-banner", "not historical event ownership")
+    {:ok, statistics, _} = live(conn, "/statistics")
+
+    assert has_element?(
+             statistics,
+             "#statistics-help:not([open]) > summary",
+             "not verified remediation"
+           )
+
+    assert has_element?(
+             statistics,
+             "#statistics-help #statistics-note",
+             "not verified remediation"
+           )
+  end
+
   defp feed!(seed, event_name, occurred_at) do
     image =
       Repo.insert!(%Image{

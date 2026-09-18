@@ -154,13 +154,16 @@ defmodule Triage.CasesQueueTest do
   # latency claim.
   defp count_queries(fun) do
     counter = :counters.new(1, [])
+    caller = self()
     id = "cases-queue-" <> Integer.to_string(:erlang.unique_integer([:positive, :monotonic]))
 
     :ok =
       :telemetry.attach(
         id,
         [:triage, :repo, :query],
-        fn _event, _measurements, _metadata, _config -> :counters.add(counter, 1, 1) end,
+        fn _event, _measurements, _metadata, _config ->
+          if self() == caller, do: :counters.add(counter, 1, 1)
+        end,
         nil
       )
 

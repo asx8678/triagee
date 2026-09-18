@@ -65,15 +65,18 @@ defmodule TriageWeb.StatisticsLive do
         </:actions>
       </.page_header>
 
-      <.notice id="statistics-note" kind="info">
-        Dates come from local collection records: first local observation and the most recent
-        recorded disappearance. "No longer observed" means the occurrence vanished from an
-        eligible local collection — it is not verified remediation, a fixed version claim,
-        CVE publication, or approval. Green and red only compare elapsed observation time
-        with the local review target. Whitelist timing means a recorded operator decision, not a fix.
-        Scanner suppression alone has no decision date. Durations start at the earliest recorded
-        detection across this CVE’s occurrences; reopened history is not a per-incident repair timer.
-      </.notice>
+      <details id="statistics-help" class="disclosure supporting">
+        <summary>Local observation timing · not verified remediation. How metrics work</summary>
+        <.notice id="statistics-note" kind="info">
+          Dates come from local collection records: first local observation and the most recent
+          recorded disappearance. "No longer observed" means the occurrence vanished from an
+          eligible local collection — it is not verified remediation, a fixed version claim,
+          CVE publication, or approval. Green and red only compare elapsed observation time
+          with the local review target. Whitelist timing means a recorded operator decision, not a fix.
+          Scanner suppression alone has no decision date. Durations start at the earliest recorded
+          detection across this CVE’s occurrences; reopened history is not a per-incident repair timer.
+        </.notice>
+      </details>
 
       <section id="statistics-cards" class="stat-cards" aria-label="Advisory timing summary">
         <div class="stat-card" id="stat-card-total">

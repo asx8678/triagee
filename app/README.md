@@ -35,8 +35,8 @@ implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener 
 
 - **Findings / CVE details:** inspect recorded inventory, scope, lifecycle and
   cached intelligence. Unknown exposure is not evidence of safety.
-- **Action required (`/triage`):** pages scan 25 candidate CVEs in ascending CVE
-  order. Counts are page-local. Covered/ticketed candidates may leave an empty
+- **Action required (`/triage`):** pages scan 25 candidate CVEs in descending review-priority
+  order, with ascending CVE as the tie-breaker. Counts are page-local. Covered/ticketed candidates may leave an empty
   page with a **Next page** link; continue until no next page remains. Details
   load independently of the current page. **First page** resets the cursor.
 - **Guided review:** understand the CVE, verify teams/exposure, assess risk and

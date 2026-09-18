@@ -308,70 +308,92 @@ defmodule TriageWeb.FindingLive.Index do
         </p>
       </details>
 
-      <.filter_bar id="filter-form" form={@filter_form} change="filter">
-        <.input
-          field={@filter_form[:owner]}
-          type="select"
-          label="Team"
-          options={display_scope_options(@teams, @filter_form[:owner].value, "All teams")}
-        />
-        <.input
-          field={@filter_form[:environment]}
-          type="select"
-          label="Environment"
-          options={
-            display_scope_options(@environments, @filter_form[:environment].value, "All environments")
-          }
-        />
-        <.input
-          field={@filter_form[:q]}
-          type="search"
-          label="Search advisory or package"
-          aria-describedby="inventory-search-help"
-        />
-        <.input
-          field={@filter_form[:severity]}
-          type="select"
-          label="Severity"
-          options={[
-            {"All severities", ""},
-            {"Critical", "CRITICAL"},
-            {"High", "HIGH"},
-            {"Medium", "MEDIUM"},
-            {"Low", "LOW"}
-          ]}
-        />
-        <.input
-          field={@filter_form[:sort]}
-          type="select"
-          label="Sort"
-          options={@sort_options}
-          aria-describedby="findings-order"
-        />
-        <.input field={@filter_form[:suppressed]} type="checkbox" label="Include suppressed" />
-        <:actions>
-          <.link id="reset-findings" patch={~p"/findings"} class="button button-secondary">
-            Clear filters
-          </.link>
-        </:actions>
-        <:summary>
-          <div :if={@invalid_filters == []} id="findings-summary" class="filter-summary" role="status">
-            <strong>{@advisory_count} matching {if @advisory_count == 1,
-              do: "advisory",
-              else: "advisories"}</strong>
-            <span>· {@filters[:owner] || "All teams"} · {@filters[:environment] || "All environments"}</span>
-            <span :if={@filters[:search]}>· Search: “{@filters[:search]}”</span>
-            <span>· {if @filters[:include_suppressed],
-              do: "Including suppressed",
-              else: "Suppressed excluded"}</span>
-            <span id="findings-active-sort">· Order: {sort_label(@filters[:sort])}</span>
-          </div>
-        </:summary>
-      </.filter_bar>
-      <p id="inventory-search-help" class="supporting">
-        Search accepts an advisory id — a partial id matches too — or a package name. A package
-        match keeps the whole advisory group, so other affected packages remain included.
-      </p>
+      <details
+        id="inventory-filters"
+        class="disclosure"
+        open={
+          filter_chips(@filters) != [] or @filters[:sort] != default_sort() or @invalid_filters != []
+        }
+      >
+        <summary>Filters and sort</summary>
+        <.filter_bar id="filter-form" form={@filter_form} change="filter">
+          <.input
+            field={@filter_form[:owner]}
+            type="select"
+            label="Team"
+            options={display_scope_options(@teams, @filter_form[:owner].value, "All teams")}
+          />
+          <.input
+            field={@filter_form[:environment]}
+            type="select"
+            label="Environment"
+            options={
+              display_scope_options(
+                @environments,
+                @filter_form[:environment].value,
+                "All environments"
+              )
+            }
+          />
+          <.input
+            field={@filter_form[:q]}
+            type="search"
+            label="Search advisory or package"
+            aria-describedby="inventory-search-help"
+          />
+          <.input
+            field={@filter_form[:severity]}
+            type="select"
+            label="Severity"
+            options={[
+              {"All severities", ""},
+              {"Critical", "CRITICAL"},
+              {"High", "HIGH"},
+              {"Medium", "MEDIUM"},
+              {"Low", "LOW"}
+            ]}
+          />
+          <.input
+            field={@filter_form[:sort]}
+            type="select"
+            label="Sort"
+            options={@sort_options}
+            aria-describedby="findings-order"
+          />
+          <.input field={@filter_form[:suppressed]} type="checkbox" label="Include suppressed" />
+          <:actions>
+            <.link id="reset-findings" patch={~p"/findings"} class="button button-secondary">
+              Clear filters
+            </.link>
+          </:actions>
+          <:summary>
+            <div
+              :if={@invalid_filters == []}
+              id="findings-summary"
+              class="filter-summary"
+              role="status"
+            >
+              <strong>{@advisory_count} matching {if @advisory_count == 1,
+                do: "advisory",
+                else: "advisories"}</strong>
+              <span>· {@filters[:owner] || "All teams"} · {@filters[:environment] ||
+                "All environments"}</span>
+              <span :if={@filters[:search]}>· Search: “{@filters[:search]}”</span>
+              <span>· {if @filters[:include_suppressed],
+                do: "Including suppressed",
+                else: "Suppressed excluded"}</span>
+              <span id="findings-active-sort">· Order: {sort_label(@filters[:sort])}</span>
+            </div>
+          </:summary>
+        </.filter_bar>
+      </details>
+      <details id="inventory-search-details" class="disclosure supporting">
+        <summary>Search help</summary>
+        <p id="inventory-search-help" class="supporting">
+          Search accepts an advisory id — a partial id matches too — or a package name. A package
+          match keeps the whole advisory group, so other affected packages remain included.
+        </p>
+      </details>
       <.kev_note id="inventory-kev-note" present?={map_size(@kev) > 0} />
       <.kev_source_status id="inventory-kev-status" status={@kev_status} />
 
