@@ -13,8 +13,8 @@ defmodule Triage.Risk do
 
   @policy_version 1
 
-  @severity_weight %{"CRITICAL" => 4, "HIGH" => 3, "MEDIUM" => 2, "LOW" => 1}
   @priorities ~w(critical high medium low)
+  @ranks Map.new(Enum.zip(@priorities, 4..1//-1))
 
   defstruct [:priority, :severity, :exposure, reasons: [], policy_version: @policy_version]
 
@@ -55,7 +55,7 @@ defmodule Triage.Risk do
     known_exploited = get(attrs, :known_exploited) == true
     fix_available = get(attrs, :fix_available) == true
 
-    base = Map.get(@severity_weight, severity, 0)
+    base = Triage.Severity.rank(severity)
 
     {level, reasons} =
       cond do
@@ -87,27 +87,15 @@ defmodule Triage.Risk do
           {2, ["Severity not reported; treating as needing review"]}
       end
 
-    reasons =
-      reasons
-      |> Kernel.++(
-        if exposure == "internal",
-          do: ["Placement declared internal — likelihood input only, severity unchanged"],
-          else: []
-      )
-      |> Kernel.++(
-        if fix_available,
-          do: ["Fix available — remediation information, does not reduce danger"],
-          else: []
-      )
-      |> Kernel.++(
-        if is_nil(get(attrs, :known_exploited)),
-          do: [],
-          else:
-            if(known_exploited,
-              do: [],
-              else: ["Not listed as known exploited — absence is not evidence"]
-            )
-      )
+    additional_reasons = [
+      {exposure == "internal",
+       "Placement declared internal — likelihood input only, severity unchanged"},
+      {fix_available, "Fix available — remediation information, does not reduce danger"},
+      {not is_nil(get(attrs, :known_exploited)) and not known_exploited,
+       "Not listed as known exploited — absence is not evidence"}
+    ]
+
+    reasons = reasons ++ for({true, reason} <- additional_reasons, do: reason)
 
     %__MODULE__{
       priority: priority_for(level),
@@ -125,8 +113,7 @@ defmodule Triage.Risk do
 
   def aggregate([]), do: nil
 
-  defp rank(%__MODULE__{priority: p}),
-    do: Enum.find_index(@priorities |> Enum.reverse(), &(&1 == p)) || 0
+  defp rank(%__MODULE__{priority: priority}), do: Map.fetch!(@ranks, priority)
 
   # Level 4 is the most urgent and `@priorities` is ordered most urgent first,
   # so the label for a level is that list indexed from the top. Reading the
@@ -134,19 +121,12 @@ defmodule Triage.Risk do
   # order and this mapping from drifting apart.
   defp priority_for(level), do: Enum.at(@priorities, 4 - level)
 
-  defp normalize_severity(nil), do: nil
-
-  defp normalize_severity(s) when is_binary(s) do
-    case String.upcase(String.trim(s)) do
-      "CRITICAL" -> "CRITICAL"
-      "HIGH" -> "HIGH"
-      "MEDIUM" -> "MEDIUM"
-      "LOW" -> "LOW"
-      _ -> nil
-    end
-  end
+  defp normalize_severity(value), do: Triage.Severity.normalize(value)
 
   defp get(map, key) do
-    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+    case Map.fetch(map, key) do
+      {:ok, value} -> value
+      :error -> Map.get(map, Atom.to_string(key))
+    end
   end
 end

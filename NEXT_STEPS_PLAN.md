@@ -1,5 +1,24 @@
 # Next implementation plan
 
+> **Superseding status (2026-09-16):** work packages **A (checkpoint) and B (safe
+> local baseline) are complete and committed** at `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6`.
+> The §2 code finding "All `app/` is untracked / HEAD is `dc48431`" is historical —
+> it described the tree before the checkpoint. C–F remain gated and unimplemented,
+> and the following are **explicitly deferred** (not authorized by the closeout):
+> the KEV-only findings filter, new review-queue domain filters and a global
+> navigation CVE lookup (each needs a distinct input/navigation contract); live
+> read-only collection (D); historical real-export compatibility/import (C); SSO,
+> authorization and shared deployment (E); and observation ingestion, scheduling
+> and automation (F). This session's KEV cache-freshness and small activity/finding
+Closeout VERIFIED: fan-out work landed and passed static gates, closeout modules (31/31) and full suite (785 passed + 2 skipped) on an owned cluster (CLOSEOUT_EXECUTION.md). C–F remain gated.
+> coordinator verification — no current evidence for them exists in the tree.
+> Latest committed verification is offline (84 filter tests, 109,944 parity
+> comparisons, static green) with the DB-backed full precommit blocked
+> (`psql unavailable`); see [CURRENT_STATUS.md](CURRENT_STATUS.md).
+>
+> The roadmap below is retained verbatim as planning context and history.
+
+
 Status: A+B IMPLEMENTED — fresh bounded integration + independent Astra verification PASS.
 No staging/checkpoint commit performed. C–F remain gated and unimplemented here.
 See [CURRENT_STATUS.md](CURRENT_STATUS.md) and [A_B_EXECUTION.md](A_B_EXECUTION.md)
@@ -72,9 +91,15 @@ Acceptance:
 - [x] Intended app source, lockfile, migrations, tests and static source assets are
   covered by the reviewed prospective inventory; artifacts are excluded. This is
   checkpoint preparation only, not staged/committed coverage.
-- [ ] Staged diff review remains pending: staging is prohibited in this execution.
-  Prospective source-only diff, ignore policy, and bounded secret-review summary
-  are inspected without production credential values.
+- [ ] Staged diff review remains pending: the approval and the commit are still not
+  taken. **Partly superseded 2026-09-15:** a later approved execution did stage a
+  source-only checkpoint (20 files, +697/−2622) and regenerated the inventory to
+  `evidence/checkpoint/MANIFEST.sha256` (224 paths, re-verified 224/224 against the
+  staged blobs), recorded by `scripts/checkpoint_inventory.sh` and
+  [CHECKPOINT_REVIEW.md](CHECKPOINT_REVIEW.md). "Staging is prohibited in this
+  execution" was a constraint on that execution, not a standing ban, and should not
+  be read as one. Outstanding: the owner's decision on the staged diff, the commit
+  itself, and the `architecture(3).md` decision.
 - [x] One authoritative status links bounded latest verdicts and unresolved gaps.
 - [x] Missing original-baseline proof stays explicitly unresolved; a new baseline
   is recorded as new, never described as recovery of the old one.
@@ -266,3 +291,18 @@ Sizing is relative, not a delivery-date promise. A/B are immediately actionable;
 C/D/E estimates depend on the external contracts above. No tests, app startup,
 credential reads, live calls, DB effects, commits or deployments were performed
 while preparing this plan.
+
+### Decisions taken on the owner's behalf (2026-09-15)
+
+The owner delegated the remaining calls. Taken and recorded in
+[CURRENT_STATUS.md](CURRENT_STATUS.md) → "Decisions taken on the owner's behalf":
+no commit and no push (the reviewed unit worth committing is one commit over the
+whole current tree, which is green under `mix ci`), no exposure write path, no new
+queue filters — the domain exposes saved scope plus the keyset cursor and nothing
+else, so a new filter would be a new query — and the three cross-links the data
+actually supports (case → advisory under the saved scope, queue row → advisory under
+the queue filter, advisory → scoped inventory and per affected package).
+
+Still owner-only, because each needs a fact or an approval that does not exist
+locally: questions 1–5 above, the `architecture(3).md` decision, and the commit
+itself over the verified index and worktree.

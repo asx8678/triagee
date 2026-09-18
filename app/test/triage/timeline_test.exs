@@ -17,11 +17,6 @@ defmodule Triage.TimelineTest do
     :ok
   end
 
-  # The window ends today and is Monday-aligned, so its newest week is partial:
-  # it holds whole weeks back plus today's weekday. That is 56 days only on a
-  # Sunday, which is why these assertions must not hard-code 56.
-  defp window_days(weeks), do: 7 * (weeks - 1) + Date.day_of_week(today(), :monday)
-
   describe "request validation" do
     test "rejects every unrecognized request shape" do
       for bad <- [
@@ -91,21 +86,48 @@ defmodule Triage.TimelineTest do
   describe "window" do
     test "defaults to twelve Monday-aligned weeks ending today" do
       assert {:ok, view} = Timeline.list_timeline()
+      span = window_span(12)
+
       assert view.window.weeks == 12
-      assert length(view.days) == window_days(12)
+      assert view.window.from == span.from
+      assert view.window.to == span.to
       assert Date.day_of_week(view.window.from) == 1
       assert view.window.to == today()
+
+      # Monday to today is a round 84 days only on a Sunday, so the span is
+      # derived from the contract rather than hard-coded.
+      assert length(view.days) == span.days
+      assert span.days == 77 + Date.day_of_week(span.to)
+
+      # The window ends today and is never padded into days that have not
+      # happened: unless today closes its week, it is shorter than twelve full
+      # weeks. Rendering future days as empty bands would be a claim about time
+      # that has not passed.
+      assert length(view.days) == Date.diff(view.window.to, view.window.from) + 1
+      assert Date.day_of_week(view.window.to) == 7 or length(view.days) < 12 * 7
       assert view.days |> hd() |> Map.fetch!(:date) == today()
       assert view.days |> List.last() |> Map.fetch!(:date) == view.window.from
       assert length(view.grid.weeks) == 12
+
+      # The label states the real span, so "Last 12 weeks" cannot pass a shorter
+      # partial week off as twelve full weeks.
+      assert view.window.label =~ "Last 12 weeks"
+      assert view.window.label =~ Calendar.strftime(span.from, "%d %b")
+      assert view.window.label =~ Calendar.strftime(span.to, "%d %b %Y")
+      assert view.summary.days == span.days
+      assert view.summary.empty_days == span.days - view.summary.observed_days
     end
 
     test "honours the 4 and 12 week windows" do
       for weeks <- [4, 12] do
         assert {:ok, view} = Timeline.list_timeline(weeks: weeks)
-        assert length(view.days) == window_days(weeks)
-        assert length(view.grid.weeks) == weeks
+        span = window_span(weeks)
+
         assert view.window.weeks == weeks
+        assert view.window.from == span.from
+        assert Date.day_of_week(view.window.from) == 1
+        assert length(view.days) == span.days
+        assert length(view.grid.weeks) == weeks
       end
     end
 
@@ -113,7 +135,7 @@ defmodule Triage.TimelineTest do
       assert {:ok, view} = Timeline.list_timeline()
       assert view.summary.events == 0
       assert view.summary.observed_days == 0
-      assert view.summary.empty_days == window_days(12)
+      assert view.summary.empty_days == window_span(12).days
       assert view.lanes.total == 0
       assert view.lanes.rows == []
       assert Enum.all?(view.days, &(&1.observed? == false))
@@ -146,7 +168,7 @@ defmodule Triage.TimelineTest do
       refute two_days_ago.observed?
       assert two_days_ago.rows == []
       assert view.summary.observed_days == 2
-      assert view.summary.empty_days == window_days(12) - 2
+      assert view.summary.empty_days == window_span(12).days - 2
     end
 
     test "adjacent observations are joined by a connector in both directions" do
@@ -417,7 +439,7 @@ defmodule Triage.TimelineTest do
   end
 
   describe "one cve detail" do
-    test "returns the full recorded history, marking events outside the window" do
+    test "returns full-history counts and the first event page, marking events outside the window" do
       image = image!("detail")
       placement!(image, "alpha", "prod")
       finding = finding!(image, "CVE-2026-4001")
@@ -436,7 +458,9 @@ defmodule Triage.TimelineTest do
       resolved = Enum.find(detail.events, &(&1.kind == "resolved"))
       assert resolved.in_window?
       assert detail.lane.window_observed_count == 1
-      assert detail.lane.observed_dates == [Date.add(today(), -200), Date.add(today(), -1)]
+      assert detail.lane.observed_day_count == 2
+      assert detail.event_page.total == 2
+      refute detail.event_page.has_more?
     end
 
     test "includes saved cases with their timeline data" do
@@ -485,6 +509,152 @@ defmodule Triage.TimelineTest do
     test "rejects an unknown option before any query" do
       assert {:error, :invalid_request} = Timeline.cve_detail("CVE-2026-4001", cursor: 1)
     end
+  end
+
+  describe "quality regressions" do
+    test "assessments follow the case owner/environment even when placements share an image" do
+      image = image!("shared-assessments")
+
+      for {owner, environment} <- [{"alpha", "prod"}, {"alpha", "staging"}, {"beta", "prod"}] do
+        placement!(image, owner, environment)
+      end
+
+      finding = finding!(image, "CVE-2026-7001")
+      event!(finding, "appeared", at(2))
+      reviewed_case!(finding, "beta", "prod")
+      reviewed_case!(finding, "alpha", "staging")
+
+      for {opts, expected} <- [
+            {[], 2},
+            {[owner: "alpha"], 1},
+            {[environment: "prod"], 1},
+            {[owner: "alpha", environment: "prod"], 0},
+            {[owner: "alpha", environment: "staging"], 1},
+            {[owner: "beta", environment: "staging"], 0}
+          ] do
+        assert {:ok, view} = Timeline.list_timeline(opts)
+        assert view.summary.judged == expected
+        assert Enum.find(view.days, &(&1.date == today())).judged_count == expected
+      end
+    end
+
+    test "daily counts include events beyond the display cap" do
+      image = image!("daily-cap")
+      finding = finding!(image, "CVE-2026-7002")
+      for second <- 1..26, do: event!(finding, "appeared", DateTime.add(at(1), second))
+      assert {:ok, view} = Timeline.list_timeline()
+      day = Enum.find(view.days, &(&1.date == Date.add(today(), -1)))
+      assert {day.event_count, day.new_count, day.truncated_count} == {26, 26, 1}
+      assert length(day.rows) == 25
+    end
+
+    test "chronological event pages retain full totals and handle backdated ids" do
+      image = image!("event-pages")
+      placement!(image, "alpha", "prod")
+      finding = finding!(image, "CVE-2026-7003")
+
+      events =
+        for second <- 50..0//-1, do: event!(finding, "appeared", DateTime.add(at(2), second))
+
+      assert {:ok, first} = Timeline.cve_detail(finding.cve, owner: "alpha", environment: "prod")
+      assert length(first.events) == 50
+      assert first.event_page.has_more?
+      assert first.event_page.total == 51
+      assert first.lane.event_count == 51
+      assert first.lane.observed_day_count == 1
+      assert first.lane.appeared_count == 51
+
+      assert {:ok, second} =
+               Timeline.cve_detail(finding.cve,
+                 owner: "alpha",
+                 environment: "prod",
+                 events_after: first.event_page.next_after
+               )
+
+      assert Enum.map(first.events ++ second.events, & &1.id) ==
+               Enum.map(Enum.reverse(events), & &1.id)
+
+      assert second.lane == first.lane
+      refute second.event_page.has_more?
+
+      foreign =
+        finding!(image, "CVE-2026-7999", package_name: "other") |> event!("appeared", at(2))
+
+      assert Timeline.cve_detail(finding.cve, events_after: foreign.id) ==
+               {:error, :invalid_cursor}
+    end
+
+    test "event cursor tie-breaking does not skip events recorded at the same instant" do
+      image = image!("event-ties")
+      finding = finding!(image, "CVE-2026-7004")
+      sibling = finding!(image, finding.cve, package_name: "sibling")
+      for second <- 0..48, do: event!(finding, "appeared", DateTime.add(at(2), second))
+      first_tie = event!(finding, "appeared", DateTime.add(at(2), 49))
+      second_tie = event!(sibling, "appeared", DateTime.add(at(2), 49))
+      assert {:ok, first} = Timeline.cve_detail(finding.cve)
+      assert first.event_page.next_after == first_tie.id
+
+      assert {:ok, second} =
+               Timeline.cve_detail(finding.cve, events_after: first.event_page.next_after)
+
+      assert Enum.map(second.events, & &1.id) == [second_tie.id]
+      assert second.lane.event_count == 51
+    end
+
+    test "case pages and lane previews are bounded without truncating their totals" do
+      image = image!("case-pages")
+      placement!(image, "alpha", "prod")
+
+      cases =
+        for index <- 1..11 do
+          finding = finding!(image, "CVE-2026-7005", package_name: "package-#{index}")
+          event!(finding, "appeared", at(1))
+
+          assert {:ok, %{case: cse}} =
+                   Cases.open_case(finding.id, owner: "alpha", environment: "prod")
+
+          cse
+        end
+
+      assert {:ok, view} = Timeline.list_timeline(owner: "alpha")
+      assert [lane] = view.lanes.rows
+      assert lane.case_count == 11
+      assert length(lane.cases) == 10
+      assert lane.cases_truncated_count == 1
+      assert {:ok, first} = Timeline.cve_detail("CVE-2026-7005", owner: "alpha")
+      assert first.cases.total == 11
+      assert first.cases.shown == 10
+      assert first.cases.has_more?
+
+      assert {:ok, second} =
+               Timeline.cve_detail("CVE-2026-7005",
+                 owner: "alpha",
+                 cases_after: first.cases.next_after
+               )
+
+      assert Enum.map(first.cases.rows ++ second.cases.rows, & &1.id) == Enum.map(cases, & &1.id)
+      refute second.cases.has_more?
+      placement!(image, "beta", "prod")
+
+      assert Timeline.cve_detail("CVE-2026-7005", owner: "beta", cases_after: hd(cases).id) ==
+               {:error, :invalid_cursor}
+    end
+  end
+
+  defp reviewed_case!(finding, owner, environment) do
+    assert {:ok, %{case: cse, snapshot: snapshot}} =
+             Cases.open_case(finding.id, owner: owner, environment: environment)
+
+    assert {:ok, _} =
+             Cases.submit_review(
+               cse.id,
+               cse.revision,
+               snapshot.id,
+               Ecto.UUID.generate(),
+               review_attrs()
+             )
+
+    cse
   end
 
   defp cell_for(view, date) do

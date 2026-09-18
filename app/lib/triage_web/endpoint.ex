@@ -1,13 +1,15 @@
 defmodule TriageWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :triage
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
+  # Encrypt session contents as well as authenticating them. The eight-hour
+  # lifetime is enforced by Plug's cookie verifier, not only by the browser.
   @session_options [
     store: :cookie,
     key: "_triage_key",
     signing_salt: "Cr6NkaDP",
+    encryption_salt: "triage-session-v1",
+    max_age: 28_800,
+    http_only: true,
     same_site: "Lax"
   ]
 

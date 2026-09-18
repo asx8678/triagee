@@ -16,7 +16,9 @@ defmodule Triage.Repo.Migrations.CreateRemediationRequests do
     end
 
     create unique_index(:remediation_requests, [:cve, :owner, :scope_key])
+
     create constraint(:remediation_requests, :remediation_status,
-      check: "status IN ('planned', 'sending', 'created', 'failed', 'unknown')")
+             check: "status IN ('planned', 'sending', 'created', 'failed', 'unknown')"
+           )
   end
 end

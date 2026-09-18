@@ -77,8 +77,8 @@ defmodule Triage.Import do
       the UI scope filter (at most #{120} characters / #{480} bytes), so an
       imported owner can never be offered by a feed that would then reject it.
 
-  Collection parsing is linear (prepend then reverse); it never appends to the
-  tail of an accumulator.
+  Record collection parsing is linear (prepend then reverse). Small per-record
+  validation error lists preserve their field order with bounded appends.
 
   `dry_run/1` uses a fixed number of SELECTs (four), independent of how many
   images, placements, findings or events the snapshot contains.

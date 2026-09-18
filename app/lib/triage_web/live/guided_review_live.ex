@@ -3,12 +3,15 @@ defmodule TriageWeb.GuidedReviewLive do
   use TriageWeb, :live_view
   alias Triage.{GuidedReview, ReviewIntegrations}
 
+  @queue_filters ~w(q team severity kev exposure)
+
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
        page_title: "Action required",
        step: 1,
        row: nil,
+       review_fingerprint: nil,
        cve: nil,
        advice: nil,
        ai_busy: false,
@@ -23,13 +26,19 @@ defmodule TriageWeb.GuidedReviewLive do
 
   def handle_params(params, _uri, socket) do
     cve = params["cve"]
-    queue = GuidedReview.queue()
+    row = if(cve, do: GuidedReview.get(cve))
 
     {:noreply,
-     assign(socket,
-       queue: queue,
+     socket
+     |> assign(queue_filters: Map.take(params, @queue_filters))
+     |> load_queue(params["after_cve"])
+     |> assign(
        cve: cve,
-       row: Enum.find(queue, &(&1.cve == cve)),
+       bulk_selection: [],
+       bulk_preview: nil,
+       bulk_message: nil,
+       row: row,
+       review_fingerprint: if(row, do: GuidedReview.review_fingerprint(row)),
        step: 1,
        plans: [],
        fingerprint: nil,
@@ -39,6 +48,74 @@ defmodule TriageWeb.GuidedReviewLive do
        receipts: if(cve, do: GuidedReview.requests(cve), else: []),
        error: nil
      )}
+  end
+
+  def handle_event("bulk_toggle", %{"cve" => cve}, %{assigns: %{cve: nil}} = socket) do
+    selected = socket.assigns.bulk_selection
+
+    selected =
+      cond do
+        cve in selected ->
+          List.delete(selected, cve)
+
+        length(selected) < 25 and Enum.any?(socket.assigns.queue, &(&1.cve == cve)) ->
+          [cve | selected]
+
+        true ->
+          selected
+      end
+
+    {:noreply, assign(socket, bulk_selection: selected, bulk_preview: nil, bulk_message: nil)}
+  end
+
+  def handle_event("bulk_preview", _, %{assigns: %{cve: nil}} = socket) do
+    rows = Enum.map(socket.assigns.bulk_selection, &GuidedReview.get/1)
+
+    if rows != [] and Enum.all?(rows, &(not is_nil(&1))) do
+      {:noreply, assign(socket, bulk_preview: rows, bulk_message: nil)}
+    else
+      {:noreply,
+       assign(socket, bulk_preview: nil, bulk_message: "Select current actionable CVEs first.")}
+    end
+  end
+
+  def handle_event("bulk_confirm", _, %{assigns: %{cve: nil, bulk_preview: rows}} = socket)
+      when is_list(rows) and rows != [] do
+    reviews = Map.new(rows, &{&1.cve, GuidedReview.review_fingerprint(&1)})
+
+    case GuidedReview.bulk_mark_for_fix(reviews) do
+      {:ok, requests} ->
+        {:noreply,
+         socket
+         |> assign(
+           bulk_selection: [],
+           bulk_preview: nil,
+           bulk_message:
+             "Planned #{length(requests)} team requests locally. No tickets sent or risk accepted."
+         )
+         |> load_queue(socket.assigns.after_cve)}
+
+      {:error, _} ->
+        {:noreply,
+         assign(socket,
+           bulk_preview: nil,
+           bulk_message: "Evidence changed. Nothing was planned; preview the selection again."
+         )}
+    end
+  end
+
+  # Shortcuts never submit a decision or trigger an external integration.
+  def handle_event("review_shortcut", %{"key" => "ArrowRight", "altKey" => true}, socket) do
+    handle_event("next", %{}, socket)
+  end
+
+  def handle_event("review_shortcut", %{"key" => "ArrowLeft", "altKey" => true}, socket) do
+    handle_event("back", %{}, socket)
+  end
+
+  def handle_event("filter_queue", params, socket) do
+    filters = Map.take(params, @queue_filters) |> Map.reject(fn {_k, v} -> v == "" end)
+    {:noreply, push_patch(socket, to: ~p"/triage?#{filters}")}
   end
 
   def handle_event("next", _, %{assigns: %{row: row, step: step}} = socket)
@@ -84,12 +161,34 @@ defmodule TriageWeb.GuidedReviewLive do
         %{"decision" => params},
         %{assigns: %{step: 4, ticket_busy: false}} = socket
       ) do
-    case GuidedReview.whitelist(socket.assigns.cve, params["reason"], params["expires_on"]) do
+    case GuidedReview.whitelist(
+           socket.assigns.cve,
+           params["reason"],
+           params["expires_on"],
+           socket.assigns.review_fingerprint
+         ) do
       {:ok, _} ->
         {:noreply,
          socket
          |> put_flash(:info, "Whitelisted with recorded reason and expiry. This is not a fix.")
          |> push_navigate(to: ~p"/triage")}
+
+      {:error, :review_changed} ->
+        row = GuidedReview.get(socket.assigns.cve)
+
+        {:noreply,
+         assign(socket,
+           row: row,
+           review_fingerprint: if(row, do: GuidedReview.review_fingerprint(row)),
+           step: 1,
+           plans: [],
+           fingerprint: nil,
+           advice: nil,
+           ai_busy: false,
+           error:
+             "Evidence or affected teams changed. Review the current evidence again before confirming; no risk was accepted.",
+           decision_form: to_form(params, as: :decision)
+         )}
 
       _ ->
         {:noreply,
@@ -150,7 +249,8 @@ defmodule TriageWeb.GuidedReviewLive do
   def handle_async({:tickets, cve}, {:ok, {:ok, receipts}}, %{assigns: %{cve: cve}} = socket) do
     {:noreply,
      socket
-     |> assign(ticket_busy: false, receipts: receipts, queue: GuidedReview.queue())
+     |> assign(ticket_busy: false, receipts: receipts)
+     |> load_queue(socket.assigns.after_cve)
      |> preview()}
   end
 
@@ -165,6 +265,42 @@ defmodule TriageWeb.GuidedReviewLive do
   end
 
   def handle_async(_, _, socket), do: {:noreply, socket}
+
+  defp load_queue(socket, after_cve) do
+    opts =
+      for key <- [:q, :team, :severity, :kev, :exposure],
+          do: {key, Map.get(socket.assigns.queue_filters, Atom.to_string(key), "")}
+
+    case GuidedReview.page([after_cve: after_cve] ++ opts) do
+      {:ok, page} ->
+        assign(socket,
+          queue: page.rows,
+          after_cve: after_cve,
+          has_more?: page.has_more?,
+          next_after_cve: page.next_after_cve,
+          queue_error: nil
+        )
+
+      {:error, :invalid_page} ->
+        assign(socket,
+          queue: [],
+          after_cve: after_cve,
+          has_more?: false,
+          next_after_cve: nil,
+          queue_error: "Invalid queue cursor. Return to the first page."
+        )
+    end
+  end
+
+  defp queue_params(filters, nil), do: filters
+  defp queue_params(filters, cursor), do: Map.put(filters, "after_cve", cursor)
+
+  defp filter_value(filters, key) do
+    case Map.get(filters, key, "") do
+      value when is_binary(value) -> value
+      _ -> ""
+    end
+  end
 
   defp preview(socket) do
     case GuidedReview.preview(socket.assigns.cve) do
@@ -192,6 +328,9 @@ defmodule TriageWeb.GuidedReviewLive do
         title="Action required"
         subtitle="Only CVEs that still need a decision or a remediation ticket. Work through one issue at a time."
       />
+      <p id="review-keyboard-help" class="supporting" phx-window-keydown="review_shortcut">
+        Keyboard: Alt + Right advances the review; Alt + Left goes back. Shortcuts never confirm actions.
+      </p>
       <p class="supporting" id="guided-scope-note">
         All severities · active services only. Fixed, whitelisted and fully ticketed scopes are excluded. A ticket means remediation requested, not fixed.
       </p>
@@ -201,22 +340,163 @@ defmodule TriageWeb.GuidedReviewLive do
       </p>
 
       <section :if={is_nil(@cve)} id="action-queue" aria-label="CVEs requiring action">
-        <h2>{length(@queue)} {if length(@queue) == 1, do: "CVE needs", else: "CVEs need"} action</h2>
-        <p :if={@queue == []} id="action-queue-empty" class="notice">
-          No CVEs currently need action in this queue. This does not mean all vulnerabilities are fixed.
+        <details class="queue-saved-views">
+          <summary>Saved views</summary>
+          <section
+            id="saved-queue-filters"
+            phx-hook="SavedQueueFilters"
+            phx-update="ignore"
+            aria-label="Saved filter combinations"
+          >
+            <p>
+              Saved on this browser only. Apply filters before saving. Saving the same name replaces it. Do not save sensitive search terms on shared devices.
+            </p>
+            <label for="saved-filter-name">View name</label>
+            <input id="saved-filter-name" maxlength="80" />
+            <button type="button" class="button button-secondary" data-saved-action="save">Save applied filters</button>
+            <label for="saved-filter-choice">Saved filters</label>
+            <select id="saved-filter-choice"><option value="">Choose saved filters</option></select>
+            <button type="button" class="button button-secondary" data-saved-action="load">Load</button>
+            <button type="button" class="button button-secondary" data-saved-action="delete">Delete</button>
+            <p role="status" aria-live="polite"></p>
+          </section>
+        </details>
+        <form id="queue-filters" class="queue-filter-grid" phx-submit="filter_queue">
+          <div class="queue-filter-field">
+            <label for="queue-search">Search CVE, package or image</label>
+            <input
+              id="queue-search"
+              name="q"
+              type="search"
+              maxlength="200"
+              value={filter_value(@queue_filters, "q")}
+            />
+          </div>
+          <div class="queue-filter-field">
+            <label for="queue-team">Team (exact name)</label>
+            <input
+              id="queue-team"
+              name="team"
+              maxlength="200"
+              value={filter_value(@queue_filters, "team")}
+            />
+          </div>
+          <div class="queue-filter-field">
+            <label for="queue-severity">Scanner severity</label>
+            <select id="queue-severity" name="severity">
+              <option
+                :for={value <- ["" | Triage.Severity.order()]}
+                value={value}
+                selected={filter_value(@queue_filters, "severity") == value}
+              >
+                {if value == "", do: "All severities", else: value}
+              </option>
+            </select>
+          </div>
+          <div class="queue-filter-field">
+            <label for="queue-kev">KEV cache</label>
+            <select id="queue-kev" name="kev">
+              <option
+                :for={
+                  {label, value} <- [
+                    {"Any KEV status", ""},
+                    {"Listed", "yes"},
+                    {"Not listed (not proof of safety)", "no"}
+                  ]
+                }
+                value={value}
+                selected={filter_value(@queue_filters, "kev") == value}
+              >
+                {label}
+              </option>
+            </select>
+          </div>
+          <div class="queue-filter-field">
+            <label for="queue-exposure">Exposure</label>
+            <select id="queue-exposure" name="exposure">
+              <option
+                :for={
+                  {label, value} <- [
+                    {"Any exposure", ""},
+                    {"Internet exposed", "internet_exposed"},
+                    {"Internal", "internal"},
+                    {"Unknown", "unknown"}
+                  ]
+                }
+                value={value}
+                selected={filter_value(@queue_filters, "exposure") == value}
+              >
+                {label}
+              </option>
+            </select>
+          </div>
+          <div class="queue-filter-actions">
+            <button type="submit" class="button">Apply filters</button>
+            <.link patch={~p"/triage"}>Clear filters</.link>
+          </div>
+        </form>
+        <p class="supporting">
+          Highest review priority first, then CVE. Filters match active scopes; each review includes all affected teams. Restart from the first page when evidence changes.
+        </p>
+        <h2>
+          {length(@queue)} {if length(@queue) == 1, do: "CVE needs", else: "CVEs need"} action on this page
+        </h2>
+        <p :if={@queue_error} id="action-queue-error" role="alert">{@queue_error}</p>
+        <p :if={@queue == [] and is_nil(@queue_error)} id="action-queue-empty" class="notice">
+          No CVEs need action on this page. This does not mean all vulnerabilities are fixed.
+          <span :if={@has_more?}>More candidates remain; continue to the next page.</span>
         </p>
         <div :if={@queue != []} class="review-queue-heading" aria-hidden="true">
           <span>CVE</span><span>Priority</span><span>Description</span><span>Libraries</span><span>Teams</span><span>Review</span>
         </div>
+        <section id="bulk-remediation" aria-label="Bulk remediation planning">
+          <p>Select up to 25 CVEs on this page. Planning does not accept risk or send tickets.</p>
+          <button
+            id="bulk-preview"
+            class="button button-secondary"
+            type="button"
+            phx-click="bulk_preview"
+            disabled={@bulk_selection == []}
+          >Preview selected remediation plans</button>
+          <p :if={@bulk_message} id="bulk-message" role="status">{@bulk_message}</p>
+          <div :if={@bulk_preview} id="bulk-scope-preview">
+            <h3>Confirm affected scope</h3>
+            <article :for={row <- @bulk_preview}>
+              <strong>{row.cve}</strong>
+              <ul>
+                <li :for={team <- row.pending}>
+                  {team.owner}: {length(team.scopes)} affected scopes
+                  <ul>
+                    <li :for={scope <- team.scopes}>
+                      {scope.image.repository}:{scope.image.tag} · {scope.placement.environment} · {scope.finding.package_name} {scope.finding.package_version} · {scope.exposure}
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </article>
+            <button id="bulk-confirm" type="button" phx-click="bulk_confirm">Confirm local plans (no external tickets)</button>
+          </div>
+        </section>
         <div class="review-queue review-queue-compact">
           <article :for={row <- @queue} id={"action-#{row.cve}"} class="review-queue-row">
-            <h3><.link navigate={~p"/triage/#{row.cve}"}>{row.cve}</.link></h3>
+            <h3>
+              <button
+                id={"select-#{row.cve}"}
+                type="button"
+                phx-click="bulk_toggle"
+                phx-value-cve={row.cve}
+                aria-pressed={row.cve in @bulk_selection}
+                aria-label={"Select #{row.cve} for local remediation planning"}
+              >{if row.cve in @bulk_selection, do: "Selected", else: "Select"}</button>
+              <.link navigate={~p"/triage/#{row.cve}?#{queue_params(@queue_filters, @after_cve)}"}>{row.cve}</.link>
+            </h3>
             <span
               class={["review-row-priority", "review-priority-#{row.risk.priority}"]}
               title="Review priority, not a CVSS score"
             >{String.upcase(row.risk.priority)}</span>
             <p class="review-row-description" title={summary(row.descriptions)}>
               {summary(row.descriptions)}
+              <span class="supporting">Action required: uncovered active scope still needs a decision or ticket. Next: verify teams and exposure.</span>
             </p>
             <p
               class="review-row-libraries"
@@ -244,16 +524,28 @@ defmodule TriageWeb.GuidedReviewLive do
             </p>
             <.link
               id={"triage-issue-#{row.cve}"}
-              navigate={~p"/triage/#{row.cve}"}
+              navigate={~p"/triage/#{row.cve}?#{queue_params(@queue_filters, @after_cve)}"}
               class="button"
               aria-label={"Triage issue #{row.cve}"}
             >Triage issue →</.link>
           </article>
         </div>
+        <nav aria-label="Action queue pages">
+          <.link
+            :if={not is_nil(@after_cve)}
+            id="action-queue-first"
+            patch={~p"/triage?#{@queue_filters}"}
+          >First page</.link>
+          <.link
+            :if={@has_more?}
+            id="action-queue-next"
+            patch={~p"/triage?#{queue_params(@queue_filters, @next_after_cve)}"}
+          >Next page →</.link>
+        </nav>
       </section>
 
       <section :if={@cve} id="guided-triage" aria-labelledby="guided-title">
-        <.link navigate={~p"/triage"}>← Back to action queue</.link>
+        <.link navigate={~p"/triage?#{queue_params(@queue_filters, @after_cve)}"}>← Back to action queue</.link>
         <h2 id="guided-title">Triage {@cve}</h2>
         <p :if={is_nil(@row)} id="guided-not-actionable" class="notice">
           This CVE is not currently awaiting action. Check recorded ticket results below or return to the queue.

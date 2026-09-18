@@ -43,11 +43,16 @@ jobs:
       - run: mix deps.get
 
       # Dialyzer's PLT lives in _build and takes minutes to build from scratch,
-      # so it is cached with the compiled artifacts.
+      # so it is cached with the compiled artifacts. The config is hashed too:
+      # the standalone Tailwind CLI version is pinned in config/config.exs, so
+      # a CLI bump alone must not restore a cache holding the previous binary.
+      # A cold _build cache additionally downloads that pinned CLI from GitHub
+      # releases, so the asset build needs network access on the first run
+      # after a cache miss or a version bump.
       - uses: actions/cache@v4
         with:
           path: app/_build
-          key: build-${{ runner.os }}-${{ hashFiles('app/mix.lock') }}
+          key: build-${{ runner.os }}-${{ hashFiles('app/mix.lock', 'app/config/config.exs') }}
 
       # `mix ci` is the non-mutating counterpart of `mix precommit`: it checks
       # formatting instead of rewriting it and checks for unused deps instead

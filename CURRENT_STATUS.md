@@ -1,5 +1,64 @@
 # Triage current status
 
+## Current summary (2026-09-16 — supersedes stale header claims)
+
+Baseline HEAD is `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6`
+("Improve triage quality and simplify shared validation"). It carries the committed
+Tailwind asset pipeline, the KEV/Timeline/UI work, and the code-quality passes. `app/`
+source is committed; there was no app diff against this baseline, and no commit,
+staging, push or deployment happened in this reconciliation session. The three
+tracked `.pi/` modifications and untracked `evidence/` trees are unrelated and remain
+untouched, as before.
+
+What is actually current on this baseline:
+
+- **Latest committed verification is OFFLINE and partial, not a full signoff.**
+  `evidence/code-quality-retry/REPORT.md`: **84 affected filter tests passed**,
+  **109,944** baseline/current parity comparisons passed, and static checks are
+  green (compile `--warnings-as-errors`, `format --check-formatted`, `credo
+  --strict`, `dialyzer` 0 errors). The guarded DB-backed full precommit is
+  **BLOCKED: exit 69, `verify-owned-db: psql unavailable`** in this environment,
+  so real-PostgreSQL integration and the full suite remain unverified here. See also
+  `evidence/code-quality-review/REPORT.md` and `evidence/code-quality-followup/REPORT.md`,
+  which record the same psql block and seven + ten DB-backed regressions that are
+  compile-only pending that environment. This is the state of evidence, not a defect
+  in the tree.
+- **The older "721 passed, 2 skipped" full-suite result is historical, not current
+  signoff.** It predates the code-quality follow-up/retry work (SQL/history and
+  filter-contract changes) and no longer describes this tree.
+**Closeout verified (latest):** KEV cache status, activity CVE identity and finding-header dedup landed; closeout modules 31/31, full suite 785 passed + 2 skipped, compile/format/credo / dialyzer exit 0 on an owned disposable cluster (CLOSEOUT_EXECUTION.md). The run is uncommitted.
+  improvements and the small activity/finding presentation changes (another worker
+  is implementing them). They are pending coordinator verification; no current
+  evidence for them exists in the tree, so they are not claimed as done anywhere in
+  these documents.
+- **Explicitly deferred (not authorized by the closeout request):** the KEV-only
+  findings filter, new review-queue domain filters, and a global navigation CVE
+  lookup (each requires a distinct input/navigation contract); live read-only
+  collection (work package D); historical real-export compatibility and import
+  (work package C); SSO, authorization and shared deployment (work package E); and
+  observation ingestion, scheduling and automation (work package F). C–F remain
+  gated exactly as written in [NEXT_STEPS_PLAN.md](NEXT_STEPS_PLAN.md).
+- **`architecture(3).md` is already tracked** (initial commit `2612c56`) and
+  unchanged; the "needs an explicit decision" wording in the historical sections
+  below referred only to whether the checkpoint would modify or enumerate it — no
+  decision was ever required to keep it. Its runtime recommendations are superseded
+  by the implemented Phoenix choice, stated at the top of
+  [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) ("Current implementation
+  decision: Phoenix..."); its integration findings and safety requirements remain
+  the referenced planning context.
+- Original historical-baseline proof remains unresolved; later results are new
+  bounded baselines, never a recovery of that missing record. The app has no
+  authentication or authorization and is loopback-only; no shared deployment is
+  approved or implied by any section of this document.
+
+---
+
+## Historical record (2026-09-11 .. 2026-09-15; superseded per section, retained verbatim)
+
+Failures, defects and limits below are preserved as written. Per-section verdicts
+were accurate when written; where later sessions changed the tree (commit
+`0b7fc1a`), the Current summary above governs.
+
 **Code review findings implemented (2026-09-13: `mix ci` exit 0 — `credo --strict`
 reports no issues, 634 passed / 2 skipped, `dialyzer` 0 errors).** The findings
 list pages by keyset position like the review queue; `credo` and `dialyzer` are
@@ -70,6 +129,112 @@ Details, failures/repairs, commands, ownership, hashes and limits:
   [UI_REDESIGN_REPORT.md](UI_REDESIGN_REPORT.md),
   [UI_IMPROVEMENTS_REPORT.md](UI_IMPROVEMENTS_REPORT.md).
 
+## KEV intelligence coverage (2026-09-15)
+
+- The cached known-exploited signal is now the whole CISA KEV feed rather than a
+  50-row prefix, and the actionable fields (`requiredAction`, `dueDate`,
+  `knownRansomwareCampaignUse`) are cached and shown per advisory. The advisory page
+  reports rows stored and the last refresh receipt, and renders the intel banner as a
+  warning whenever the KEV cache is empty, so "no cached entry" can no longer read as
+  "not known exploited".
+- Verified on this tree: focused intel/CVE suites **30 passed, 0 failures**; full
+  suite **705/712 passed, 2 skipped, 7 failed** — the same seven pre-existing Timeline
+  window tests (696/703 before this slice, +9 new tests); `mix compile
+  --warnings-as-errors`, `mix format --check-formatted`, `mix credo --strict` and
+  `mix dialyzer` all exit 0. The staged stylesheet checkpoint is untouched: all 224
+  manifest paths still match their staged blobs. This slice is **unstaged**.
+- Defects, the transport-contract mismatch found while testing, and what remains
+  unverified (live feed size, stale-cache escalation, exposure producer, queue
+  filters): [KEV_INTEL_EXECUTION.md](KEV_INTEL_EXECUTION.md).
+
+## Timeline window tests were Sunday-only (2026-09-15)
+
+- The seven failing Timeline window tests were not a regression: they hard-coded the
+  window as a round `7 * weeks` days, while the read model ends the window at today
+  (Monday-aligned start), so the span is `49 + day_of_week(today)` — 56 only on a
+  Sunday. The slice's own probe ran on Sunday 13 September and counted 56 bands,
+  which is why the record looked clean. A weekday table is in
+  [TIMELINE_EXECUTION.md](TIMELINE_EXECUTION.md).
+- Fixed by deriving every window expectation from the contract
+  (`Triage.Fixtures.window_span/1`), pinning the semantics with
+  `length(days) == Date.diff(to, from) + 1` and
+  `day_of_week(to) == 7 or length(days) < 7 * weeks`, asserting the label's real
+  span, and asserting that the grid's future cells read "not yet observed". **No
+  production code changed.**
+- Verified: `mix test test/triage/timeline_test.exs
+  test/triage_web/live/timeline_live_test.exs` → **50 passed**; **full suite 712
+  passed, 2 skipped, 0 failed** (705/712 before). The earlier "696 passed" line in
+  the timeline record counts the same tree in which those seven failed (696 + 7 =
+  703, the pre-KEV total).
+
+## Decisions taken on the owner's behalf (2026-09-15)
+
+The owner delegated the remaining calls ("take decisions for me and continue").
+These are decisions, not open questions; the ones I could not take are named with
+the fact that is missing.
+
+- **No commit, no push, nothing newly staged.** The index already holds the reviewed
+  Tailwind checkpoint (20 files, +697/−2622 — `default.css` −2590 replaced by the
+  Tailwind build) and still verifies 224/224 against
+  `evidence/checkpoint/MANIFEST.sha256`. Committing *now* would land a
+  `CURRENT_STATUS.md` that this session's unstaged work has already superseded and
+  would mix the checkpoint with the KEV slice, the timeline fix and the cross-links
+  into one unreviewed unit. The reviewed unit worth committing is one commit over the
+  whole current tree; the worktree is at a green, fully recorded state for it.
+- **No exposure write path.** `Triage.Exposure.record/4` is still reached only by
+  `Triage.Seeds`. Who may *declare* exposure, and under which entitlement, is an
+  authorization decision (work package E) — not something to invent behind a new
+  button. Missing exposure evidence keeps being stated as unknown.
+- **No new queue filters.** `CaseFilters` validates exactly the saved scope
+  (`owner`, `environment`) and the keyset `before` cursor, and `Triage.Cases`
+  exposes `list_cases/1`, `get_case/1`, `open_case/2`, `case_filter_options/0` —
+  nothing that filters by assessment state or by advisory. A new filter would mean a
+  new domain query, which this UI-only round excluded, so the queue keeps two honest
+  filters instead of a filter that would silently return the wrong set.
+- **Advisory cross-links: every site that renders a CVE id can now reach it.** The real
+  gap was that only two places did (the findings list and the home page) — nothing
+  reached an advisory from a case, the queue, the activity feed, a finding detail or the
+  timeline. Added, each under the scope of the view it is opened from and never wider:
+  `#case-cve-action` (case → advisory, under the case's **saved** scope and never the
+  URL scope — the case page's own rule, so a mismatched query cannot widen the
+  aggregate); `#case-cve-<id>` (queue row → advisory, under the queue's filter, absent
+  when the queue is unfiltered); `#cve-inventory-link` and `#cve-package-link-<id>`
+  (advisory → scoped inventory and per affected package, built through the findings
+  page's own `q` search contract, so a link cannot show a different set than that search
+  does); `#finding-cve-action` (finding detail → advisory under its display scope, and
+  deliberately **without** the list's `q`/`sort`/cursor params, which the advisory route
+  cannot apply — a link must not claim a filter it ignores); `#event-cve-<id>` (activity
+  row → advisory under the activity filter); `#tl-lane-cve-<cve>` (timeline lanes →
+  advisory), with the timeline's other two advisory links — the bands row button and the
+  drawer's — unified onto one implementation,
+  `TriageWeb.TimelineFilters.advisory_path/2`, where only `owner` and `environment`
+  travel because the timeline's `weeks`/`cve` params are not advisory filters. A blank
+  captured advisory id or package name renders as text, never as a link to an empty
+  route or an accidentally unscoped search.
+- **Three CVE ids stay deliberately unlinked**, recorded so they do not read as
+  oversights: the chart's SVG gutter label (the chart's whole subtree is `ignored` in
+  the accessibility tree, and the lanes and bands tables carry that navigation), the case
+  page title and the drawer title (each has an explicit advisory action beside it), and
+  the finding eyebrow (the header action is the affordance).
+- **Deferred polish stays deferred, with reasons.** #13 (per-occurrence case count)
+  needs a case count per finding and `Triage.Cases` exposes none; #16 (receipt expiry
+  countdown) has no receipt expiry field — the only `expires_at` in the domain is
+  exposure evidence (`lib/triage/exposure.ex:26`), so the countdown would have nothing
+  truthful to count; #12 (search autofocus/shortcut) is deliberately skipped, because
+  autofocus moves focus for keyboard and screen-reader users and a `/` shortcut is a
+  keybinding-contract decision; #15 (hover polish) is cosmetic.
+
+Verified on the tree carrying all of the above: `mix ci` → exit 0, **714 passed,
+2 skipped, 0 failed**, `credo --strict` 1809 mods/funs with no issues, `dialyzer`
+0 errors. New tests: `TriageWeb.CaseLiveTest` "the case's captured advisory opens the
+advisory detail under the saved scope" and `TriageWeb.CveLiveTest` "the advisory links
+into the scoped inventory and per affected package"; further assertions extend the
+finding, activity and timeline suites, each deriving its expected URL through the same
+contract the page uses so the two cannot drift. Guard check: every link is built from
+the frozen captured value rendered beside it, and a blank captured id (or package name)
+renders as text instead of a link — the present-id path is what the seeded fixtures
+exercise.
+
 ## Inherited evidence, not fresh claims
 
 Historical FAIL/PASS records are preserved:
@@ -88,3 +253,40 @@ observation ingestion is authorized. **C–F remain gated** in
 are still pending: the regenerated source-only inventory awaits owner approval, and
 `architecture(3).md` needs an explicit decision. Do not indiscriminately add the
 untracked app or harness state.
+
+## Tailwind asset pipeline (2026-09-15)
+
+The frozen daisyUI stylesheet is replaced by a real build: `assets/css/tailwind.css`
+(v4.1.18, `source(none)` plus one `@source "../../lib"`) is compiled by
+`mix tailwind triage`, which `mix assets.setup` runs before copying the pinned vendor
+dists; the root layout loads the generated sheet before the tracked, hand-written
+`app.css`, which stays authoritative. `priv/static/assets/default.css` (2,590 lines,
+no build behind it) is deleted. Verified in this tree: `mix format --check-formatted`,
+`mix compile --warnings-as-errors`, `mix deps.unlock --check-unused`, `mix credo
+--strict` (0 issues) and `mix assets.setup` all exit 0, the generated bytes are
+reproducible (`05734178f35cd213252180a8921fc4d3fd8fb5b9940e1293e50941d67b8a635c`), and
+[scripts/tailwind_assets_probe.exs](scripts/tailwind_assets_probe.exs) passes 22 checks
+without a database, including a fresh-destination build and a synthetic `.heex` scan
+witness. `mix dialyzer` passes in the test environment CI uses (0 errors), and the full suite
+runs here against a local PostgreSQL 16 cluster: 696/703 passed, 2 skipped, 7 failed,
+all seven pre-existing Timeline window tests that fail identically at HEAD. No production
+digest path exists because there is no deployment target. Details: [TAILWIND_EXECUTION.md](TAILWIND_EXECUTION.md).
+
+## KEV visibility and the Timeline window (2026-09-15)
+
+The cached KEV signal now reaches the views where triage decisions are made: the
+findings list, the overview critical table, the review queue, the case header and the
+timeline lanes render a "Known exploited (KEV cache)" marker only when the cache holds
+a row, with one source note per page; the advisory page adds the recorded required
+action, due date and ransomware flag. Ingest keeps the whole feed (the 50-row prefix is
+gone), persists those three fields and enforces the 8 MB bound at one transport boundary
+for real and injected transports alike. A review of that delta found the
+timeline lane component never received the index (fixed), that none of the five marker
+surfaces was tested (six tests added) and that `lib/triage/intel.ex` broke
+`mix format --check-formatted` (fixed). Verified on the current tree: `mix test`
+**721 passed, 2 skipped, 0 failures** — the seven Timeline window tests now pass under
+the `window_span/1` contract that derives the today-clamped span instead of hard-coding
+56 days — and `mix format --check-formatted`, `mix compile --warnings-as-errors`,
+`mix credo --strict` (0 issues) and `mix dialyzer` (`MIX_ENV=test`, 0 errors) all exit 0.
+The staged Tailwind checkpoint is untouched: 224/224 manifest paths still match their
+staged blobs. Details: [KEV_INTEL_EXECUTION.md](KEV_INTEL_EXECUTION.md).

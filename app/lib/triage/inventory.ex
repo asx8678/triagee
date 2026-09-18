@@ -16,149 +16,15 @@ defmodule Triage.Inventory do
   """
 
   import Ecto.Query
-  alias Triage.Inventory.GroupCursor
+  alias Triage.Inventory.{Finding, FindingEvent, GroupCursor, Image, ImagePlacement}
   alias Triage.Repo
 
-  @severity_order ~w(CRITICAL HIGH MEDIUM LOW)
+  @severity_order Triage.Severity.order()
   @unsafe_text ~r/[\x00-\x1F\x7F]/
-
-  defmodule Image do
-    use Ecto.Schema
-    import Ecto.Changeset
-
-    schema "images" do
-      field :digest, :string
-      field :repository, :string
-      field :tag, :string
-      field :description, :string
-
-      timestamps(type: :utc_datetime)
-    end
-
-    def changeset(image, attrs) do
-      image
-      |> cast(attrs, [:digest, :repository, :tag, :description])
-      |> validate_required([:digest])
-      |> unique_constraint(:digest)
-    end
-  end
-
-  defmodule CveDetail do
-    @moduledoc false
-    @type t :: %__MODULE__{cve: String.t(), occurrences: list(), placements: list()}
-    defstruct [:cve, occurrences: [], placements: []]
-  end
-
-  defmodule ImagePlacement do
-    use Ecto.Schema
-    import Ecto.Changeset
-
-    schema "image_placements" do
-      belongs_to :image, Image
-      field :namespace, :string
-      field :owner, :string
-      field :environment, :string
-      field :active, :boolean, default: true
-      field :first_seen, :utc_datetime
-      field :last_seen, :utc_datetime
-
-      timestamps(type: :utc_datetime)
-    end
-
-    def changeset(placement, attrs) do
-      placement
-      |> cast(attrs, [
-        :image_id,
-        :namespace,
-        :owner,
-        :environment,
-        :active,
-        :first_seen,
-        :last_seen
-      ])
-      |> validate_required([:image_id, :namespace, :owner, :environment, :first_seen, :last_seen])
-      |> unique_constraint([:image_id, :namespace, :owner, :environment])
-    end
-  end
-
-  defmodule Finding do
-    use Ecto.Schema
-    import Ecto.Changeset
-
-    schema "findings" do
-      belongs_to :image, Image
-      field :cve, :string
-      field :package_name, :string
-      field :package_version, :string
-      field :severity, :string
-      field :fix, :string
-      field :url, :string
-      field :description, :string
-      field :suppressed, :boolean, default: false
-      field :first_seen, :utc_datetime
-      field :last_seen, :utc_datetime
-      field :resolved_at, :utc_datetime
-      field :reopen_count, :integer, default: 0
-
-      timestamps(type: :utc_datetime)
-    end
-
-    def changeset(finding, attrs) do
-      finding
-      |> cast(attrs, [
-        :image_id,
-        :cve,
-        :package_name,
-        :package_version,
-        :severity,
-        :fix,
-        :url,
-        :description,
-        :suppressed,
-        :first_seen,
-        :last_seen,
-        :resolved_at,
-        :reopen_count
-      ])
-      |> validate_required([
-        :image_id,
-        :cve,
-        :package_name,
-        :package_version,
-        :first_seen,
-        :last_seen
-      ])
-      |> foreign_key_constraint(:image_id)
-      |> unique_constraint([:image_id, :cve, :package_name, :package_version])
-    end
-  end
-
-  defmodule FindingEvent do
-    use Ecto.Schema
-    import Ecto.Changeset
-
-    # No association back to Finding on purpose: lifecycle events are queried
-    # explicitly so the event log stays append-only and independent.
-    schema "finding_events" do
-      field :finding_id, :integer
-      field :event, :string
-      field :occurred_at, :utc_datetime
-      field :note, :string
-
-      timestamps(type: :utc_datetime)
-    end
-
-    def changeset(event, attrs) do
-      event
-      |> cast(attrs, [:finding_id, :event, :occurred_at, :note])
-      |> validate_required([:finding_id, :event, :occurred_at])
-      |> validate_inclusion(:event, ~w(appeared resolved reopened))
-    end
-  end
 
   # Highest scanner severity present in a group, as a rank. Shared by the
   # selected column and the default ordering so the two cannot drift.
-  @severity_rank_sql "max(case ? when 'CRITICAL' then 4 when 'HIGH' then 3 when 'MEDIUM' then 2 when 'LOW' then 1 else 0 end)"
+  @severity_rank_sql Triage.Severity.sql_max_rank()
 
   @group_sorts ~w(severity newest last_seen occurrences cve)
   @default_group_sort "severity"
@@ -395,12 +261,18 @@ defmodule Triage.Inventory do
   def summary_counts do
     open =
       Repo.one(
-        from f in Finding, where: is_nil(f.resolved_at) and f.suppressed == false, select: count()
+        from f in Finding,
+          where: is_nil(f.resolved_at) and f.suppressed == false,
+          where: f.image_id in subquery(active_placement_image_ids(nil, nil)),
+          select: count()
       )
 
     suppressed =
       Repo.one(
-        from f in Finding, where: is_nil(f.resolved_at) and f.suppressed == true, select: count()
+        from f in Finding,
+          where: is_nil(f.resolved_at) and f.suppressed == true,
+          where: f.image_id in subquery(active_placement_image_ids(nil, nil)),
+          select: count()
       )
 
     %{open: open || 0, suppressed: suppressed || 0}
@@ -504,6 +376,7 @@ defmodule Triage.Inventory do
             where: p.image_id in ^image_ids,
             order_by: [asc: p.owner, asc: p.namespace, asc: p.environment, asc: p.id]
           )
+          |> apply_placement_scope(owner, environment)
           |> Repo.all()
 
         exposure_map =
@@ -528,6 +401,7 @@ defmodule Triage.Inventory do
     query =
       from(f in Finding,
         where: f.cve == ^cve and is_nil(f.resolved_at),
+        where: f.image_id not in subquery(Triage.ReferenceData.retired_image_ids()),
         order_by: [asc: f.package_name, asc: f.id],
         preload: :image
       )
@@ -869,10 +743,8 @@ defmodule Triage.Inventory do
     raise ArgumentError, "scope values must be strings or nil, got: " <> inspect(value)
   end
 
-  @severity_labels %{4 => "CRITICAL", 3 => "HIGH", 2 => "MEDIUM", 1 => "LOW", 0 => "UNKNOWN"}
-
   @doc "Maps an internal severity rank to its label for display."
-  def severity_label(rank), do: Map.get(@severity_labels, rank, "UNKNOWN")
+  defdelegate severity_label(rank), to: Triage.Severity, as: :label
 
   def severity_order, do: @severity_order
 end

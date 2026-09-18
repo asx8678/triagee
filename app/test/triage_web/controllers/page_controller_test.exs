@@ -11,7 +11,7 @@ defmodule TriageWeb.PageControllerTest do
              1
 
     assert Enum.count(LazyHTML.query(document, ".nav-group-primary a")) == 3
-    assert Enum.count(LazyHTML.query(document, ".nav-group-tools[open]")) == 0
+    assert Enum.empty?(LazyHTML.query(document, ".nav-group-tools[open]"))
     assert Enum.count(LazyHTML.query(document, "#environment-notice")) == 1
   end
 end

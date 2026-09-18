@@ -217,15 +217,22 @@ defmodule TriageWeb.TimelineLive.Chart do
                 {track.severity_chip.letter}
               </text>
 
-              <a href={Map.get(@action_paths, track.cve, ~p"/cves/#{track.cve}")} aria-label={if Map.has_key?(@action_paths, track.cve), do: "Triage #{track.cve} — action required", else: "View #{track.cve}"}>
-              <text
-                class="tl-chart-cve"
-                x={@layout.gutter - 10}
-                y={track.y + 4}
-                text-anchor="end"
+              <a
+                href={Map.get(@action_paths, track.cve, ~p"/cves/#{track.cve}")}
+                aria-label={
+                  if Map.has_key?(@action_paths, track.cve),
+                    do: "Triage #{track.cve} — action required",
+                    else: "View #{track.cve}"
+                }
               >
-                {track.cve}
-              </text>
+                <text
+                  class="tl-chart-cve"
+                  x={@layout.gutter - 10}
+                  y={track.y + 4}
+                  text-anchor="end"
+                >
+                  {track.cve}
+                </text>
               </a>
 
               <line

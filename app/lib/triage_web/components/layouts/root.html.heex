@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="Vulnerabilities" suffix=" · Triage" phx-no-format>{assigns[:page_title]}</.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/default.css"} />
+    <.live_title default="Overview" suffix=" · Triage" phx-no-format>{assigns[:page_title]}</.live_title>
+    <%!-- The generated Tailwind sheet is layered and app.css is unlayered, so at
+           equal specificity app.css always wins the cascade: this application's
+           semantic classes and tokens stay authoritative over the utilities. --%>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/tailwind.css"} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!-- Same-origin Phoenix client distributions, generated from the
            mix.lock-pinned deps by `mix assets.setup` (see README.md "Assets").

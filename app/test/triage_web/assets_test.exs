@@ -1,9 +1,12 @@
 defmodule TriageWeb.AssetsTest do
   @moduledoc """
-  Narrow wiring tests for the shipped browser client bootstrap:
-  the root layout must load the Phoenix / LiveView client distributions
-  and the LiveSocket bootstrap as same-origin scripts (in order, with a
-  CSRF token), and the endpoint must actually serve those files.
+  Narrow wiring tests for the shipped browser client: the root layout must
+  load the generated Tailwind stylesheet before the application stylesheet,
+  the build behind that stylesheet must show repeat-build determinism when
+  Mix.Task.rerun rebuilds over existing output (not from-scratch generation),
+  and the layout must load the Phoenix / LiveView client
+  distributions and the LiveSocket bootstrap as same-origin scripts (in
+  order, with a CSRF token). The endpoint must actually serve all of it.
   """
 
   # Regenerating the shared vendor files on disk is not safe to run
@@ -17,6 +20,9 @@ defmodule TriageWeb.AssetsTest do
     "/assets/vendor/phoenix_live_view.js"
   ]
   @bootstrap_script "/assets/js/app.js"
+  @tailwind_source "assets/css/tailwind.css"
+  @tailwind_output "priv/static/assets/css/tailwind.css"
+  @application_stylesheet "priv/static/assets/css/app.css"
 
   describe "asset generation" do
     test "mix assets.setup regenerates vendor files from the pinned deps" do
@@ -118,6 +124,139 @@ defmodule TriageWeb.AssetsTest do
       assert body =~ "csrf-token"
       assert body =~ "_csrf_token"
       assert body =~ "liveSocket.connect()"
+    end
+  end
+
+  # The stylesheet pair and the build behind it. The generated Tailwind output
+  # is git-ignored output ("regenerate with mix assets.setup"), so these
+  # assertions are about the wiring, the scan and the served bytes - not about
+  # committing a build artifact.
+  describe "stylesheet wiring" do
+    test "loads the generated Tailwind stylesheet before the application stylesheet" do
+      hrefs =
+        build_conn()
+        |> get("/")
+        |> html_response(200)
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.filter("link[rel=stylesheet]")
+        |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
+
+      # Order is precedence: the utilities load first, so app.css - this
+      # application's own classes and tokens - stays authoritative over them.
+      assert hrefs == ["/assets/css/tailwind.css", "/assets/css/app.css"]
+
+      # both are same-origin: no CDN, no bundler output
+      assert Enum.all?(hrefs, &String.starts_with?(&1, "/"))
+    end
+
+    test "the generated stylesheet is what the current sources compile to" do
+      assert File.exists?(@tailwind_output), "run `mix assets.setup` first"
+      built = File.read!(@tailwind_output)
+
+      # Mix.Task.rerun rebuilds over the existing output: this checks
+      # repeat-build determinism, not from-scratch generation.
+      Mix.Task.rerun("tailwind", ["triage"])
+
+      assert File.read!(@tailwind_output) == built,
+             "the rebuild over the existing output changed bytes: " <>
+               "priv/static/assets/css/tailwind.css is not byte-stable"
+    end
+
+    test "the CLI version and profile are pinned to the tracked source and output" do
+      version = Application.fetch_env!(:tailwind, :version)
+      assert is_binary(version) and version =~ ~r/^4\.\d+\.\d+$/
+
+      profile = Application.fetch_env!(:tailwind, :triage)
+      args = Keyword.fetch!(profile, :args)
+      assets = Path.expand("assets")
+
+      assert Path.expand(Keyword.fetch!(profile, :cd)) == assets
+      assert "--input=#{Path.relative_to(Path.expand(@tailwind_source), assets)}" in args
+      assert "--output=../#{@tailwind_output}" in args
+    end
+
+    test "the development watcher rebuilds the same profile" do
+      # Configuration-level check only: the watcher is not started by the test
+      # run, so this proves the wiring and not a live rebuild.
+      dev =
+        "config/dev.exs"
+        |> File.read!()
+        |> String.split("\n")
+        |> Enum.reject(&Regex.match?(~r/^\s*#/, &1))
+        |> Enum.join("\n")
+
+      assert dev =~
+               ~r/watchers:\s*\[\s*tailwind:\s*\{Tailwind,\s*:install_and_run,\s*\[:triage,\s*~w\(--watch\)\]\}/,
+             "no dev rebuild when the source changes: wire the :triage Tailwind profile with --watch"
+    end
+
+    test "the source entrypoint scans lib/ and nothing else" do
+      source = File.read!(@tailwind_source)
+
+      # Comments are stripped first: a directive named in prose, or one that
+      # has been commented out, must not count as live.
+      live = Regex.replace(~r{/\*.*?\*/}s, source, "")
+
+      # source(none) turns off Tailwind's automatic project-wide scan, so the
+      # candidate set cannot silently grow to deps/, _build/ or the notes.
+      assert live =~ ~s{@import "tailwindcss" source(none)}
+
+      # Exactly one @source, and it points at lib/. Adding a second one
+      # (deps/, _build/, the evidence notes) fails here instead of silently
+      # widening the scan.
+      assert Regex.scan(~r/@source\b[^;]*;/, live) == [[~s{@source "../../lib";}]]
+    end
+
+    test "serves the generated utilities, the theme bridge and the application stylesheet" do
+      tailwind = response(get(build_conn(), "/assets/css/tailwind.css"), 200)
+      version = Application.fetch_env!(:tailwind, :version)
+      assert String.starts_with?(tailwind, "/*! tailwindcss v#{version} |")
+      # @theme bridges the two scale names the generated components carry
+      assert tailwind =~ "--color-error: #a02222"
+      assert tailwind =~ "--color-base-content: #182539"
+      # utilities a component actually passes are emitted, so the @source scan
+      # really ran: size-5 on the validation icon, w-full on the controls
+      assert tailwind =~ ".size-5 {"
+      assert tailwind =~ ".w-full {"
+      # the served bytes are the file: not a cached or transformed variant
+      assert tailwind == File.read!(@tailwind_output)
+
+      application = response(get(build_conn(), "/assets/css/app.css"), 200)
+      assert application =~ ".triage-nav"
+      assert application == File.read!(@application_stylesheet)
+    end
+
+    test "serves artwork for literal icon names in lib sources" do
+      # Scans literal name="hero-..." occurrences, including @doc examples.
+      # Dynamically supplied icon names are not covered by this check.
+      css = File.read!(@tailwind_output) <> File.read!(@application_stylesheet)
+
+      icons =
+        "lib/**/*.{ex,heex,eex}"
+        |> Path.wildcard()
+        |> Enum.flat_map(fn path ->
+          ~r/name="(hero-[a-z0-9-]+)"/
+          |> Regex.scan(File.read!(path), capture: :all_but_first)
+          |> List.flatten()
+        end)
+        |> Enum.uniq()
+
+      # Literal icon names exist in the sources; an empty match must not pass
+      refute icons == []
+
+      # Comments are stripped so a selector named in prose cannot satisfy the
+      # check, and the artwork itself is required, not just the name: the
+      # shared rule that lists all three icons carries no mask-image, so
+      # deleting a per-icon rule has to fail here.
+      live = Regex.replace(~r{/\*.*?\*/}s, css, "")
+
+      for icon <- icons do
+        assert Regex.match?(
+                 ~r/.#{Regex.escape(icon)}\s*\{[^}]*\bmask-image:\s*url\(['"]?data:image\/svg\+xml;/s,
+                 live
+               ),
+               "CoreComponents.icon/1 renders #{icon} but no stylesheet rule draws it"
+      end
     end
   end
 end

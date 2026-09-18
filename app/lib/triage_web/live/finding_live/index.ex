@@ -2,13 +2,14 @@ defmodule TriageWeb.FindingLive.Index do
   @moduledoc """
   CVE inventory grouped by advisory, with URL-restorable team/environment filters.
 
-  Synthetic demo data only (PR 1). Team filtering scopes what is displayed; it is
-  not authentication or authorization, and this unauthenticated demo must stay on
-  loopback until real identity and roles land.
+  Local inventory may include synthetic fixtures and public-reference CVEs. Team
+  filtering scopes the display, not authorization; the unauthenticated app must
+  stay on loopback until real identity and roles land.
   """
 
   use TriageWeb, :live_view
 
+  alias Triage.Intel
   alias Triage.Inventory
   alias Triage.Inventory.GroupCursor
   alias TriageWeb.FindingFilters
@@ -31,20 +32,22 @@ defmodule TriageWeb.FindingLive.Index do
       socket
       |> assign(:page_title, "Vulnerabilities")
       |> assign(:invalid_filters, [])
+      |> assign(:kev_status, nil)
       |> stream_configure(:groups, dom_id: &"group-#{&1.cve}")
 
     {:ok, socket}
   end
 
   @impl true
-  def handle_params(params, uri, socket) do
+  def handle_params(params, _uri, socket) do
     parsed = FindingFilters.parse(params)
     invalid = parsed.invalid != []
 
-    # Invalid values are never normalized into a scope, truncated or dropped:
-    # nothing is queried and the state is surfaced visibly instead.
-    unknown_team? = not invalid and team_unknown?(parsed.owner)
-    sort = parsed.sort || if(URI.parse(uri).path == "/", do: "newest", else: default_sort())
+    # Invalid values never become a scope: no finding query runs. Global
+    # dropdown options/counts remain available so the user can recover.
+    teams = Inventory.teams()
+    unknown_team? = not invalid and parsed.owner != nil and parsed.owner not in teams
+    sort = parsed.sort || default_sort()
 
     scope_opts = [
       owner: parsed.owner,
@@ -76,47 +79,26 @@ defmodule TriageWeb.FindingLive.Index do
         {groups, total, has_more?, next_before}
       end
 
+    # One batched cached-KEV read for the rows on this page. A marker is only ever
+    # rendered for an advisory the cache actually holds.
+    kev = Intel.kev_index(Enum.map(groups, & &1.cve))
+
+    # Source freshness is one read per valid page load, never per row.
+    # Invalid input leaves status unread rather than inventing freshness.
+    kev_status = if invalid or unknown_team?, do: nil, else: Intel.kev_status()
+
     {:noreply,
      socket
+     |> assign(filter_assigns(parsed, sort))
      |> assign(
-       :filters,
-       %{
-         owner: parsed.owner,
-         environment: parsed.environment,
-         search: parsed.q,
-         include_suppressed: parsed.include_suppressed,
-         severity: parsed.severity,
-         sort: sort,
-         before: parsed.before
-       }
+       unknown_team?: unknown_team?,
+       teams: teams,
+       environments: Inventory.environments(),
+       counts: Inventory.summary_counts(),
+       kev: kev,
+       kev_status: kev_status
      )
-     |> assign(:invalid_filters, if(invalid, do: parsed.invalid, else: []))
-     |> assign(:unknown_team?, unknown_team?)
-     |> assign(:teams, Inventory.teams())
-     |> assign(:environments, Inventory.environments())
-     |> assign(:counts, Inventory.summary_counts())
-     |> assign(:advisory_count, total)
-     |> assign(:shown, length(groups))
-     |> assign(:per_page, @per_page)
-     |> assign(:has_more?, has_more?)
-     |> assign(:cursor, parsed.before)
-     |> assign(:next_before, next_before)
-     |> assign(:beyond_end?, groups == [] and total > 0)
-     |> assign(:order_note, sort_note(sort))
-     |> assign(:sort_options, sort_options())
-     |> assign(
-       :filter_form,
-       to_form(%{
-         "owner" => parsed.owner,
-         "environment" => parsed.environment,
-         "q" => parsed.q,
-         "suppressed" => parsed.include_suppressed,
-         "severity" => parsed.severity,
-         "sort" => sort
-       })
-     )
-     |> assign(:empty?, groups == [])
-     |> stream(:groups, groups, reset: true)}
+     |> assign_results(groups, total, has_more?, parsed.before, next_before)}
   end
 
   @impl true
@@ -127,26 +109,55 @@ defmodule TriageWeb.FindingLive.Index do
       {:noreply,
        push_patch(socket, to: ~p"/findings?#{FindingFilters.query_params(canonical(parsed))}")}
     else
-      # Keep the last valid URL; show the invalid state and no findings.
+      # Keep the last valid URL/form; clear the same result model used by URL loads.
       {:noreply,
        socket
-       |> assign(:invalid_filters, parsed.invalid)
-       |> assign(:unknown_team?, false)
-       |> assign(:advisory_count, 0)
-       |> assign(:shown, 0)
-       |> assign(:has_more?, false)
-       |> assign(:cursor, nil)
-       |> assign(:next_before, nil)
-       |> assign(:beyond_end?, false)
-       |> assign(:empty?, true)
-       |> stream(:groups, [], reset: true)}
+       |> assign(invalid_filters: parsed.invalid, unknown_team?: false, kev: %{}, kev_status: nil)
+       |> assign_results([], 0, false, nil, nil)}
     end
   end
 
-  defp team_unknown?(nil), do: false
+  defp filter_assigns(parsed, sort) do
+    %{
+      filters: %{
+        owner: parsed.owner,
+        environment: parsed.environment,
+        search: parsed.q,
+        include_suppressed: parsed.include_suppressed,
+        severity: parsed.severity,
+        sort: sort,
+        before: parsed.before
+      },
+      invalid_filters: parsed.invalid,
+      order_note: sort_note(sort),
+      sort_options: sort_options(),
+      filter_form:
+        to_form(%{
+          "owner" => parsed.owner,
+          "environment" => parsed.environment,
+          "q" => parsed.q,
+          "suppressed" => parsed.include_suppressed,
+          "severity" => parsed.severity,
+          "sort" => sort
+        })
+    }
+  end
 
-  defp team_unknown?(owner) do
-    owner not in Inventory.teams()
+  # Streams do not retain an enumerable list. Compute all derived result state
+  # together whenever the stream resets, including invalid form events.
+  defp assign_results(socket, groups, total, has_more?, cursor, next_before) do
+    socket
+    |> assign(%{
+      advisory_count: total,
+      shown: length(groups),
+      per_page: @per_page,
+      has_more?: has_more?,
+      cursor: cursor,
+      next_before: next_before,
+      beyond_end?: groups == [] and total > 0,
+      empty?: groups == []
+    })
+    |> stream(:groups, groups, reset: true)
   end
 
   # The default order is the absence of a sort parameter: a filter event that
@@ -270,6 +281,12 @@ defmodule TriageWeb.FindingLive.Index do
         subtitle="Advisories grouped across affected packages and images in local inventory."
       />
 
+      <.notice id="reference-inventory-help" kind="info">
+        The <strong>public-reference / not-a-deployment</strong> scope contains real NVD CVEs,
+        not proof that your systems are affected. Its severity comes from public CVSS metrics;
+        installed versions, exposure and fixes are not asserted. Open a CVE for source links and provenance.
+      </.notice>
+
       <dl
         id="inventory-totals"
         class="metric-strip metric-strip-compact"
@@ -287,7 +304,7 @@ defmodule TriageWeb.FindingLive.Index do
       <details id="inventory-count-scope" class="disclosure supporting">
         <summary>All local inventory · counts are not filtered</summary>
         <p>
-          Independent of filters and active placements. Open excludes suppressed; both counts exclude occurrences no longer observed. Suppression is not mitigation evidence.
+          Independent of display filters; only images with active placements count. Open excludes suppressed; both counts exclude occurrences no longer observed. Suppression is not mitigation evidence.
         </p>
       </details>
 
@@ -351,6 +368,12 @@ defmodule TriageWeb.FindingLive.Index do
           </div>
         </:summary>
       </.filter_bar>
+      <p id="inventory-search-help" class="supporting">
+        Search accepts an advisory id — a partial id matches too — or a package name. A package
+        match keeps the whole advisory group, so other affected packages remain included.
+      </p>
+      <.kev_note id="inventory-kev-note" present?={map_size(@kev) > 0} />
+      <.kev_source_status id="inventory-kev-status" status={@kev_status} />
 
       <div
         :if={@invalid_filters == [] and filter_chips(@filters) != []}
@@ -397,9 +420,6 @@ defmodule TriageWeb.FindingLive.Index do
       </p>
       <details id="findings-order-details" class="disclosure supporting">
         <summary>Search and ordering details</summary>
-        <p id="inventory-search-help">
-          Package search matches the whole advisory group; other affected packages remain included.
-        </p>
         <p id="findings-order">
           One page shows at most {@per_page} advisory groups in this order; the matching total is
           the unpaged count for this scope.
@@ -458,6 +478,7 @@ defmodule TriageWeb.FindingLive.Index do
                   >View occurrence</.link>
                 </div>
                 <div class="cluster">
+                  <.kev_marker id={"group-kev-#{g.cve}"} kev={@kev[g.cve]} />
                   <.status_badge :if={g.reopened > 0} label="Reopened" />
                   <.status_badge
                     :if={g.suppressed_occurrences > 0}
@@ -473,12 +494,12 @@ defmodule TriageWeb.FindingLive.Index do
                 />
               </td>
               <td>
-                <div data-field="packages">{count_label(g.packages, "package")}</div>
+                <div data-field="packages"><.counted count={g.packages} singular="package" /></div>
                 <div class="supporting">
-                  <span data-field="images">{count_label(g.images, "image")}</span>
+                  <span data-field="images"><.counted count={g.images} singular="image" /></span>
                   ·
                   <span data-field="occurrences">
-                    {count_label(g.occurrences, "occurrence")}
+                    <.counted count={g.occurrences} singular="occurrence" />
                   </span>
                 </div>
               </td>
@@ -492,7 +513,7 @@ defmodule TriageWeb.FindingLive.Index do
                 <% end %>
               </td>
               <td><.timestamp value={g.first_seen} /></td>
-              <td data-field="teams">{count_label(g.teams, "team")}</td>
+              <td data-field="teams"><.counted count={g.teams} singular="team" /></td>
             </tr>
           </tbody>
         </table>

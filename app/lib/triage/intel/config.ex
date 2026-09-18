@@ -12,6 +12,23 @@ defmodule Triage.Intel.Config do
   enabled scheduler — never on ordinary GET requests.
   """
 
+  @default_max_response_bytes 8_000_000
+
+  @doc "Validated runtime byte cap shared by streaming and injected-response admission."
+  @spec max_response_bytes() ::
+          {:ok, pos_integer()} | {:error, {:invalid_config, :max_response_bytes}}
+  def max_response_bytes do
+    config = Application.get_env(:triage, :intel, [])
+
+    max =
+      if Keyword.keyword?(config),
+        do: Keyword.get(config, :max_response_bytes, @default_max_response_bytes)
+
+    if is_integer(max) and max > 0,
+      do: {:ok, max},
+      else: {:error, {:invalid_config, :max_response_bytes}}
+  end
+
   @spec enabled?() :: boolean()
   def enabled? do
     Application.get_env(:triage, :intel, [])

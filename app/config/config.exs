@@ -16,7 +16,15 @@ config :triage,
 # explicit `sources` allowlist and operational approval.
 config :triage, :intel,
   enabled: false,
-  sources: []
+  sources: [],
+  max_response_bytes: 8_000_000
+
+# Offline collection policy. The network-capable loopback transport is disabled
+# in every environment except test, which enables it in `config/test.exs`. The
+# gate is read with `Application.compile_env/3`, so the value is baked into the
+# beam when the module is compiled: runtime configuration cannot flip it, and a
+# dev/prod release still cannot reach the network.
+config :triage, :collection, loopback_transport: false
 
 # Configure the endpoint
 config :triage, TriageWeb.Endpoint,
@@ -41,6 +49,16 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Compile Tailwind CSS from the source entrypoint in assets/css into the served
+# static directory. The profile name `triage` is what `mix tailwind triage` and
+# the development watcher select below.
+config :tailwind,
+  version: "4.1.18",
+  triage: [
+    args: ~w(--input=css/tailwind.css --output=../priv/static/assets/css/tailwind.css),
+    cd: Path.expand("../assets", __DIR__)
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

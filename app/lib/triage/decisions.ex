@@ -124,31 +124,38 @@ defmodule Triage.Decisions do
   def record(_other), do: {:error, :invalid_decision}
 
   @doc """
-  The governing decision per CVE, as `%{cve => decision map}`.
-
-  An active decision always outranks an expired one, so a newer expired row
-  never hides an older valid acceptance. Only `state: :active` covers the
-  advisory; `state: :expired` is why the advisory is back in the work list.
-  The reduction runs in PostgreSQL with `DISTINCT ON`, one row per CVE.
+  Latest effective whole-advisory decision per CVE. Placement decisions never
+  masquerade as advisory-wide coverage. Future decisions do not supersede an
+  effective row; an expired replacement never resurrects an older acceptance.
   """
   @spec latest_by_cve([String.t()], DateTime.t()) :: %{optional(String.t()) => map()}
-  def latest_by_cve(cves, now \\ DateTime.utc_now())
+  def latest_by_cve(cves, now \\ DateTime.utc_now()) do
+    cves
+    |> latest_by_scope(now)
+    |> Enum.flat_map(fn
+      {{cve, nil}, decision} -> [{cve, decision}]
+      _ -> []
+    end)
+    |> Map.new()
+  end
 
-  def latest_by_cve([], _now), do: %{}
+  @doc "Latest effective decision for each exact `{cve, placement_id}` scope."
+  def latest_by_scope(cves, now \\ DateTime.utc_now())
+  def latest_by_scope([], _now), do: %{}
 
-  def latest_by_cve(cves, now) when is_list(cves) do
+  def latest_by_scope(cves, now) when is_list(cves) do
     from(d in Decision,
-      where: d.cve in ^cves,
-      distinct: d.cve,
-      order_by: [
-        asc: d.cve,
-        desc: fragment("(? IS NULL OR ? >= ?)", d.expires_at, d.expires_at, ^now),
-        desc: d.decided_at,
-        desc: d.id
-      ]
+      where: d.cve in ^cves and d.decided_at <= ^now,
+      distinct: [d.cve, d.placement_id],
+      order_by: [asc: d.cve, asc: d.placement_id, desc: d.decided_at, desc: d.id]
     )
     |> Repo.all()
-    |> Map.new(&{&1.cve, decorate(&1, now)})
+    |> Map.new(&{{&1.cve, &1.placement_id}, decorate(&1, now)})
+  end
+
+  @doc "Active coverage for one placement, from its own scope or the whole advisory."
+  def covering_decision(decisions, cve, placement_id) do
+    Enum.find([decisions[{cve, nil}], decisions[{cve, placement_id}]], &active?/1)
   end
 
   @doc "Append-only decision history for one advisory, newest first."
@@ -175,12 +182,15 @@ defmodule Triage.Decisions do
   def active?(%{state: :active}), do: true
   def active?(_other), do: false
 
-  @doc "State of a decision at `now`: `:active` or `:expired`."
-  @spec state(Decision.t(), DateTime.t()) :: :active | :expired
-  def state(%Decision{expires_at: nil}, _now), do: :active
-
-  def state(%Decision{expires_at: expires_at}, now) do
-    if DateTime.compare(expires_at, now) == :lt, do: :expired, else: :active
+  @doc "State at `now`; future decisions are pending and cover nothing."
+  @spec state(Decision.t(), DateTime.t()) :: :pending | :active | :expired
+  def state(%Decision{} = decision, now) do
+    cond do
+      DateTime.compare(decision.decided_at, now) == :gt -> :pending
+      is_nil(decision.expires_at) -> :active
+      DateTime.compare(decision.expires_at, now) == :lt -> :expired
+      true -> :active
+    end
   end
 
   defp decorate(decision, now) do

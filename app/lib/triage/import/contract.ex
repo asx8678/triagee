@@ -13,7 +13,7 @@ defmodule Triage.Import.Contract do
   @format "triage.snapshot"
   @version 1
   @events ~w(appeared resolved reopened)
-  @severities ~w(CRITICAL HIGH MEDIUM LOW)
+  @severities Triage.Severity.order()
   @unsafe_text ~r/[\x00-\x1F\x7F]/
 
   # Text and scope budgets.
@@ -39,6 +39,10 @@ defmodule Triage.Import.Contract do
   @placement_keys ~w(namespace owner environment active first_seen last_seen)
   @finding_keys ~w(cve package_name package_version severity fix url description suppressed first_seen last_seen resolved_at events)
   @event_keys ~w(event occurred_at note)
+
+  @doc "The transaction-scoped advisory lock shared by every import writer."
+  @spec lock_key() :: integer()
+  def lock_key, do: @import_lock_key
 
   @doc false
   defmacro __using__(_opts) do

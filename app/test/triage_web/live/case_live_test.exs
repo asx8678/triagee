@@ -13,7 +13,7 @@ defmodule TriageWeb.CaseLiveTest do
   use TriageWeb.ConnCase, async: true
 
   import Ecto.Query
-  alias Triage.{Cases, Repo, Seeds}
+  alias Triage.{Cases, Intel, Repo, Seeds}
   alias Triage.Inventory.Finding
 
   @env "prod"
@@ -40,6 +40,40 @@ defmodule TriageWeb.CaseLiveTest do
 
     {:ok, case_view, _html} = live(conn, to)
     {to, case_view}
+  end
+
+  test "the case's captured advisory opens the advisory detail under the saved scope", %{
+    conn: conn
+  } do
+    {_to, case_view} = open_case(conn)
+
+    expected = ~p"/cves/CVE-2026-60002?#{@scope}"
+
+    # Scoped to the case's SAVED scope, so the aggregate a reviewer opens from the
+    # case is the same team and environment the case is fixed to.
+    assert has_element?(case_view, "#case-cve-action[href='#{expected}']")
+    assert has_element?(case_view, "#case-cve-action", "Advisory detail")
+  end
+
+  test "the case header carries the cached KEV actionability it actually holds", %{conn: conn} do
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: "CVE-2026-60002",
+          summary: "kev entry",
+          published_at: ~U[2026-09-12 10:00:00Z],
+          required_action: "Apply updates per vendor instructions.",
+          due_date: ~U[2026-01-23 00:00:00Z],
+          known_ransomware: true
+        }
+      ])
+
+    {_to, case_view} = open_case(conn)
+
+    assert has_element?(case_view, "#case-kev-badge", "Known exploited (KEV cache)")
+    assert has_element?(case_view, "#case-kev", "Apply updates per vendor instructions.")
+    assert has_element?(case_view, "#case-kev", "Known ransomware campaign use")
+    assert has_element?(case_view, "#case-kev time")
   end
 
   defp case_id_of(to) do

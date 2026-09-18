@@ -30,6 +30,8 @@ defmodule TriageWeb.FindingFilters do
   @severities ~w(CRITICAL HIGH MEDIUM LOW)
   @unsafe_text ~r/[\x00-\x1F\x7F]/
 
+  use TriageWeb, :verified_routes
+
   alias Triage.Inventory.GroupCursor
 
   @doc """
@@ -148,18 +150,32 @@ defmodule TriageWeb.FindingFilters do
   defp blank_flat_fields?(flat) do
     parsed = parse(flat)
 
-    parsed.invalid == [] and parsed.owner == nil and parsed.environment == nil and
-      parsed.q == nil and parsed.include_suppressed == false and neutral_order?(parsed)
+    # The form's default sort is neutral. Compare the whole state so a new
+    # filter cannot accidentally be omitted from the ambiguity check.
+    parsed in [defaults(), %{defaults() | sort: Triage.Inventory.default_group_sort()}]
   end
 
-  # The real filter form serializes its order control on every event, so a flat
-  # value that equals the default order — and no position at all, because the
-  # form has no cursor field — carries no second filter intent next to a
-  # wrapper. Any other value there is a genuine conflict and stays rejected as
-  # ambiguous.
-  defp neutral_order?(parsed) do
-    parsed.sort in [nil, Triage.Inventory.default_group_sort()] and parsed.before == nil
+  @doc """
+  The advisory aggregate for `cve` under an owner/environment scope, or nil.
+
+  One implementation of the advisory route for every view that carries a display scope —
+  findings, activity and the timeline all link to the same page — so no two of them can
+  disagree about the target or about which scope keys travel. A blank `cve`, or anything
+  that is not a scope map, yields no link at all: an empty id addresses a route that does
+  not exist.
+  """
+  @spec advisory_path(term(), term()) :: String.t() | nil
+  def advisory_path(cve, filters)
+      when is_binary(cve) and cve != "" and is_map(filters) do
+    qs =
+      %{owner: filters[:owner], environment: filters[:environment]}
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+      |> Map.new()
+
+    if map_size(qs) == 0, do: ~p"/cves/#{cve}", else: ~p"/cves/#{cve}?#{qs}"
   end
+
+  def advisory_path(_cve, _filters), do: nil
 
   @doc """
   Atom-keyed query params for verified routes, dropping blank All choices and
@@ -200,87 +216,34 @@ defmodule TriageWeb.FindingFilters do
     end
   end
 
-  defp field_value(:severity, nil), do: {:ok, nil}
+  defp field_value(:severity, value), do: enum_value(value, @severities, &String.upcase/1)
+  defp field_value(:sort, value), do: enum_value(value, sorts(), &String.downcase/1)
 
-  defp field_value(:severity, value) when is_binary(value) do
-    cond do
-      not String.valid?(value) ->
-        {:error, nil}
-
-      Regex.match?(@unsafe_text, value) ->
-        {:error, nil}
-
-      true ->
-        case String.trim(value) do
-          "" ->
-            {:ok, nil}
-
-          trimmed ->
-            normalized = String.upcase(trimmed)
-
-            if normalized in @severities do
-              {:ok, normalized}
-            else
-              {:error, nil}
-            end
-        end
+  defp field_value(:suppressed, value) do
+    case scope_value(value) do
+      {:ok, nil} -> {:ok, false}
+      {:ok, trimmed} when trimmed in @suppressed_truthy -> {:ok, true}
+      {:ok, trimmed} when trimmed in @suppressed_falsy -> {:ok, false}
+      _other -> {:error, false}
     end
   end
 
-  defp field_value(:severity, _other), do: {:error, nil}
-
-  defp field_value(:sort, nil), do: {:ok, nil}
-
-  defp field_value(:sort, value) when is_binary(value) do
-    cond do
-      not String.valid?(value) ->
-        {:error, nil}
-
-      Regex.match?(@unsafe_text, value) ->
-        {:error, nil}
-
-      true ->
-        case value |> String.trim() |> String.downcase() do
-          "" ->
-            {:ok, nil}
-
-          normalized ->
-            if normalized in Triage.Inventory.group_sorts(),
-              do: {:ok, normalized},
-              else: {:error, nil}
-        end
-    end
-  end
-
-  defp field_value(:sort, _other), do: {:error, nil}
-
-  defp field_value(:suppressed, nil), do: {:ok, false}
-
-  defp field_value(:suppressed, value) when is_binary(value) do
-    # Raw validation first: control characters or invalid UTF-8 are rejected
-    # even when trimming would remove them.
-    cond do
-      not String.valid?(value) ->
-        {:error, false}
-
-      Regex.match?(@unsafe_text, value) ->
-        {:error, false}
-
-      true ->
-        case String.trim(value) do
-          "" -> {:ok, false}
-          trimmed when trimmed in @suppressed_truthy -> {:ok, true}
-          trimmed when trimmed in @suppressed_falsy -> {:ok, false}
-          _other -> {:error, false}
-        end
-    end
-  end
-
-  defp field_value(:suppressed, _other), do: {:error, false}
-
-  # `owner`/`environment` — and any field without a specialized clause above —
-  # use the published scope value contract defined below.
+  # `owner`/`environment` and free text use the same raw validation and trimming.
   defp field_value(_scope, value), do: scope_value(value)
+
+  defp enum_value(value, allowed, normalize) do
+    case scope_value(value) do
+      {:ok, nil} ->
+        {:ok, nil}
+
+      {:ok, trimmed} ->
+        normalized = normalize.(trimmed)
+        if normalized in allowed, do: {:ok, normalized}, else: {:error, nil}
+
+      error ->
+        error
+    end
+  end
 
   @doc "
   The scope value contract, published because more than one caller implements it.

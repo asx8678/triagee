@@ -221,7 +221,7 @@ defmodule Triage.TriageTest do
                decision: "accepted_risk",
                reason: "Synthetic acceptance with an end date.",
                actor: "test-operator",
-               decided_at: at(0),
+               decided_at: DateTime.add(DateTime.utc_now(), -60),
                expires_at: DateTime.add(at(0), 30, :day)
              })
 
@@ -276,7 +276,7 @@ defmodule Triage.TriageTest do
                decision: "not_affected",
                reason: "Synthetic: the vulnerable entry point is not deployed.",
                actor: "test-operator",
-               decided_at: at(0)
+               decided_at: DateTime.add(DateTime.utc_now(), -60)
              })
 
     open_image = image!("triage-filter-open")
@@ -313,7 +313,7 @@ defmodule Triage.TriageTest do
                decision: "accepted_risk",
                reason: "Synthetic acceptance recorded after the review.",
                actor: "test-operator",
-               decided_at: at(0),
+               decided_at: DateTime.add(DateTime.utc_now(), -60),
                expires_at: DateTime.add(at(0), 10, :day)
              })
 

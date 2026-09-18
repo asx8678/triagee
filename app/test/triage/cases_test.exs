@@ -8,7 +8,6 @@ defmodule Triage.CasesTest do
 
   use Triage.DataCase, async: true
 
-  import Triage.Fixtures
   alias Triage.{Cases, Inventory, Repo}
   alias Triage.Cases.{CaseEvent, EvidenceSnapshot, Review, ReviewCase}
 
@@ -23,7 +22,7 @@ defmodule Triage.CasesTest do
   }
 
   setup do
-    :ok = seed()
+    :ok = Triage.CaseFixtures.seed()
     :ok
   end
 

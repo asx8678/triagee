@@ -9,7 +9,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   use TriageWeb.ConnCase, async: true
 
   import Ecto.Query
-  alias Triage.{Cases, Inventory, Repo, Seeds}
+  alias Triage.{Cases, Intel, Inventory, Repo, Seeds}
   alias Triage.Cases.ReviewCase
   alias Triage.Inventory.Finding
 
@@ -140,6 +140,30 @@ defmodule TriageWeb.CaseLiveIndexTest do
 
     assert has_element?(view, "#case-link-#{alpha.id}[href='#{alpha_href}']")
     assert has_element?(view, "#case-link-#{beta.id}[href='#{beta_href}']")
+
+    # The row's advisory id opens the advisory's aggregate detail. An unfiltered
+    # queue carries no scope, so the advisory opens unscoped rather than inheriting
+    # one row's saved team.
+    assert has_element?(view, "#case-cve-#{alpha.id}[href='/cves/CVE-2026-60002']")
+    assert has_element?(view, "#case-cve-#{beta.id}[href='/cves/CVE-2026-60002']")
+  end
+
+  test "a cached KEV row marks its queue row and the queue names the cache", %{conn: conn} do
+    alpha = open_case!("openssh-client", "alpha")
+
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: "CVE-2026-60002",
+          summary: "kev entry",
+          published_at: ~U[2026-09-12 10:00:00Z]
+        }
+      ])
+
+    {:ok, view, _html} = live(conn, "/cases")
+
+    assert has_element?(view, "#case-kev-#{alpha.id}", "Known exploited (KEV cache)")
+    assert has_element?(view, "#queue-kev-note")
   end
 
   test "URL scope filters rows; row links keep each row's saved scope", %{conn: conn} do
@@ -156,6 +180,10 @@ defmodule TriageWeb.CaseLiveIndexTest do
 
     assert has_element?(view, "#case-link-#{alpha.id}[href='#{alpha_href}']")
 
+    # A filtered queue carries its filter, so the advisory opens on the team the
+    # reviewer is already looking at.
+    assert has_element?(view, "#case-cve-#{alpha.id}[href='/cves/CVE-2026-60002?owner=alpha']")
+
     {:ok, view, _html} = live(conn, "/cases?environment=#{@env}")
 
     assert has_element?(view, "#case-#{alpha.id}")
@@ -170,6 +198,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
     assert has_element?(view, "#queue-empty")
     refute has_element?(view, "#queue-error")
     refute has_element?(view, "[id^='case-link-']")
+    refute has_element?(view, "[id^='case-cve-']")
     refute has_element?(view, "#older-cases")
   end
 

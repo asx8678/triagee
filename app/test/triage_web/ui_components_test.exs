@@ -6,6 +6,20 @@ defmodule TriageWeb.UIComponentsTest do
   import TriageWeb.UIComponents
   alias TriageWeb.{CoreComponents, Layouts, UIComponents}
 
+  test "counted handles zero, singular and irregular plurals without interpreting markup" do
+    for {n, expected} <- [{0, "0 packages"}, {1, "1 package"}, {2, "2 packages"}] do
+      doc = component(&UIComponents.counted/1, count: n, singular: "package")
+      assert doc |> LazyHTML.text() |> String.trim() == expected
+    end
+
+    doc = component(&UIComponents.counted/1, count: 2, singular: "advisory", plural: "advisories")
+    assert doc |> LazyHTML.text() |> String.trim() == "2 advisories"
+
+    doc = component(&UIComponents.counted/1, count: 1, singular: "<script>probe</script>")
+    assert count(doc, "script") == 0
+    assert doc |> LazyHTML.text() |> String.trim() == "1 <script>probe</script>"
+  end
+
   test "technical disclosure preserves and copies the exact untrusted original" do
     value =
       "registry/team/" <>
@@ -21,6 +35,31 @@ defmodule TriageWeb.UIComponentsTest do
     assert count(doc, "#image-copy[phx-hook='CopyValue'][type='button']") == 1
     assert count(doc, "#image-feedback[role='status'][aria-live='polite']") == 1
     assert count(doc, "script") == 0
+  end
+
+  test "both technical variants preserve copy targets, hostile text and unique IDs" do
+    value = ~s(sha256:<script>&"copy-me")
+
+    for variant <- ["default", "compact"] do
+      doc =
+        component(&UIComponents.technical_value/1,
+          id: "technical",
+          label: "Digest",
+          value: value,
+          variant: variant
+        )
+
+      assert count(doc, "#technical") == 1
+      assert count(doc, "#technical-copy") == 1
+      assert count(doc, "#technical-feedback") == 1
+      assert attrs(doc, "#technical-copy", "data-copy-feedback") == ["technical-feedback"]
+      assert attrs(doc, "#technical-copy", "data-copy-value") == [value]
+      assert attrs(doc, "#technical-copy", "aria-label") == ["Copy exact Digest"]
+      assert count(doc, "#technical-feedback[phx-update='ignore'][aria-live='polite']") == 1
+      assert text(doc, "#technical-full") == value
+      assert count(doc, "script") == 0
+      assert count(doc, ".technical-label.sr-only") == if(variant == "compact", do: 1, else: 0)
+    end
   end
 
   test "missing technical values do not offer a fake copy action" do

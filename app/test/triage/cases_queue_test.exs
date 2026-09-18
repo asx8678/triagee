@@ -9,7 +9,6 @@ defmodule Triage.CasesQueueTest do
   use Triage.DataCase, async: true
 
   import Ecto.Query
-  import Triage.Fixtures
 
   alias Triage.{Cases, Inventory, Repo}
   alias Triage.Cases.{CaseEvent, EvidenceSnapshot, Review, ReviewCase}
@@ -26,7 +25,7 @@ defmodule Triage.CasesQueueTest do
   }
 
   setup do
-    :ok = seed()
+    :ok = Triage.CaseFixtures.seed()
     :ok
   end
 

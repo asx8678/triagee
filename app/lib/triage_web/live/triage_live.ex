@@ -105,9 +105,6 @@ defmodule TriageWeb.TriageLive do
              assign(socket, :decision_errors, [
                "cve: no finding in this inventory carries that CVE, so no decision was recorded"
              ])}
-
-          {:error, _other} ->
-            {:noreply, assign(socket, :decision_errors, ["The decision was refused."])}
         end
 
       {:error, message} ->

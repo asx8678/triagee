@@ -24,9 +24,10 @@ defmodule Triage.Triage do
       placement the scope belongs to, with its source and observation time.
       Absence is *not* "no impact": absence is silence.
     * **Decision** — the governing `advisory_decisions` row for the advisory
-      (`Triage.Decisions`): the latest active decision, or the latest one of any
-      state when none is active. A decision removes the advisory from the work
-      list; it is not resolution and writes nothing to the finding.
+      (`Triage.Decisions`): the latest effective decision in each exact scope.
+      Future records cover nothing and expired replacements never revive older
+      acceptances. Every active placement must be covered before the advisory
+      leaves the work list; a placement decision never covers its siblings.
 
   Scope assessment states:
 
@@ -127,7 +128,7 @@ defmodule Triage.Triage do
     cves = Enum.map(groups, & &1.cve)
     scopes = scopes_by_cve(cves)
     cases = cases_by_scope(finding_ids(scopes))
-    decisions = Decisions.latest_by_cve(cves)
+    decisions = Decisions.latest_by_scope(cves)
     impacts = impacts_by_placement(scopes)
 
     rows =
@@ -249,7 +250,14 @@ defmodule Triage.Triage do
     work_items =
       scopes
       |> Map.get(group.cve, [])
-      |> Enum.map(&work_item(&1, cases, impacts))
+      |> Enum.map(fn scope ->
+        scope
+        |> work_item(cases, impacts)
+        |> Map.put(
+          :decision,
+          Decisions.covering_decision(decisions, group.cve, scope.placement_id)
+        )
+      end)
       |> Enum.sort_by(&{&1.owner, &1.environment, &1.finding_id})
 
     assessed = Enum.count(work_items, &(&1.assessment == :assessed))
@@ -262,7 +270,8 @@ defmodule Triage.Triage do
     with_impact =
       Enum.count(work_items, &(&1.impact != nil and &1.impact.state == :active))
 
-    decision = Map.get(decisions, group.cve)
+    decision = Map.get(decisions, {group.cve, nil})
+    decided = Enum.count(work_items, &Decisions.active?(&1.decision))
 
     %{
       cve: group.cve,
@@ -282,7 +291,8 @@ defmodule Triage.Triage do
       scopes_applicable: applicable,
       scopes_with_impact: with_impact,
       decision: decision,
-      state: lane_state(assessed, applicable, length(work_items), decision),
+      scopes_decided: decided,
+      state: lane_state(assessed, applicable, length(work_items), decided),
       work_items: work_items
     }
   end
@@ -293,7 +303,8 @@ defmodule Triage.Triage do
        when total > 0 and assessed == total and applicable == 0,
        do: :assessed_no_impact
 
-  defp lane_state(_assessed, _applicable, _total, %{state: :active}), do: :decision_recorded
+  defp lane_state(_assessed, _applicable, total, decided) when total > 0 and total == decided,
+    do: :decision_recorded
 
   defp lane_state(_assessed, applicable, _total, _decision) when applicable > 0,
     do: :applicability_confirmed

@@ -1,7 +1,7 @@
 defmodule TriageWeb.StatisticsLiveTest do
   use TriageWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
-  alias Triage.Inventory.{Image, Finding}
+  alias Triage.Inventory.{Finding, Image}
   alias Triage.Repo
 
   setup do
@@ -43,14 +43,14 @@ defmodule TriageWeb.StatisticsLiveTest do
         tag: "1"
       })
 
-    for {cve, resolved} <- [{"CVE-OPEN", nil}, {"CVE-CLEAR", DateTime.add(now, -86400)}] do
+    for {cve, resolved} <- [{"CVE-OPEN", nil}, {"CVE-CLEAR", DateTime.add(now, -86_400)}] do
       Repo.insert!(%Finding{
         image_id: image.id,
         cve: cve,
         package_name: cve,
         package_version: "1",
         severity: "CRITICAL",
-        first_seen: DateTime.add(now, -10 * 86400),
+        first_seen: DateTime.add(now, -10 * 86_400),
         last_seen: now,
         resolved_at: resolved
       })
@@ -62,7 +62,7 @@ defmodule TriageWeb.StatisticsLiveTest do
         decision: "not_affected",
         reason: "Not applicable",
         actor: "test",
-        decided_at: DateTime.add(now, -8 * 86400)
+        decided_at: DateTime.add(now, -8 * 86_400)
       })
 
     render_click(view, "reload")

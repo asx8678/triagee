@@ -28,7 +28,7 @@ defmodule Triage.DecisionsTest do
         decision: "accepted_risk",
         reason: "Synthetic test acceptance that expires.",
         actor: "test-operator",
-        decided_at: at(0),
+        decided_at: at(1),
         expires_at: DateTime.add(at(0), 30, :day)
       },
       overrides
@@ -41,11 +41,59 @@ defmodule Triage.DecisionsTest do
     assert decision.actor == "test-operator"
     assert decision.placement_id == placement.id
 
-    assert %{"CVE-2098-6101" => current} = Decisions.latest_by_cve(["CVE-2098-6101"])
+    assert Decisions.latest_by_cve(["CVE-2098-6101"]) == %{}
+    current = Decisions.latest_by_scope(["CVE-2098-6101"])[{"CVE-2098-6101", placement.id}]
     assert current.label == "Accepted risk"
     assert current.state == :active
     assert Decisions.active?(current)
     assert current.expires_at == decision.expires_at
+  end
+
+  test "placement decisions never cover siblings and triage requires every scope", context do
+    image = Repo.get!(Triage.Inventory.Image, context.finding.image_id)
+    sibling = placement!(image, "beta", "prod-cluster-1")
+    cve = context.finding.cve
+    assert {:ok, _} = Decisions.record(attrs(%{placement_id: context.placement.id}))
+    decisions = Decisions.latest_by_scope([cve])
+    assert Decisions.covering_decision(decisions, cve, context.placement.id)
+    assert Decisions.covering_decision(decisions, cve, sibling.id) == nil
+    assert Decisions.latest_by_cve([cve]) == %{}
+    assert {:ok, %{rows: [row]}} = Triage.Triage.list_critical(filter: "all")
+    assert row.state == :awaiting_assessment
+    assert row.scopes_decided == 1
+    assert Enum.map(Triage.GuidedReview.get(cve).pending, & &1.owner) == ["beta"]
+
+    assert {:ok, _} = Decisions.record(attrs(%{placement_id: sibling.id}))
+    assert {:ok, %{rows: [covered]}} = Triage.Triage.list_critical(filter: "whitelisted")
+    assert covered.state == :decision_recorded
+    assert covered.scopes_decided == 2
+    assert Triage.GuidedReview.get(cve) == nil
+  end
+
+  test "future decisions are pending and cannot replace current coverage", context do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    cve = context.finding.cve
+    assert {:ok, future} = Decisions.record(attrs(%{decided_at: DateTime.add(now, 3600)}))
+    assert Decisions.state(future, now) == :pending
+    assert Decisions.latest_by_scope([cve], now) == %{}
+    assert Triage.GuidedReview.get(cve)
+    assert {:ok, %{rows: [row]}} = Triage.Triage.list_critical(filter: "active")
+    assert row.scopes_decided == 0
+
+    assert {:ok, effective} = Decisions.record(attrs(%{decided_at: DateTime.add(now, -60)}))
+    assert Decisions.latest_by_cve([cve], now)[cve].id == effective.id
+    assert Decisions.latest_by_cve([cve], DateTime.add(now, 3600))[cve].id == future.id
+  end
+
+  test "expiry covers its exact boundary but not the next second", context do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    assert {:ok, decision} = Decisions.record(attrs(%{expires_at: now}))
+    assert Decisions.state(decision, now) == :active
+    assert Decisions.state(decision, DateTime.add(now, 1)) == :expired
+
+    assert Decisions.latest_by_cve([context.finding.cve], DateTime.add(now, 1))[
+             context.finding.cve
+           ].state == :expired
   end
 
   test "an accepted risk without an expiry is refused" do
@@ -83,7 +131,7 @@ defmodule Triage.DecisionsTest do
     assert expired.expires_at == decision.expires_at
   end
 
-  test "an active decision outranks a newer expired one" do
+  test "the latest effective replacement expires without reviving an older acceptance" do
     active_expiry = DateTime.add(at(0), 10, :day)
 
     assert {:ok, _older} =
@@ -92,8 +140,9 @@ defmodule Triage.DecisionsTest do
     assert {:ok, newer} = Decisions.record(attrs(%{decided_at: at(1), expires_at: at(1)}))
 
     assert %{"CVE-2098-6101" => governing} = Decisions.latest_by_cve(["CVE-2098-6101"])
-    assert governing.expires_at == active_expiry
-    assert governing.id != newer.id
+    assert governing.expires_at == newer.expires_at
+    assert governing.id == newer.id
+    assert governing.state == :expired
   end
 
   test "history is append-only and links the decision it supersedes" do

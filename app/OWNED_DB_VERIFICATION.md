@@ -24,6 +24,8 @@ Then run modes separately as needed:
 ./scripts/verify_owned_db.sh all
 ```
 
+The wrapper targets passwordless loopback PostgreSQL on the standard port 5432 by default. When that port already belongs to a pre-existing server that must not be touched, export `TRIAGE_OWNED_DB_PORT` (decimal, 1024..65535) to point at an owned cluster elsewhere. The value is validated **before any database effect**; an empty, non-decimal or out-of-range value is rejected with exit 65 and no effects. The wrapper passes the validated port to every `psql` connection and exports it for the test configuration; `config/test.exs` honors it only alongside the guard's generated `_ab_` partition with the same range validation and fails closed otherwise, and `scripts/verify_owned_db.exs` re-checks the configured port against the validated value. Dev/prod configuration never reads this variable.
+
 `target` covers runtime configuration plus focused import, navigation/scope, and replay tests. `precommit` runs the full alias once. `concurrency` alone sets the exact internal `TRIAGE_IMPORT_CONCURRENCY_DB` opt-in and runs the import concurrency test; do not report ordinary target/precommit evidence as concurrency evidence.
 
 ## Fail-closed guards
@@ -36,13 +38,13 @@ Before `CREATE DATABASE`, the no-connection config probe uses supported argv syn
 mise x -- mix run --no-start scripts/verify_owned_db.exs DATABASE config
 ```
 
-It requires `Mix.env() == :test`, `Application.get_env(:triage, :ecto_repos) == [Triage.Repo]`, the generated database, hostname `localhost`, username `postgres`, default port 5432, and no URL/socket override. No Triage application is started. After creation, the verifier starts Postgrex and its dependencies only. Its first SQL statement is `SELECT current_database()`; it then requires the fresh database to contain no user tables before any migration or test.
+It requires `Mix.env() == :test`, `Application.get_env(:triage, :ecto_repos) == [Triage.Repo]`, the generated database, hostname `localhost`, username `postgres`, the validated owned port (default 5432), and no URL/socket override. No Triage application is started. After creation, the verifier starts Postgrex and its dependencies only. Its first SQL statement is `SELECT current_database()`; it then requires the fresh database to contain no user tables before any migration or test.
 
 Before concurrency, a later guard checks every application table from the migrations is empty: inventory/finding tables, all review case/evidence/review/event tables, and `replay_runs`.
 
 A preexisting generated name is never adopted. Cleanup drops only the exact database created by that invocation. It never uses `FORCE`, terminates sessions, or invokes `dropdb`; a failed drop is reported and turns an otherwise successful run into exit 74. Commands and exit outcomes are logged without URLs, environment values, SQL rows, or credentials.
 
-Exit 64 means invalid mode, 65 rejected ambient execution control, 69 missing tools, 70 unsafe generated identity, 73 preexisting database, and 74 cleanup failure. Other Mix/psql failures preserve their nonzero status.
+Exit 64 means invalid mode, 65 rejected ambient execution control or an invalid `TRIAGE_OWNED_DB_PORT`, 69 missing tools, 70 unsafe generated identity, 73 preexisting database, and 74 cleanup failure. Other Mix/psql failures preserve their nonzero status.
 
 ## Tested boundary
 

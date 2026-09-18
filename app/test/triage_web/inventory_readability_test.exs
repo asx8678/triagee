@@ -224,7 +224,11 @@ defmodule TriageWeb.InventoryReadabilityTest do
     finding = finding!("openssh-client")
     {:ok, view, _html} = live(conn, ~p"/findings/#{finding.id}")
 
-    assert has_element?(view, ".page-header .eyebrow", "Findings / #{finding.cve}")
+    # The advisory id is the page title and copy target; repeating it in the eyebrow
+    # was the deliberate round-3 dedupe, so the eyebrow names only the section.
+    assert has_element?(view, ".page-header .eyebrow", "Findings")
+    refute has_element?(view, ".page-header .eyebrow", finding.cve)
+    assert has_element?(view, ".page-header h1", finding.cve)
     assert has_element?(view, "#finding-summary", "Occurrence ##{finding.id}")
   end
 

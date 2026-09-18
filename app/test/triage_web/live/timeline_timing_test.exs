@@ -4,20 +4,58 @@ defmodule TriageWeb.TimelineLaneTimingTest do
   alias TriageWeb.TimelineLive.Lanes
   @first ~U[2026-01-01 00:00:00Z]
 
-  defp lane(attrs \\ %{}) do
-    Map.merge(%{cve: "CVE-TEST", severity: "HIGH", first_seen: @first, resolved_at: nil, state: :open, occurrence_count: 2, open_count: 2, resolved_count: 0, suppressed_count: 0, reopen_count: 0, observed_dates: [], judged_count: 0, decisions: []}, attrs)
+  defp lane(attrs) do
+    Map.merge(
+      %{
+        cve: "CVE-TEST",
+        severity: "HIGH",
+        first_seen: @first,
+        resolved_at: nil,
+        state: :open,
+        occurrence_count: 2,
+        open_count: 2,
+        resolved_count: 0,
+        suppressed_count: 0,
+        reopen_count: 0,
+        observed_dates: [],
+        judged_count: 0,
+        decisions: []
+      },
+      attrs
+    )
   end
 
   defp render_lane(row) do
-    render_component(&Lanes.lane_table/1, lanes: %{total: 1, rows: [row], truncated_count: 0}, filters: TriageWeb.TimelineFilters.defaults())
+    render_component(&Lanes.lane_table/1,
+      lanes: %{total: 1, rows: [row], truncated_count: 0},
+      filters: TriageWeb.TimelineFilters.defaults()
+    )
   end
 
   defp decision(attrs \\ %{}) do
-    Map.merge(%Triage.Decisions.Decision{id: 1, cve: "CVE-TEST", decision: "not_affected", decided_at: DateTime.add(@first, 2 * 86400)}, attrs)
+    Map.merge(
+      %Triage.Decisions.Decision{
+        id: 1,
+        cve: "CVE-TEST",
+        decision: "not_affected",
+        decided_at: DateTime.add(@first, 2 * 86_400)
+      },
+      attrs
+    )
   end
 
   test "fixed proxy shows both dates and duration, retaining whitelist history" do
-    html = render_lane(lane(%{state: :no_longer_observed, open_count: 0, resolved_count: 2, resolved_at: DateTime.add(@first, 5 * 86400), decisions: [decision()]}))
+    html =
+      render_lane(
+        lane(%{
+          state: :no_longer_observed,
+          open_count: 0,
+          resolved_count: 2,
+          resolved_at: DateTime.add(@first, 5 * 86_400),
+          decisions: [decision()]
+        })
+      )
+
     assert html =~ "Fixed"
     assert html =~ "not a verified repair"
     assert html =~ "2026-01-01T00:00:00Z"
@@ -38,7 +76,9 @@ defmodule TriageWeb.TimelineLaneTimingTest do
     assert html =~ "Date unknown"
     assert html =~ "Whitelist date unknown"
     assert render_lane(lane(%{suppressed_count: 1})) =~ "Partially whitelisted"
-    assert render_lane(lane(%{decisions: [decision(%{placement_id: 42})]})) =~ "Partially whitelisted"
+
+    assert render_lane(lane(%{decisions: [decision(%{placement_id: 42})]})) =~
+             "Partially whitelisted"
   end
 
   test "expired and future decisions do not stop waiting; reopened and unknown timing remain explicit" do

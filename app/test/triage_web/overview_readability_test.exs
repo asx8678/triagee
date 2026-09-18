@@ -6,7 +6,7 @@ defmodule TriageWeb.OverviewReadabilityTest do
     assert has_element?(view, "h1", "Vulnerabilities")
     assert has_element?(view, "#filter-form")
     assert has_element?(view, "#inventory-totals")
-    assert has_element?(view, "select[name='sort'] option[value='newest'][selected]")
+    assert has_element?(view, "select[name='sort'] option[value='severity'][selected]")
     refute has_element?(view, "#home-active-list")
     refute has_element?(view, "#home-workflows")
     assert has_element?(view, "#nav-findings[aria-current='page']")

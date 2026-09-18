@@ -17,7 +17,7 @@ defmodule Triage.CasesIntegrityTest do
   alias Triage.Cases.{CaseEvent, EvidenceSnapshot, Review, ReviewCase}
   alias Triage.Inventory
 
-  # From `Triage.Seeds`: image_a carries active placements for teams alpha and
+  # From the stable `Triage.CaseFixtures` test estate: image_a carries active placements for teams alpha and
   # beta in "prod"; its openssl finding is CRITICAL with fix "3.2.1".
   @owner "alpha"
   @other_owner "beta"
@@ -31,7 +31,7 @@ defmodule Triage.CasesIntegrityTest do
   }
 
   setup do
-    :ok = Triage.Fixtures.seed()
+    :ok = Triage.CaseFixtures.seed()
 
     finding =
       Repo.one!(

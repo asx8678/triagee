@@ -1,12 +1,71 @@
 # Prospective checkpoint review
 
+> **RESOLVED 2026-09-16 (commit-era supersession):** the checkpoint this document
+> proposed was committed at `0b7fc1af6223e3321cb5a6cf666a0af3f2fe61c6` ("Improve
+> triage quality and simplify shared validation"). `app/` source is committed and
+> the working tree holds no app diff against that baseline. The "app untracked",
+> "staged/pending commit" and "staging for approval" claims below were accurate
+> when written — they do not describe the current tree.
+>
+> Note the enumeration history: the **197-path** staging was approved and committed;
+> the **224-path regeneration** below was a later *proposal* that also included the
+> then-staged-but-uncommitted Tailwind/KEV/quality delta, and was never executed as
+> a separate staging set. Commit `0b7fc1a` landed the approved checkpoint content
+> (see `git show --stat 0b7fc1a`: 80 files, +4433/-3335).
+> `architecture(3).md` was already tracked (initial commit `2612c56`), is unchanged
+> by any checkpoint, and was never "pending a decision" to remain in the tree. The
+> three tracked `.pi/` modifications and untracked evidence remain outside this
+> scope, as before.
+>
+> Everything below is retained verbatim as history.
+
+
 > **Superseded 2026-09-13 for inventory purposes** by the regenerated inventory
 > below. The A+B-era review further down is retained unchanged as history: its file
 > counts and pending-B wording describe the tree as of 2026-09-12.
+>
+> **Superseded again 2026-09-15**: a later workstream (Tailwind asset pipeline)
+> changed the staged set and the regenerated inventory to 224 paths — see the
+> section immediately below.
 
 Status: **staged for the checkpoint commit after owner approval of the recommended
 plan.** HEAD was `dc4843141b94aa8f9a040eec6aa0ea61978784cc` and the app untracked
 before staging. No push and no deployment occurred.
+
+## Superseding change set (2026-09-15) — Tailwind asset pipeline
+
+A later workstream landed in the same working tree, so the 197-path enumeration
+below is a 2026-09-13 snapshot rather than the current index. The frozen
+`priv/static/assets/default.css` (2,590 lines, no build behind it) is replaced by a
+real Tailwind v4.1.18 build driven by `mix assets.setup`.
+
+- Added: `app/assets/css/tailwind.css` — the tracked build **source**. Without it
+  `mix tailwind triage` exits 1 and the whole asset step fails with it, which is why
+  it must be committed rather than left untracked. Also `TAILWIND_EXECUTION.md` and
+  `scripts/tailwind_assets_probe.exs`.
+- Modified: `app/.gitignore`, `app/README.md`, `app/config/config.exs`,
+  `app/config/dev.exs`, `app/lib/mix/tasks/assets_setup.ex`,
+  `app/lib/triage_web/components/core_components.ex`,
+  `app/lib/triage_web/components/layouts/root.html.heex`, `app/mix.exs`,
+  `app/mix.lock`, `app/priv/static/assets/css/app.css`,
+  `app/test/triage_web/assets_test.exs`, `.github/workflows/ci.yml`, and the
+  citation annotation in `IMPLEMENTATION_ROADMAP.md`.
+- Deleted: `app/priv/static/assets/default.css`.
+- Regenerated inventory: **224 source-only paths**, produced 2026-09-15 by the same
+  read-only script, which now also lists `TAILWIND_EXECUTION.md` and
+  `scripts/tailwind_assets_probe.exs` among this checkpoint's documents.
+- Staged diff: **20 paths, +697 / −2622** (`git diff --cached --stat`), after the
+  2026-09-15 Astra fan-out added its assertions to the asset test and the probe. The
+  harness state under `.pi/` remains excluded.
+
+Evidence, hashes and limits are in [TAILWIND_EXECUTION.md](TAILWIND_EXECUTION.md).
+`mix dialyzer` passes here in the environment CI uses (0 errors) and the full suite
+runs against a local PostgreSQL 16 cluster: 696/703 passed, 2 skipped, with 7 failures
+that are pre-existing Timeline window tests failing identically at HEAD; the 14 asset
+tests in this checkpoint pass, and the 22-check `scripts/tailwind_assets_probe.exs`
+covers the asset assertions without a database. Fan-out provenance, the audits' punch list, and
+the harness blocker that had killed every explicit-model child are recorded in
+[TAILWIND_EXECUTION.md](TAILWIND_EXECUTION.md).
 
 ## Regenerated inventory (2026-09-13)
 

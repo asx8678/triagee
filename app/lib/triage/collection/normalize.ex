@@ -55,8 +55,8 @@ defmodule Triage.Collection.Normalize do
       images: [],
       findings: [],
       suppressed: [],
-      warnings: Enum.reverse(ctx.warnings),
-      failures: Enum.reverse(ctx.failures),
+      warnings: ctx.warnings,
+      failures: ctx.failures,
       requests: ctx.requests,
       duration_ms: ctx.duration_ms,
       raw: %{},
@@ -69,9 +69,7 @@ defmodule Triage.Collection.Normalize do
 
     {report, _remaining, _used} =
       entries
-      |> Enum.with_index()
-      |> Enum.reduce({base, config.max_records, 0}, fn {entry, _index},
-                                                       {report, remaining, used} ->
+      |> Enum.reduce({base, config.max_records, 0}, fn entry, {report, remaining, used} ->
         if remaining <= 0 do
           {fail(
              report,
@@ -89,6 +87,17 @@ defmodule Triage.Collection.Normalize do
           )
         end
       end)
+
+    # Accumulate in reverse throughout; restore the public order once, before
+    # deriving blockers from the completed report.
+    report = %{
+      report
+      | images: Enum.reverse(report.images),
+        findings: Enum.reverse(report.findings),
+        suppressed: Enum.reverse(report.suppressed),
+        warnings: Enum.reverse(report.warnings),
+        failures: Enum.reverse(report.failures)
+    }
 
     %{report | blockers: Preview.blockers(report)}
   end
@@ -204,7 +213,7 @@ defmodule Triage.Collection.Normalize do
 
     report = %{
       report
-      | images: report.images ++ [normalized],
+      | images: [normalized | report.images],
         raw: Map.put(report.raw, entry.digest, raw_image)
     }
 
@@ -269,8 +278,8 @@ defmodule Triage.Collection.Normalize do
 
     report = %{
       report
-      | findings: report.findings ++ new_findings,
-        suppressed: report.suppressed ++ new_suppressed,
+      | findings: Enum.reverse(new_findings, report.findings),
+        suppressed: Enum.reverse(new_suppressed, report.suppressed),
         raw: Map.update!(report.raw, entry.digest, &Map.put(&1, "findings", raw_findings))
     }
 
@@ -584,10 +593,10 @@ defmodule Triage.Collection.Normalize do
   defp text(_value), do: nil
 
   defp fail(report, message) do
-    %{report | failures: report.failures ++ [message], incomplete: true}
+    %{report | failures: [message | report.failures], incomplete: true}
   end
 
   defp warn(report, message) do
-    %{report | warnings: report.warnings ++ [message]}
+    %{report | warnings: [message | report.warnings]}
   end
 end

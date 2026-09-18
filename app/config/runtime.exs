@@ -93,7 +93,9 @@ end
 # is enabled merely by visiting the queue. Team keys are exact inventory owners.
 review_teams =
   case System.get_env("TRIAGE_AZURE_TEAMS_JSON") do
-    nil -> %{}
+    nil ->
+      %{}
+
     value ->
       case Jason.decode(value) do
         {:ok, teams} when is_map(teams) -> teams

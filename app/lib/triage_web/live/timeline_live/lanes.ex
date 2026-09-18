@@ -1,12 +1,16 @@
 defmodule TriageWeb.TimelineLive.Lanes do
   @moduledoc "CVE response timing for occurrences represented in the selected timeline window."
   use TriageWeb, :html
+
+  alias TriageWeb.FindingFilters
   alias TriageWeb.TimelineFilters
 
   attr :action_paths, :map, default: %{}
   attr :selected_cve, :string, default: nil
   attr :lanes, :map, required: true
   attr :filters, :map, required: true
+  attr :kev, :map, default: %{}
+  attr :kev_status, :any, default: nil
 
   def lane_table(assigns) do
     assigns = assign(assigns, :now, DateTime.utc_now())
@@ -47,10 +51,14 @@ defmodule TriageWeb.TimelineLive.Lanes do
             >
               <% action = response(lane, @now) %>
               <th scope="row">
-                <.link navigate={Map.get(@action_paths, lane.cve, ~p"/cves/#{lane.cve}")}>{lane.cve}</.link><span :if={lane.cve == @selected_cve} class="tl-selection-label">Selected</span><span class="supporting"><.status_badge
+                <.link navigate={Map.get(@action_paths, lane.cve, ~p"/cves/#{lane.cve}")}>{lane.cve}</.link><span
+                  :if={lane.cve == @selected_cve}
+                  class="tl-selection-label"
+                >Selected</span><span class="supporting"><.status_badge
                   label={display_value(lane.severity)}
                   kind="severity"
                 /></span>
+                <.kev_marker id={"tl-lane-kev-" <> lane.cve} kev={Map.get(@kev, lane.cve)} />
               </th>
               <td><.timestamp value={lane.first_seen} /></td>
               <td>
@@ -61,13 +69,23 @@ defmodule TriageWeb.TimelineLive.Lanes do
               <td>
                 <strong>{duration(lane.first_seen, if(action.waiting, do: @now, else: action.at))}</strong><span class="supporting">{action.timing}</span>
               </td>
-              <td><strong>{action.label}</strong><span class="supporting">{action.detail}</span></td>
+              <td>
+                <strong>{action.label}</strong><span class="supporting">{action.detail}</span>
+                <span class="supporting">{if lane.state == :open,
+                  do: "Open in local inventory",
+                  else: "No longer observed in local inventory"}</span>
+              </td>
               <td>
                 <.link
                   id={"tl-lane-open-" <> lane.cve}
                   patch={TimelineFilters.path(@filters, %{cve: lane.cve})}
                   class="button button-secondary"
                 >Timeline detail</.link>
+                <.link
+                  id={"tl-lane-cve-" <> lane.cve}
+                  navigate={FindingFilters.advisory_path(lane.cve, @filters)}
+                  class="button button-secondary"
+                >CVE detail</.link>
                 <details>
                   <summary>Actions &amp; scope</summary>
                   <p>
@@ -98,6 +116,10 @@ defmodule TriageWeb.TimelineLive.Lanes do
           </tbody>
         </table>
       </div>
+
+      <.kev_note id="tl-lanes-kev-note" present?={map_size(@kev) > 0} />
+      <.kev_source_status id="tl-lanes-kev-status" status={@kev_status} />
+
       <p :if={@lanes.truncated_count > 0} class="supporting">
         {@lanes.truncated_count} further CVE(s) in this window are not shown.
       </p>
@@ -166,17 +188,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
         }
 
       true ->
-        detail =
-          cond do
-            lane.reopen_count > 0 ->
-              "Detected again"
-
-            Enum.any?(history, &(decision_state(&1, history, now) == "Expired")) ->
-              "Whitelist expired"
-
-            true ->
-              "Not fixed"
-          end
+        detail = waiting_detail(lane, history, now)
 
         %{
           label: "Awaiting action",
@@ -188,13 +200,21 @@ defmodule TriageWeb.TimelineLive.Lanes do
     end
   end
 
+  defp waiting_detail(lane, history, now) do
+    cond do
+      lane.reopen_count > 0 -> "Detected again"
+      Enum.any?(history, &(decision_state(&1, history, now) == "Expired")) -> "Whitelist expired"
+      true -> "Not fixed"
+    end
+  end
+
   defp duration(first, last) do
     case Triage.Statistics.elapsed_seconds(first, last) do
       nil -> "Unknown"
       seconds when seconds < 60 -> "Less than 1 minute"
       seconds when seconds < 3600 -> "#{div(seconds, 60)} min"
-      seconds when seconds < 86400 -> "#{div(seconds, 3600)} h"
-      seconds -> "#{div(seconds, 86400)} days #{div(rem(seconds, 86400), 3600)} h"
+      seconds when seconds < 86_400 -> "#{div(seconds, 3600)} h"
+      seconds -> "#{div(seconds, 86_400)} days #{div(rem(seconds, 86_400), 3600)} h"
     end
   end
 end

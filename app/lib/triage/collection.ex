@@ -3,9 +3,10 @@ defmodule Triage.Collection do
   Offline-first, read-only collection adapter for the security GraphQL source.
 
   The default entry is DISABLED and the loopback transport is compile-time
-  test-only: a production build (dev/prod release) always returns
-  `{:error, %DisabledError{}}` and never performs network access, even when a
-  config and transport are passed. Only test builds may use the fixed
+  gated by `config :triage, :collection, loopback_transport` (enabled only by
+  `config/test.exs`): a dev/prod build always returns `{:error,
+  %DisabledError{}}` and never performs network access, even when a config and
+  transport are passed. Only a build compiled with that flag may use the fixed
   `Transport.Req` transport against the literal `http://127.0.0.1` endpoint of a
   validated `Config`. Collection never writes the inventory and references no
   `Triage.Repo`.
@@ -25,6 +26,12 @@ defmodule Triage.Collection do
 
   alias Triage.Collection.{Config, Crawl, Transport}
   alias Triage.Collection.Errors.{DisabledError, InvalidOptionsError}
+
+  # Compile-time gate, read from the one shared definition in
+  # `Triage.Collection.Loopback`. The policy stays visible in `config/*.exs` and
+  # the guarantee is unchanged: the value is baked in when this module is
+  # compiled, so a release cannot enable the loopback transport at runtime.
+  @loopback_enabled Triage.Collection.Loopback.enabled?()
 
   @allowed_opts ~w(config transport signal owners max_images)a
 
@@ -111,7 +118,7 @@ defmodule Triage.Collection do
 
   defp resolve_transport({Transport.Disabled, state}), do: {:ok, {Transport.Disabled, state}}
 
-  if Mix.env() == :test do
+  if @loopback_enabled do
     defp resolve_transport({Transport.Req, %Transport.Req{} = state}) do
       {:ok, {Transport.Req, state}}
     end

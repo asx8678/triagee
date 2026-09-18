@@ -41,7 +41,9 @@ docs=(
   UI_IMPROVEMENTS_REPORT.md
   OVERVIEW_INTELLIGENCE_PLAN.md
   CODE_REVIEW_FIXES_EXECUTION.md
+  TAILWIND_EXECUTION.md
   scripts/checkpoint_inventory.sh
+  scripts/tailwind_assets_probe.exs
 )
 
 present_docs=()

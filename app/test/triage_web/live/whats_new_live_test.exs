@@ -116,6 +116,13 @@ defmodule TriageWeb.WhatsNewLiveTest do
              "#event-link-#{Enum.at(event_ids(finding), 0)}[href='#{~p"/findings/#{finding.id}?#{qs}"}']"
            )
 
+    # The row's advisory id opens the advisory aggregate under the same activity
+    # filter, never widened to every team.
+    assert has_element?(
+             view,
+             "#event-cve-#{Enum.at(event_ids(finding), 0)}[href='#{~p"/cves/#{finding.cve}?owner=alpha"}']"
+           )
+
     # Scope change discards any previous cursor.
     render_patch(view, ~p"/whats-new?owner=alpha&before=1")
     assert_patch(view, ~p"/whats-new?owner=alpha&before=1")

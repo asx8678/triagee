@@ -2,14 +2,15 @@ defmodule Triage.Timeline do
   @default_weeks 12
   @min_weeks 1
   @max_weeks 12
-  @day_row_limit 25
+  @day_row_limit Triage.Timeline.Days.row_limit()
   @event_limit 2_000
   @lane_limit 50
   @chart_lane_limit 12
-  @case_limit 10
+  @case_limit Triage.Timeline.History.case_page_size()
   @scope_max 120
   @unsafe_text ~r/[\x00-\x1F\x7F]/
-  @opt_keys [:weeks, :owner, :environment, :cve]
+  @window_opt_keys [:weeks, :owner, :environment, :cve]
+  @opt_keys @window_opt_keys ++ [:events_after, :cases_after]
   @weekdays ~w(Mon Tue Wed Thu Fri Sat Sun)
 
   @moduledoc """
@@ -45,21 +46,21 @@ defmodule Triage.Timeline do
       backdated. They are not scan completion times, and import runs are not
       persisted, so no true scan time exists to display.
 
-  Everything is bounded: a #{@min_weeks}-#{@max_weeks} week window (default
+  The window projection is bounded: a #{@min_weeks}-#{@max_weeks} week window (default
   #{@default_weeks}), at most #{@day_row_limit} rows per day band,
   #{@event_limit} events, #{@lane_limit} lanes, #{@case_limit} cases per CVE and
   #{@chart_lane_limit} chart tracks, each with an explicit truncation flag. Invalid input is rejected before any
-  query and nothing here writes.
+  query and nothing here writes. Drawer events use chronological keyset pages;
+  case histories are bounded previews with links to the complete case record.
   """
 
   import Ecto.Query
 
   alias Triage.Activity
-  alias Triage.Cases
   alias Triage.Cases.{Review, ReviewCase}
-  alias Triage.Inventory
   alias Triage.Inventory.{Finding, FindingEvent, Image, ImagePlacement}
   alias Triage.Repo
+  alias Triage.Timeline.History
 
   @doc """
   Loads the windowed timeline.
@@ -80,22 +81,23 @@ defmodule Triage.Timeline do
   """
   @spec list_timeline(keyword()) :: {:ok, map()} | {:error, atom()}
   def list_timeline(opts \\ []) do
-    with {:ok, req} <- validate(opts) do
+    with {:ok, req} <- validate(opts, @window_opt_keys) do
       {:ok, load(req)}
     end
   end
 
   @doc """
-  Loads the full recorded history of one CVE for the detail drawer: the lane
-  across every recorded observation (not limited to the window), every
-  lifecycle event with an `in_window?` marker, and each saved case with its
-  scope, revision and review count.
+  Loads one CVE with full-history aggregate counts and a chronological page of
+  lifecycle events, each with an `in_window?` marker. `:events_after` resumes
+  after a scoped event id; `:cases_after` resumes after a scoped case id. Both
+  cursors must be positive bigint integers (or nil). The detail lane reports
+  `:observed_day_count` rather than retaining every historical observation date.
 
   Returns `{:error, :not_found}` when no finding records that CVE, and
   `{:error, :invalid_cve}` before any query for a malformed or missing value
-  (including `nil`). Case detail
-  itself is loaded through `Triage.Cases.get_case/1` so the drawer and the case
-  page cannot describe different histories.
+  (including `nil`). Case histories use batched, bounded projections of the same
+  stored records and formatter as the full case page. No snapshot payloads or
+  idempotency tokens are loaded for these previews.
   """
   @spec cve_detail(String.t() | nil, keyword()) :: {:ok, map()} | {:error, atom()}
   def cve_detail(cve, opts \\ [])
@@ -103,8 +105,12 @@ defmodule Triage.Timeline do
   def cve_detail(nil, _opts), do: {:error, :invalid_cve}
 
   def cve_detail(cve, opts) do
-    with {:ok, req} <- validate(Keyword.put(opts, :cve, cve)) do
+    with true <- is_list(opts) and Keyword.keyword?(opts),
+         {:ok, req} <- validate(Keyword.put(opts, :cve, cve), @opt_keys) do
       load_cve(req)
+    else
+      false -> {:error, :invalid_request}
+      error -> error
     end
   end
 
@@ -129,12 +135,12 @@ defmodule Triage.Timeline do
 
   ## Request validation - completes before any query
 
-  defp validate(opts) when is_list(opts) do
+  defp validate(opts, allowed_keys) when is_list(opts) do
     if Keyword.keyword?(opts) do
       keys = Keyword.keys(opts)
 
       cond do
-        not Enum.all?(keys, &(&1 in @opt_keys)) -> {:error, :invalid_request}
+        not Enum.all?(keys, &(&1 in allowed_keys)) -> {:error, :invalid_request}
         length(keys) != length(Enum.uniq(keys)) -> {:error, :invalid_request}
         true -> validate_values(opts)
       end
@@ -143,16 +149,32 @@ defmodule Triage.Timeline do
     end
   end
 
-  defp validate(_opts), do: {:error, :invalid_request}
+  defp validate(_opts, _keys), do: {:error, :invalid_request}
 
   defp validate_values(opts) do
     with {:ok, weeks} <- validate_weeks(Keyword.get(opts, :weeks)),
          {:ok, owner} <- validate_scope(Keyword.get(opts, :owner)),
          {:ok, environment} <- validate_scope(Keyword.get(opts, :environment)),
-         {:ok, cve} <- validate_cve(Keyword.get(opts, :cve)) do
-      {:ok, build_window(weeks, owner, environment, cve)}
+         {:ok, cve} <- validate_cve(Keyword.get(opts, :cve)),
+         {:ok, events_after} <- validate_cursor(Keyword.get(opts, :events_after)),
+         {:ok, cases_after} <- validate_cursor(Keyword.get(opts, :cases_after)),
+         :ok <- history_selection(cve, events_after, cases_after) do
+      {:ok,
+       Map.merge(
+         build_window(weeks, owner, environment, cve),
+         %{events_after: events_after, cases_after: cases_after}
+       )}
     end
   end
+
+  defp validate_cursor(cursor) do
+    if History.valid_cursor?(cursor), do: {:ok, cursor}, else: {:error, :invalid_cursor}
+  end
+
+  defp history_selection(nil, events, cases) when not is_nil(events) or not is_nil(cases),
+    do: {:error, :invalid_cursor}
+
+  defp history_selection(_cve, _events, _cases), do: :ok
 
   defp validate_weeks(nil), do: {:ok, @default_weeks}
 
@@ -218,8 +240,8 @@ defmodule Triage.Timeline do
 
   defp load(req) do
     {events, truncated?} = fetch_events(req)
-    judged = fetch_judged(req)
-    days = build_days(req, events, judged)
+    judged = fetch_judged_counts(req)
+    days = Triage.Timeline.Days.build(req, events, judged)
     lanes = build_lanes(req, events)
 
     %{
@@ -317,110 +339,20 @@ defmodule Triage.Timeline do
     )
   end
 
-  # Saved assessments recorded inside the window. A judgment is a recorded
-  # assessment, never an approval or a mitigation.
-  defp fetch_judged(req) do
-    from(r in Review,
-      join: c in ReviewCase,
-      on: c.id == r.case_id,
-      join: f in Finding,
-      as: :finding,
-      on: f.id == c.finding_id,
+  # Count by the case's own scope, not any team sharing its finding image.
+  # At most one result per day in the requested window is loaded into memory.
+  defp fetch_judged_counts(req) do
+    from(c in ReviewCase,
+      join: r in Review,
+      on: r.case_id == c.id,
       where: r.inserted_at >= ^req.from_dt and r.inserted_at <= ^req.to_dt,
-      order_by: [desc: r.inserted_at, desc: r.id],
-      select: %{
-        id: r.id,
-        cve: f.cve,
-        case_id: c.id,
-        actor: r.actor,
-        at: r.inserted_at,
-        applicability: r.applicability,
-        priority: r.priority,
-        next_action: r.next_action
-      }
+      group_by: fragment("?::date", r.inserted_at),
+      select: {type(fragment("?::date", r.inserted_at), :date), count(r.id)}
     )
-    |> apply_finding_scope(req)
+    |> apply_case_scope(req)
     |> Repo.all()
+    |> Map.new()
   end
-
-  ## Day bands
-
-  defp build_days(req, events, judged) do
-    by_date = Enum.group_by(events, fn {e, _f, _i} -> DateTime.to_date(e.occurred_at) end)
-    judged_by_date = Enum.group_by(judged, &DateTime.to_date(&1.at))
-    dates_by_cve = observed_dates_by_cve(events)
-
-    req.from
-    |> Date.range(req.to)
-    |> Enum.reverse()
-    |> Enum.map(fn date ->
-      day(date, Map.get(by_date, date, []), Map.get(judged_by_date, date, []), dates_by_cve)
-    end)
-  end
-
-  defp observed_dates_by_cve(events) do
-    events
-    |> Enum.group_by(
-      fn {_e, f, _i} -> f.cve end,
-      fn {e, _f, _i} -> DateTime.to_date(e.occurred_at) end
-    )
-    |> Map.new(fn {cve, dates} -> {cve, MapSet.new(dates)} end)
-  end
-
-  defp day(date, rows, judged, dates_by_cve) do
-    {shown, rest} =
-      if length(rows) > @day_row_limit do
-        Enum.split(rows, @day_row_limit)
-      else
-        {rows, []}
-      end
-
-    day_rows = Enum.map(shown, &day_row(&1, date, dates_by_cve))
-
-    %{
-      date: date,
-      iso_date: Date.to_iso8601(date),
-      label: Calendar.strftime(date, "%a %d %b %Y"),
-      weekday: Calendar.strftime(date, "%a"),
-      iso_weekday: Date.day_of_week(date),
-      observed?: rows != [],
-      event_count: length(rows),
-      new_count: count_kind(day_rows, "appeared"),
-      resolved_count: count_kind(day_rows, "resolved"),
-      reopened_count: count_kind(day_rows, "reopened"),
-      judged_count: length(judged),
-      truncated_count: length(rest),
-      rows: day_rows
-    }
-  end
-
-  defp count_kind(rows, kind), do: Enum.count(rows, &(&1.kind == kind))
-
-  defp day_row({event, finding, image}, date, dates_by_cve) do
-    dates = Map.get(dates_by_cve, finding.cve, MapSet.new())
-
-    %{
-      finding_id: finding.id,
-      cve: finding.cve,
-      severity: finding.severity,
-      package_name: finding.package_name,
-      package_version: finding.package_version,
-      fix: finding.fix,
-      kind: event.event,
-      occurred_at: event.occurred_at,
-      note: event.note,
-      image: image_reference(image),
-      suppressed: finding.suppressed,
-      state: finding_state(finding),
-      resolved_at: finding.resolved_at,
-      reopened?: (finding.reopen_count || 0) > 0,
-      continues?: MapSet.member?(dates, Date.add(date, -1)),
-      continued_from?: MapSet.member?(dates, Date.add(date, 1))
-    }
-  end
-
-  defp finding_state(%{resolved_at: nil}), do: :open
-  defp finding_state(_finding), do: :no_longer_observed
 
   ## Weekday x week grid
 
@@ -591,7 +523,7 @@ defmodule Triage.Timeline do
       rows:
         Enum.map(shown, fn lane ->
           lane
-          |> enrich_lane(Map.get(cases, lane.cve, []))
+          |> enrich_lane(Map.get(cases, lane.cve))
           |> Map.put(:decisions, Map.get(decisions, lane.cve, []))
         end)
     }
@@ -670,29 +602,17 @@ defmodule Triage.Timeline do
   # Cases are keyed by their own explicit scope, so a scoped view shows the
   # cases opened against that team's scope rather than another team's.
   defp cases_by_cve([], _req), do: %{}
+  defp cases_by_cve(cves, req), do: cves |> case_query(req) |> History.case_summaries()
 
-  defp cases_by_cve(cves, req) do
+  defp case_query(cves, req) do
     from(c in ReviewCase,
+      as: :case,
       join: f in Finding,
+      as: :finding,
       on: f.id == c.finding_id,
-      left_join: r in Review,
-      on: r.case_id == c.id,
-      where: f.cve in ^cves,
-      group_by: [c.id, f.cve],
-      order_by: [asc: c.id],
-      select:
-        {f.cve,
-         %{
-           id: c.id,
-           owner: c.owner,
-           environment: c.environment,
-           revision: c.revision,
-           review_count: count(r.id)
-         }}
+      where: f.cve in ^cves
     )
     |> apply_case_scope(req)
-    |> Repo.all()
-    |> Enum.group_by(fn {cve, _c} -> cve end, fn {_cve, c} -> c end)
   end
 
   defp apply_case_scope(query, %{owner: nil, environment: nil}), do: query
@@ -706,12 +626,11 @@ defmodule Triage.Timeline do
   defp apply_case_scope(query, %{owner: owner, environment: environment}),
     do: where(query, [c], c.owner == ^owner and c.environment == ^environment)
 
-  defp enrich_lane(lane, cases) do
-    Map.merge(lane, %{
-      cases: cases,
-      case_count: length(cases),
-      judged_count: Enum.sum(Enum.map(cases, & &1.review_count))
-    })
+  defp enrich_lane(lane, summary) do
+    Map.merge(
+      lane,
+      summary || %{cases: [], case_count: 0, judged_count: 0, cases_truncated_count: 0}
+    )
   end
 
   ## Summary
@@ -732,7 +651,7 @@ defmodule Triage.Timeline do
       reopened: count_events(events, "reopened"),
       cves: events |> Enum.map(fn {_e, f, _i} -> f.cve end) |> Enum.uniq() |> length(),
       suppressed: suppressed_cve_count(events),
-      judged: length(judged),
+      judged: judged |> Map.values() |> Enum.sum(),
       lanes_total: lanes.total,
       lanes_shown: lanes.shown,
       truncated?: truncated?
@@ -775,28 +694,30 @@ defmodule Triage.Timeline do
       |> Repo.all()
 
     case rows do
-      [] ->
-        {:error, :not_found}
+      [] -> {:error, :not_found}
+      _ -> load_history(cve, rows, req)
+    end
+  end
 
-      _rows ->
-        finding_ids = Enum.map(rows, fn {f, _i} -> f.id end)
+  defp load_history(cve, rows, req) do
+    finding_ids = Enum.map(rows, fn {finding, _image} -> finding.id end)
 
-        events =
-          Repo.all(
-            from(e in FindingEvent,
-              where: e.finding_id in ^finding_ids,
-              order_by: [asc: e.occurred_at, asc: e.id]
-            )
-          )
+    with {:ok, events} <- History.event_page(finding_ids, req.events_after, req),
+         {:ok, cases} <- History.case_page(case_query([cve], req), req.cases_after) do
+      detail_lane =
+        lane(cve, rows, [], req)
+        |> Map.delete(:observed_dates)
+        |> Map.merge(events.summary)
 
-        {:ok,
-         %{
-           cve: cve,
-           lane: lane(cve, rows, events, req),
-           events: Enum.map(events, &detail_event(&1, req)),
-           cases: detail_cases(cve, req),
-           window: %{weeks: req.weeks, from: req.from, to: req.to}
-         }}
+      {:ok,
+       %{
+         cve: cve,
+         lane: detail_lane,
+         events: Enum.map(events.rows, &detail_event(&1, req)),
+         event_page: Map.drop(events, [:rows, :summary]),
+         cases: cases,
+         window: %{weeks: req.weeks, from: req.from, to: req.to}
+       }}
     end
   end
 
@@ -811,43 +732,6 @@ defmodule Triage.Timeline do
       date: date,
       in_window?: in_window?(date, req)
     }
-  end
-
-  # Full case history, reusing `Triage.Cases.get_case/1` so the drawer and the
-  # case page cannot describe different histories. Bounded, with the total
-  # reported so truncation is visible.
-  defp detail_cases(cve, req) do
-    ids =
-      from(c in ReviewCase,
-        join: f in Finding,
-        on: f.id == c.finding_id,
-        where: f.cve == ^cve,
-        order_by: [asc: c.id],
-        limit: ^@case_limit,
-        select: c.id
-      )
-      |> apply_case_scope(req)
-      |> Repo.all()
-
-    total =
-      from(c in ReviewCase,
-        join: f in Finding,
-        on: f.id == c.finding_id,
-        where: f.cve == ^cve
-      )
-      |> apply_case_scope(req)
-      |> Repo.aggregate(:count)
-
-    cases =
-      ids
-      |> Enum.flat_map(fn id ->
-        case Cases.get_case(id) do
-          {:ok, data} -> [%{id: id, data: data}]
-          {:error, _reason} -> []
-        end
-      end)
-
-    %{rows: cases, total: total, truncated_count: max(total - length(cases), 0)}
   end
 
   ## Shared helpers
@@ -875,16 +759,7 @@ defmodule Triage.Timeline do
   defp max_or_nil([]), do: nil
   defp max_or_nil(values), do: Enum.max(values, DateTime)
 
-  defp severity_rank(nil), do: 0
-
-  defp severity_rank(severity) do
-    order = Inventory.severity_order()
-
-    case Enum.find_index(order, &(&1 == severity)) do
-      nil -> 0
-      index -> length(order) - index
-    end
-  end
+  defp severity_rank(severity), do: Triage.Severity.rank(severity)
 
   defp image_reference(%{repository: repository, tag: tag})
        when is_binary(repository) and repository != "" and is_binary(tag) and tag != "",

@@ -53,11 +53,19 @@ defmodule Triage.TestEnvironmentTest do
   test "the test alias creates and migrates without seeding" do
     aliases = Mix.Project.config()[:aliases]
 
-    assert aliases[:test] == [
-             "ecto.create --quiet",
-             "ecto.migrate --quiet",
-             "assets.setup",
-             "test"
-           ]
+    if System.get_env("TRIAGE_SKIP_DB_SETUP") in ["1", "true"] do
+      assert aliases[:test] == ["assets.setup", "test --no-start --exclude db"]
+      refute Process.whereis(Triage.Repo)
+      refute List.keymember?(Application.started_applications(), :triage, 0)
+      assert Process.whereis(TriageWeb.Endpoint)
+      assert ExUnit.configuration()[:exclude] == [:db]
+    else
+      assert aliases[:test] == [
+               "ecto.create --quiet",
+               "ecto.migrate --quiet",
+               "assets.setup",
+               "test"
+             ]
+    end
   end
 end

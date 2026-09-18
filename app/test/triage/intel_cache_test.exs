@@ -79,6 +79,39 @@ defmodule Triage.IntelCacheTest do
     assert length(Intel.list_cached_news(2)) == 2
   end
 
+  test "source row counts are independent of CVE matches and refresh receipt counts" do
+    assert Intel.cached_advisory_count("kev") == 0
+
+    {:ok, 2} =
+      Intel.replace_advisories("kev", [
+        %{external_id: "CVE-2026-2001"},
+        %{external_id: "CVE-2026-2002"}
+      ])
+
+    {:ok, 1} = Intel.replace_advisories("nvd:CVE-2026-2001", [%{external_id: "CVE-2026-2001"}])
+    {:ok, _} = Intel.record_receipt("kev", true, 99)
+    {:ok, _} = Intel.record_receipt("kev", false, nil, "failed refresh")
+
+    assert Intel.cached_advisory_count("kev") == 2
+    assert Intel.cached_advisory_count("nvd:CVE-2026-2001") == 1
+    assert Intel.cached_kev("CVE-2026-9999") == []
+    {:ok, 0} = Intel.replace_advisories("kev", [])
+    assert Intel.cached_advisory_count("kev") == 0
+  end
+
+  test "a rejected feed never reaches replacement and preserves the last good cache" do
+    {:ok, 1} = Intel.replace_advisories("kev", [%{external_id: "CVE-2026-2001"}])
+    before = Intel.cached_kev("CVE-2026-2001")
+    transport = %{req: fn _ -> {:ok, ~s({"vulnerabilities":[{}]})} end}
+
+    result =
+      with {:ok, rows} <- Intel.Client.fetch(:kev, transport),
+           do: Intel.replace_advisories("kev", rows)
+
+    assert result == {:error, :kev_parse_failed}
+    assert Intel.cached_kev("CVE-2026-2001") == before
+  end
+
   test "latest_receipts returns the newest per source" do
     {:ok, _} = Intel.record_receipt("kev", true, 5)
     {:ok, _} = Intel.record_receipt("kev", false, nil, "later failure")
@@ -114,6 +147,87 @@ defmodule Triage.IntelCacheTest do
     # The defect this replaced: the advisory detail looked the row up as
     # external id "kev:CVE-…", which can never match a written row.
     assert Intel.cached_advisories("kev:CVE-2024-3094") == []
+  end
+
+  test "KEV actionability survives the cache round-trip" do
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: "CVE-2026-2001",
+          summary: "kev entry",
+          published_at: ~U[2026-09-12 10:00:00Z],
+          required_action: "Apply updates per vendor instructions.",
+          due_date: ~U[2026-01-23 00:00:00Z],
+          known_ransomware: true
+        }
+      ])
+
+    assert [row] = Intel.cached_kev("CVE-2026-2001")
+    assert row.required_action == "Apply updates per vendor instructions."
+    assert row.due_date == ~U[2026-01-23 00:00:00Z]
+    assert row.known_ransomware == true
+
+    # A row written without the action fields (an NVD row, or one cached before the
+    # columns existed) reads back as nil, which the panel shows as absent.
+    {:ok, _} =
+      Intel.replace_advisories("nvd:CVE-2026-2001", [
+        %{external_id: "CVE-2026-2001", summary: "nvd entry", published_at: nil}
+      ])
+
+    assert [nvd] = Intel.cached_nvd("CVE-2026-2001")
+    assert nvd.required_action == nil
+    assert nvd.due_date == nil
+    assert nvd.known_ransomware == nil
+  end
+
+  test "kev_index batches one read, deduplicates, and keys only cached rows" do
+    {:ok, _} =
+      Intel.replace_advisories("kev", [
+        %{
+          external_id: "CVE-2026-6001",
+          summary: "cached row",
+          published_at: ~U[2026-09-12 10:00:00Z]
+        }
+      ])
+
+    index = Intel.kev_index(["CVE-2026-6001", "CVE-2026-6001", nil, "", "CVE-2026-6002"])
+
+    assert Map.keys(index) == ["CVE-2026-6001"]
+    assert index["CVE-2026-6001"].external_id == "CVE-2026-6001"
+
+    # A missing row is a missing key: the caller renders no marker, never a claim
+    # that the advisory is unexploited.
+    assert Map.get(index, "CVE-2026-6002") == nil
+
+    # An empty input and an empty cache both read as "nothing cached".
+    assert Intel.kev_index([]) == %{}
+    assert Intel.kev_index(:not_a_list) == %{}
+
+    {:ok, _} = Intel.replace_advisories("kev", [])
+    assert Intel.kev_index(["CVE-2026-6001"]) == %{}
+  end
+
+  test "kev_status reports the whole-source count and the latest refresh receipt" do
+    assert Intel.kev_status() == %{source: "kev", rows: 0, receipt: nil}
+
+    {:ok, 2} =
+      Intel.replace_advisories("kev", [
+        %{external_id: "CVE-2026-8001"},
+        %{external_id: "CVE-2026-8002"}
+      ])
+
+    {:ok, _} = Intel.record_receipt("kev", true, 2)
+    {:ok, _} = Intel.record_receipt("kev", false, nil, "simulated outage")
+
+    status = Intel.kev_status()
+    assert status.source == "kev"
+    # The count is the whole source, never the rows one view matched.
+    assert status.rows == 2
+    assert status.receipt.succeeded == false
+    assert status.receipt.message == "simulated outage"
+
+    # A failed receipt does not erase or invalidate retained rows.
+    assert Intel.kev_index(["CVE-2026-8001"]) |> Map.has_key?("CVE-2026-8001")
   end
 
   test "NVD rows are found by their per-CVE source key" do

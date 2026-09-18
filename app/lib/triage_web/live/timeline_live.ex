@@ -16,6 +16,7 @@ defmodule TriageWeb.TimelineLive do
 
   use TriageWeb, :live_view
 
+  alias Triage.Intel
   alias Triage.Timeline
   alias TriageWeb.CaseLive
   alias TriageWeb.TimelineFilters
@@ -35,7 +36,9 @@ defmodule TriageWeb.TimelineLive do
      |> assign(:view_error, nil)
      |> assign(:detail, nil)
      |> assign(:selected_cve, nil)
-     |> assign(:detail_error, nil)}
+     |> assign(:detail_error, nil)
+     |> assign(:kev, %{})
+     |> assign(:kev_status, nil)}
   end
 
   @impl true
@@ -79,16 +82,30 @@ defmodule TriageWeb.TimelineLive do
           socket
           |> assign(:view_error, nil)
           |> assign(:timeline, timeline)
-          |> assign(:action_paths, Map.new(Triage.GuidedReview.queue(), fn row -> {row.cve, ~p"/triage/#{row.cve}"} end))
+          |> assign(:action_paths, action_paths(timeline, parsed.cve))
           |> assign(:filters, parsed)
           |> assign(:options, Timeline.filter_options())
           |> assign(:filter_form, to_form(filter_params(timeline, parsed)))
+          |> assign(:kev, Intel.kev_index(Enum.map(timeline.lanes.rows, & &1.cve)))
+          |> assign(:kev_status, Intel.kev_status())
           |> load_detail(parsed)
 
         {:error, _reason} ->
           view_error(socket, parsed)
       end
     end
+  end
+
+  # Every displayed surface participates, not just the truncated lane table.
+  # Day rows and lanes are already bounded by Timeline; Query chunks this union.
+  defp action_paths(timeline, selected_cve) do
+    day_cves = Enum.flat_map(timeline.days, fn day -> Enum.map(day.rows, & &1.cve) end)
+    lane_cves = Enum.map(timeline.lanes.rows, & &1.cve)
+
+    (day_cves ++ lane_cves ++ [selected_cve])
+    |> Enum.reject(&is_nil/1)
+    |> Triage.GuidedReview.actionable_for()
+    |> Map.new(fn row -> {row.cve, ~p"/triage/#{row.cve}"} end)
   end
 
   # The form shows what is displayed: the effective window size, not the raw
@@ -110,6 +127,7 @@ defmodule TriageWeb.TimelineLive do
     |> assign(:timeline, nil)
     |> assign(:filters, TimelineFilters.defaults())
     |> assign(:filter_form, to_form(blank_filter_params()))
+    |> assign(:kev_status, nil)
     |> assign(:detail, nil)
     |> assign(:selected_cve, nil)
     |> assign(:detail_error, nil)
@@ -140,7 +158,9 @@ defmodule TriageWeb.TimelineLive do
     case Timeline.cve_detail(cve,
            weeks: parsed.weeks,
            owner: parsed.owner,
-           environment: parsed.environment
+           environment: parsed.environment,
+           events_after: parsed.events_after,
+           cases_after: parsed.cases_after
          ) do
       {:ok, detail} ->
         socket
@@ -161,7 +181,12 @@ defmodule TriageWeb.TimelineLive do
   defp prepare_detail(detail) do
     rows =
       Enum.map(detail.cases.rows, fn %{id: id, data: data} ->
-        %{id: id, case: data.case, entries: CaseLive.Format.timeline_entries(data)}
+        %{
+          id: id,
+          case: data.case,
+          entries: CaseLive.Format.timeline_entries(data),
+          history_truncated?: data.history_truncated?
+        }
       end)
 
     %{detail | cases: %{detail.cases | rows: rows}}
@@ -172,6 +197,10 @@ defmodule TriageWeb.TimelineLive do
 
   defp detail_error_text(:invalid_cve),
     do: "The CVE in the address is not a valid value."
+
+  defp detail_error_text(:invalid_cursor),
+    do:
+      "This history position is not in the selected scope. Open the CVE again to start at the first page."
 
   defp detail_error_text(_other),
     do: "The selection could not be loaded. Nothing from a previous selection is shown."
@@ -344,8 +373,20 @@ defmodule TriageWeb.TimelineLive do
           selected_cve={@selected_cve}
         />
 
-        <Lanes.lane_table action_paths={@action_paths} lanes={@timeline.lanes} filters={@filters} selected_cve={@selected_cve} />
-        <Bands.waterfall action_paths={@action_paths} days={@timeline.days} filters={@filters} selected_cve={@selected_cve} />
+        <Lanes.lane_table
+          action_paths={@action_paths}
+          lanes={@timeline.lanes}
+          filters={@filters}
+          selected_cve={@selected_cve}
+          kev={@kev}
+          kev_status={@kev_status}
+        />
+        <Bands.waterfall
+          action_paths={@action_paths}
+          days={@timeline.days}
+          filters={@filters}
+          selected_cve={@selected_cve}
+        />
         <Grid.weekday_grid grid={@timeline.grid} />
       </div>
     </Layouts.app>

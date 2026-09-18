@@ -1,5 +1,54 @@
 // Same-origin Phoenix distributions are loaded before this file by root.html.heex.
 // Hooks never own assessment form DOM and never store evidence or drafts.
+// Saved views are browser-local preferences, never an authorization boundary.
+const SavedQueueFilters = {
+  mounted() {
+    const key = "triage.saved-queue-filters.v1";
+    const allowed = ["q", "team", "severity", "kev", "exposure"];
+    const select = this.el.querySelector("select");
+    const feedback = this.el.querySelector('[role="status"]');
+    const clean = (filters) => Object.fromEntries(allowed.flatMap(name =>
+      typeof filters?.[name] === "string" && filters[name].length <= 200
+        ? [[name, filters[name]]] : []));
+    let views = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || "[]");
+      if (Array.isArray(stored)) views = stored.filter(v => typeof v?.name === "string" && v.name.length <= 80)
+        .slice(0, 20).map(v => ({name: v.name, filters: clean(v.filters)}));
+    } catch (_) { feedback.textContent = "Saved views unavailable or invalid; filters still work."; }
+    const render = () => {
+      select.replaceChildren(new Option("Choose saved filters", ""));
+      views.forEach((view, index) => select.add(new Option(view.name, String(index))));
+    };
+    const persist = (next) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+        views = next;
+        render();
+        feedback.textContent = "Saved views updated on this browser.";
+      } catch (_) { feedback.textContent = "Browser storage unavailable; changes were not saved."; }
+    };
+    this.click = (event) => {
+      const action = event.target.dataset.savedAction;
+      if (action === "save") {
+        const name = this.el.querySelector("input").value.trim();
+        if (!name || name.length > 80) { feedback.textContent = "Enter a name (1–80 characters)."; return; }
+        const next = views.filter(v => v.name !== name);
+        if (next.length >= 20) { feedback.textContent = "Delete a saved view first (limit 20)."; return; }
+        const filters = clean(Object.fromEntries(new URLSearchParams(location.search)));
+        persist([...next, {name, filters}]);
+      } else if (select.value !== "" && views[Number(select.value)]) {
+        const index = Number(select.value);
+        if (action === "load") this.pushEvent("filter_queue", views[index].filters);
+        if (action === "delete") persist(views.filter((_, i) => i !== index));
+      }
+    };
+    this.el.addEventListener("click", this.click);
+    render();
+  },
+  destroyed() { this.el.removeEventListener("click", this.click); }
+};
+
 const draftMessage = "Leave this case and discard unsaved assessment changes?";
 
 const TimelineWidth = {
@@ -172,7 +221,7 @@ if (typeof Phoenix === "undefined" || typeof LiveView === "undefined") {
 } else {
   const liveSocket = new LiveView.LiveSocket("/live", Phoenix.Socket, {
     params: { _csrf_token: csrfToken },
-    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth },
+    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth, SavedQueueFilters },
   });
   window.liveSocket = liveSocket;
   liveSocket.connect();

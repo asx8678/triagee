@@ -19,10 +19,10 @@ defmodule Triage.Statistics do
 
   import Ecto.Query
 
-  alias Triage.Inventory.{Finding, ImagePlacement}
-  alias Triage.Repo
   alias Triage.Decisions
   alias Triage.Decisions.Decision
+  alias Triage.Inventory.{Finding, ImagePlacement}
+  alias Triage.Repo
 
   # Local review targets in days from first local observation, by the highest
   # scanner severity recorded for the advisory.
@@ -129,7 +129,9 @@ defmodule Triage.Statistics do
           total: non_neg_integer(),
           open: non_neg_integer(),
           past_target: non_neg_integer(),
-          median_clear_days: number() | nil
+          median_clear_days: number() | nil,
+          median_decision_days: number() | nil,
+          decisions_recorded: non_neg_integer()
         }
   def summarize(rows) when is_list(rows) do
     %{
@@ -204,12 +206,7 @@ defmodule Triage.Statistics do
 
       timings =
         Enum.map(history, fn decision ->
-          state =
-            cond do
-              MapSet.member?(superseded, decision.id) -> :superseded
-              DateTime.compare(decision.decided_at, now) == :gt -> :scheduled
-              true -> Decisions.state(decision, now)
-            end
+          state = decision_state(decision, superseded, now)
 
           %{
             id: decision.id,
@@ -223,6 +220,14 @@ defmodule Triage.Statistics do
 
       {cve, timings}
     end)
+  end
+
+  defp decision_state(decision, superseded, now) do
+    cond do
+      MapSet.member?(superseded, decision.id) -> :superseded
+      DateTime.compare(decision.decided_at, now) == :gt -> :scheduled
+      true -> Decisions.state(decision, now)
+    end
   end
 
   defp with_decision_timing(row, decisions) do

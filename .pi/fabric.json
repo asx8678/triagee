@@ -1,11 +1,11 @@
 {
   "configVersion": 4,
   "prewalk": {
-    "model": "zro/kimi-k3",
-    "thinking": "high",
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low",
     "mode": "trajectory",
-    "alwaysRearm": true,
-    "enabled": true
+    "alwaysRearm": false,
+    "enabled": false
   },
   "compaction": {
     "thresholds": {
