@@ -40,6 +40,7 @@
     border-radius: 9px;
     color: var(--muted);
     background: transparent;
+    gap: 7px;
   }
   :scope .topnav :is(a, button):hover { background: var(--surface-soft); color: var(--ink); }
   :scope .topnav :is(a, button).active {
@@ -50,12 +51,15 @@
   :scope .nav-count { border-radius: 6px; background: #e8edf5; color: #4c5b72; padding: 1px 6px; }
   :scope .topmeta { color: var(--muted); }
   :scope .topmeta button { color: var(--ink); background: var(--paper); border-color: var(--control-border); }
+  :scope .topmeta .settings-text { display: inline; }
   :scope .scopebar { min-height: 54px; padding-block: 9px; background: #fcfcfd; flex-wrap: wrap; }
   :scope .scopebar select { border-radius: 7px; min-height: 34px; height: auto; }
   :scope .scopebar .fieldset .label { display: inline; }
   :scope .scopebar .freshness { color: var(--amber); font-weight: 600; }
   :scope .bottom-status { min-height: 30px; background: #fcfcfd; letter-spacing: 0; flex-wrap: wrap; padding-block: 5px; }
-  :scope .page { padding-top: 26px; scroll-padding-block: 24px; }
+  /* Keep absolutely positioned accessible captions inside this scrollport.
+     Without a containing block, offscreen captions can enlarge the document. */
+  :scope .page { position: relative; padding-top: 26px; scroll-padding-block: 24px; }
   :scope .page-head { margin-bottom: 22px; flex-wrap: wrap; }
   :scope .page-head h1 { font-size: 26px; letter-spacing: -.7px; }
   :scope .page-head p { font-size: 13px; line-height: 1.6; margin-top: 7px; }
@@ -189,8 +193,9 @@
     :scope .review-content { grid-template-columns: minmax(0, 1fr) 350px; }
   }
   @media (max-width: 850px) {
-    :scope .topbar { gap: 14px; }
-    :scope .topnav :is(a, button) { padding-inline: 10px; }
+    :scope .topbar { gap: 14px; flex-wrap: wrap; }
+    :scope .topnav { order: 3; width: 100%; height: auto; }
+    :scope .topnav :is(a, button) { padding-inline: 10px; flex: 1; }
     :scope .metric { padding: 14px; }
     :scope .metrics { gap: 10px; }
     :scope .review-grid { gap: 12px; }
@@ -203,7 +208,7 @@
   @media (max-width: 640px) {
     :scope .topbar { padding: 10px 12px; gap: 10px; }
     :scope .topnav { width: 100%; height: auto; gap: 4px; }
-    :scope .topnav :is(a, button) { padding: 8px 6px; min-height: 40px; }
+    :scope .topnav :is(a, button) { padding: 8px 6px; min-height: 40px; gap: 4px; }
     :scope .scopebar { gap: 9px; padding-inline: 12px; }
     :scope .scopebar .fieldset .label { display: block; margin: 0 0 3px; }
     :scope .scopebar select { max-width: 140px; }
