@@ -123,4 +123,16 @@ run_case dropfail env FAKE_DROP_FAIL=1 "$script" target
 grep -F 'cleanup failed (no FORCE or session termination attempted)' "$tmp/dropfail.out" >/dev/null || fail "cleanup failure diagnostic missing"
 ! grep -E 'FORCE|pg_terminate_backend|dropdb' "$tmp/dropfail.log" >/dev/null || fail "cleanup used force/termination"
 
-echo "ok - executable refusal, identity, population, target, owned-port, and exact cleanup guards"
+run_case workspace "$script" workspace
+[ "$CASE_STATUS" -eq 0 ] || fail "workspace status=$CASE_STATUS"
+grep -F 'workspace_test.exs' "$tmp/workspace.log" >/dev/null || fail "workspace lacks domain tests"
+grep -F 'workspace_live_test.exs' "$tmp/workspace.log" >/dev/null || fail "workspace lacks interaction tests"
+run_case browser_populated env FAKE_POPULATED=1 "$script" workspace_browser
+[ "$CASE_STATUS" -eq 43 ] || fail "browser populated guard status=$CASE_STATUS"
+! grep -F 'scripts/workspace_browser.exs' "$tmp/browser_populated.log" >/dev/null || fail "populated guard started browser fixture"
+run_case browser "$script" workspace_browser
+[ "$CASE_STATUS" -eq 0 ] || fail "browser status=$CASE_STATUS"
+grep -F 'scripts/workspace_browser.exs' "$tmp/browser.log" >/dev/null || fail "browser command missing"
+db=$(db_from_out "$tmp/browser.out")
+[ "$(grep -c "DROP DATABASE $db" "$tmp/browser.log")" -eq 1 ] || fail "browser exact cleanup missing"
+echo "ok - executable refusal, identity, population, target, owned-port, workspace, browser, and exact cleanup guards"

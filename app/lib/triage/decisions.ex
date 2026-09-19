@@ -35,11 +35,15 @@ defmodule Triage.Decisions do
 
   @decisions ~w(accepted_risk not_affected mitigated)
   @expiry_required ~w(accepted_risk)
+  @work_actions ~w(request_remediation investigate request_verification)
 
   @labels %{
     "accepted_risk" => "Accepted risk",
     "not_affected" => "Not affected",
-    "mitigated" => "Mitigated by a control"
+    "mitigated" => "Mitigated by a control",
+    "request_remediation" => "Remediation requested",
+    "investigate" => "Investigation requested",
+    "request_verification" => "Verification requested (not verified)"
   }
 
   defmodule Decision do
@@ -53,6 +57,10 @@ defmodule Triage.Decisions do
       field :actor, :string
       field :decided_at, :utc_datetime
       field :expires_at, :utc_datetime
+      field :work_owner, :string
+      field :due_on, :date
+      field :operation_id, :string
+      field :metadata, :map, default: %{}
       belongs_to :placement, ImagePlacement
       belongs_to :supersedes, __MODULE__
 
@@ -63,11 +71,35 @@ defmodule Triage.Decisions do
 
     def changeset(decision, attrs) do
       decision
-      |> cast(attrs, [:cve, :placement_id, :decision, :reason, :actor, :decided_at, :expires_at])
+      |> cast(attrs, [
+        :cve,
+        :placement_id,
+        :decision,
+        :reason,
+        :actor,
+        :decided_at,
+        :expires_at,
+        :work_owner,
+        :due_on,
+        :operation_id,
+        :metadata
+      ])
       |> validate_required([:cve, :decision, :reason, :actor, :decided_at])
       |> validate_length(:reason, min: 3)
-      |> validate_inclusion(:decision, Triage.Decisions.decisions())
+      |> validate_inclusion(
+        :decision,
+        Triage.Decisions.decisions() ++ Triage.Decisions.work_actions()
+      )
       |> validate_expiry()
+      |> validate_work()
+    end
+
+    defp validate_work(changeset) do
+      if get_field(changeset, :decision) in Triage.Decisions.work_actions() do
+        validate_required(changeset, [:placement_id, :work_owner, :due_on, :expires_at])
+      else
+        changeset
+      end
     end
 
     # An accepted risk without an end date never expires, so it is refused at
@@ -87,6 +119,8 @@ defmodule Triage.Decisions do
   @doc "The decision vocabulary."
   @spec decisions() :: [String.t()]
   def decisions, do: @decisions
+
+  def work_actions, do: @work_actions
 
   @doc "The decisions that must carry an expiry."
   @spec expiry_required() :: [String.t()]
@@ -153,9 +187,19 @@ defmodule Triage.Decisions do
     |> Map.new(&{{&1.cve, &1.placement_id}, decorate(&1, now)})
   end
 
-  @doc "Active coverage for one placement, from its own scope or the whole advisory."
+  @doc """
+  Active coverage for one placement from the latest effective scoped or global
+  decision. A newer scoped replacement takes precedence over an older global
+  claim; if it expires, that older claim must not silently become active again.
+  Call with `latest_by_scope/2`, which already excludes future decisions.
+  """
   def covering_decision(decisions, cve, placement_id) do
-    Enum.find([decisions[{cve, nil}], decisions[{cve, placement_id}]], &active?/1)
+    latest =
+      [decisions[{cve, nil}], decisions[{cve, placement_id}]]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.max_by(&{DateTime.to_unix(&1.decided_at, :microsecond), &1.id}, fn -> nil end)
+
+    if active?(latest), do: latest
   end
 
   @doc "Append-only decision history for one advisory, newest first."
@@ -186,10 +230,21 @@ defmodule Triage.Decisions do
   @spec state(Decision.t(), DateTime.t()) :: :pending | :active | :expired
   def state(%Decision{} = decision, now) do
     cond do
-      DateTime.compare(decision.decided_at, now) == :gt -> :pending
-      is_nil(decision.expires_at) -> :active
-      DateTime.compare(decision.expires_at, now) == :lt -> :expired
-      true -> :active
+      DateTime.compare(decision.decided_at, now) == :gt ->
+        :pending
+
+      is_nil(decision.expires_at) ->
+        :active
+
+      DateTime.compare(decision.expires_at, now) == :lt ->
+        :expired
+
+      DateTime.compare(decision.expires_at, now) == :eq and
+          decision.metadata["expiry_boundary"] == "exclusive" ->
+        :expired
+
+      true ->
+        :active
     end
   end
 
@@ -205,7 +260,11 @@ defmodule Triage.Decisions do
       decided_at: decision.decided_at,
       expires_at: decision.expires_at,
       placement_id: decision.placement_id,
-      supersedes_id: decision.supersedes_id
+      supersedes_id: decision.supersedes_id,
+      work_owner: decision.work_owner,
+      due_on: decision.due_on,
+      metadata: decision.metadata,
+      operation_id: decision.operation_id
     }
   end
 

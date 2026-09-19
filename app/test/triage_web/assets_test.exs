@@ -143,7 +143,32 @@ defmodule TriageWeb.AssetsTest do
 
       # Order is precedence: the utilities load first, so app.css - this
       # application's own classes and tokens - stays authoritative over them.
-      assert hrefs == ["/assets/css/tailwind.css", "/assets/css/app.css"]
+      assert hrefs == [
+               "/assets/css/tailwind.css",
+               "/assets/css/app.css",
+               "/assets/css/workspace.css"
+             ]
+
+      workspace_hrefs =
+        build_conn()
+        |> get("/workspace")
+        |> html_response(200)
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.filter("link[rel=stylesheet]")
+        |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
+
+      assert workspace_hrefs == ["/assets/css/tailwind.css", "/assets/css/workspace.css"]
+      workspace_css = response(get(build_conn(), "/assets/css/workspace.css"), 200)
+      refute workspace_css =~ "-:scope"
+
+      for selector <- [
+            ".panel-body{",
+            ".inspector-body{",
+            ".modal-body{",
+            "dialog.confirm { margin:auto; }"
+          ] do
+        assert workspace_css =~ selector
+      end
 
       # both are same-origin: no CDN, no bundler output
       assert Enum.all?(hrefs, &String.starts_with?(&1, "/"))

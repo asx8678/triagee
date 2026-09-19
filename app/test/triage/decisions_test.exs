@@ -70,6 +70,79 @@ defmodule Triage.DecisionsTest do
     assert Triage.GuidedReview.get(cve) == nil
   end
 
+  test "scoped work replaces a global claim consistently in workspace and legacy readers",
+       context do
+    cve = context.finding.cve
+    assert {:ok, global} = Decisions.record(attrs(%{decided_at: at(3)}))
+
+    assert {:ok, work} =
+             Decisions.record(
+               attrs(%{
+                 placement_id: context.placement.id,
+                 decision: "investigate",
+                 work_owner: "Scope owner",
+                 due_on: Date.utc_today(),
+                 decided_at: at(1)
+               })
+             )
+
+    decisions = Decisions.latest_by_scope([cve])
+    assert Decisions.covering_decision(decisions, cve, context.placement.id).id == work.id
+    assert {:ok, %{rows: [row]}} = Triage.Triage.list_critical(filter: "all")
+    assert hd(row.work_items).decision.id == work.id
+    assert hd(Triage.Workspace.targets(%{"cve" => cve})).decision.id == work.id
+    assert Decisions.latest_by_cve([cve])[cve].id == global.id
+  end
+
+  test "expired scoped work never resurrects an older global acceptance on legacy routes",
+       context do
+    cve = context.finding.cve
+    image = Repo.get!(Triage.Inventory.Image, context.finding.image_id)
+    sibling = placement!(image, "beta", "staging")
+    assert {:ok, global} = Decisions.record(attrs(%{decided_at: at(3)}))
+
+    assert {:ok, _work} =
+             Decisions.record(
+               attrs(%{
+                 placement_id: context.placement.id,
+                 decision: "request_remediation",
+                 work_owner: "Scope owner",
+                 due_on: Date.utc_today() |> Date.add(-1),
+                 decided_at: at(2),
+                 expires_at: at(1)
+               })
+             )
+
+    decisions = Decisions.latest_by_scope([cve])
+    assert Decisions.covering_decision(decisions, cve, context.placement.id) == nil
+    assert Decisions.covering_decision(decisions, cve, sibling.id).id == global.id
+    assert Enum.map(Triage.GuidedReview.get(cve).pending, & &1.owner) == ["alpha"]
+    assert {:ok, %{rows: [row]}} = Triage.Triage.list_critical(filter: "active")
+    assert row.scopes_decided == 1
+    assert row.state == :awaiting_assessment
+  end
+
+  test "same-second replacements use record identity and a newer global claim still governs",
+       context do
+    cve = context.finding.cve
+    assert {:ok, _global} = Decisions.record(attrs())
+    assert {:ok, scoped} = Decisions.record(attrs(%{placement_id: context.placement.id}))
+
+    assert Decisions.covering_decision(
+             Decisions.latest_by_scope([cve]),
+             cve,
+             context.placement.id
+           ).id == scoped.id
+
+    assert {:ok, newest} = Decisions.record(attrs())
+
+    assert Decisions.covering_decision(
+             Decisions.latest_by_scope([cve]),
+             cve,
+             context.placement.id
+           ).id == newest.id
+  end
+
   test "future decisions are pending and cannot replace current coverage", context do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     cve = context.finding.cve

@@ -9,7 +9,13 @@
            equal specificity app.css always wins the cascade: this application's
            semantic classes and tokens stay authoritative over the utilities. --%>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/tailwind.css"} />
-    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <link
+      :if={@conn.request_path != "/workspace"}
+      phx-track-static
+      rel="stylesheet"
+      href={~p"/assets/css/app.css"}
+    />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/workspace.css"} />
     <%!-- Same-origin Phoenix client distributions, generated from the
            mix.lock-pinned deps by `mix assets.setup` (see README.md "Assets").
            Deferred scripts execute in document order: phoenix.js defines the

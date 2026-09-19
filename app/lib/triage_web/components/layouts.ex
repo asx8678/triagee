@@ -7,7 +7,16 @@ defmodule TriageWeb.Layouts do
   attr :flash, :map, required: true
   attr :active_page, :string, default: nil
   attr :current_scope, :map, default: nil
+  attr :workspace, :boolean, default: false
   slot :inner_block, required: true
+
+  def app(%{workspace: true} = assigns) do
+    ~H"""
+    <div class="approved-workspace">
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
 
   def app(assigns) do
     assigns = assign(assigns, :runtime, runtime_notice())
@@ -62,6 +71,7 @@ defmodule TriageWeb.Layouts do
         >
           <div class="cluster environment-summary">
             <strong>Local · No sign-in · {@runtime.binding}</strong>
+            <.link href={~p"/workspace"}>Approved workspace preview</.link>
           </div>
           <details id="safety-details">
             <summary>Safety details</summary>

@@ -1,10 +1,10 @@
 #!/bin/sh
 set -eu
 
-usage() { echo "usage: $0 {target|precommit|concurrency|all}" >&2; exit 64; }
+usage() { echo "usage: $0 {target|precommit|concurrency|workspace|workspace_browser|all}" >&2; exit 64; }
 [ "$#" -eq 1 ] || usage
 mode=$1
-case "$mode" in target|precommit|concurrency|all) ;; *) usage ;; esac
+case "$mode" in target|precommit|concurrency|workspace|workspace_browser|all) ;; *) usage ;; esac
 
 # Refuse caller-selected execution controls before sanitizing the environment.
 case "${MIX_ENV-}" in ""|test) ;; *) echo "verify-owned-db: refuse non-test MIX_ENV" >&2; exit 65;; esac
@@ -94,5 +94,15 @@ run_concurrency() {
   unset TRIAGE_IMPORT_CONCURRENCY_DB
 }
 
-case "$mode" in target) run_target;; precommit) run_precommit;; concurrency) run_concurrency;; all) run_target; run_precommit; run_concurrency;; esac
+run_workspace() {
+  run_migrations
+  run workspace-tests mise x -- mix test test/triage/workspace_test.exs test/triage/decisions_test.exs test/triage_web/live/workspace_live_test.exs test/triage_web/assets_test.exs
+}
+run_workspace_browser() {
+  run_migrations; verify empty
+  run assets mise x -- mix assets.setup
+  run workspace-browser mise x -- mix run --no-start scripts/workspace_browser.exs "$db"
+}
+
+case "$mode" in workspace) run_workspace;; workspace_browser) run_workspace_browser;; target) run_target;; precommit) run_precommit;; concurrency) run_concurrency;; all) run_target; run_precommit; run_concurrency;; esac
 echo "verify-owned-db: mode=$mode completed"

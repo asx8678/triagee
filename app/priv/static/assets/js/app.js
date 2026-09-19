@@ -215,13 +215,88 @@ document.addEventListener("triage:navigation-ready", () => syncNavigation(true))
 document.addEventListener("keydown", closeNavigation);
 syncNavigation();
 
+// Native modal owns focus trapping/inertness; LiveView still owns all child DOM.
+const WorkspaceDialog = {
+  mounted() {
+    this.opener = document.activeElement;
+    this.cancel = event => { event.preventDefault(); this.pushEvent(this.el.dataset.closeEvent, {}); };
+    this.el.addEventListener("cancel", this.cancel);
+    if (!this.el.open) this.el.showModal();
+  },
+  updated() { if (!this.el.open) this.el.showModal(); },
+  destroyed() {
+    this.el.removeEventListener("cancel", this.cancel);
+    this.el.close();
+    if (this.opener?.isConnected) this.opener.focus({preventScroll: true});
+    else document.getElementById("main-content")?.focus({preventScroll: true});
+  }
+};
+
+// Sensitive drafts never enter browser storage. Patches preserve server memory;
+// leaving/reloading warns rather than claiming durable draft persistence.
+const WorkspaceDraftGuard = {
+  mounted() {
+    this.wrapper = this.el.closest(".approved-workspace");
+    this.localDirty = false;
+    this.editVersion = 0;
+    this.submittedVersion = -1;
+    this.leaving = false;
+    this.dirty = () => !this.leaving && (this.localDirty || this.el.dataset.dirty === "true");
+    // Protect keystrokes/checkbox changes before a slow or disconnected server
+    // can acknowledge them. Unrelated patches must never clear this state.
+    this.edited = event => {
+      if (!event.target.closest?.("#workspace-decision")) return;
+      this.localDirty = true;
+      this.editVersion++;
+    };
+    this.submitting = event => {
+      if (event.target.id === "workspace-decision") this.submittedVersion = this.editVersion;
+    };
+    this.confirming = event => {
+      if (event.target.closest?.('[phx-click="new-draft"], [phx-click="confirm-risk"]')) {
+        this.submittedVersion = this.editVersion;
+      }
+    };
+    this.handleEvent("workspace-draft-cleared", () => {
+      if (this.editVersion === this.submittedVersion) this.localDirty = false;
+    });
+    this.unload = event => { if (this.dirty()) { event.preventDefault(); event.returnValue = ""; } };
+    this.leave = event => {
+      const link = event.target.closest?.("a[href]");
+      if (!link || !this.dirty() || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+      const url = new URL(link.href, location.href);
+      if (url.origin === location.origin && url.pathname === "/workspace" && link.getAttribute("data-phx-link") === "patch") return;
+      if (!confirm("Leave this workspace? Drafts are held only in this live connection and may be lost.")) {
+        event.preventDefault(); event.stopImmediatePropagation();
+      } else {
+        this.leaving = true; // No second beforeunload prompt after explicit consent.
+      }
+    };
+    window.addEventListener("beforeunload", this.unload);
+    this.wrapper.addEventListener("input", this.edited);
+    this.wrapper.addEventListener("change", this.edited);
+    this.wrapper.addEventListener("submit", this.submitting, true);
+    this.wrapper.addEventListener("click", this.confirming, true);
+    this.wrapper.addEventListener("click", this.leave, true);
+  },
+  destroyed() {
+    window.removeEventListener("beforeunload", this.unload);
+    this.wrapper.removeEventListener("input", this.edited);
+    this.wrapper.removeEventListener("change", this.edited);
+    this.wrapper.removeEventListener("submit", this.submitting, true);
+    this.wrapper.removeEventListener("click", this.confirming, true);
+    this.wrapper.removeEventListener("click", this.leave, true);
+  }
+};
+
 const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content");
 if (typeof Phoenix === "undefined" || typeof LiveView === "undefined") {
   console.error("[triage] Phoenix client scripts are missing; run `mix assets.setup` and reload.");
 } else {
   const liveSocket = new LiveView.LiveSocket("/live", Phoenix.Socket, {
     params: { _csrf_token: csrfToken },
-    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth, SavedQueueFilters },
+    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth, SavedQueueFilters, WorkspaceDialog, WorkspaceDraftGuard },
   });
   window.liveSocket = liveSocket;
   liveSocket.connect();

@@ -18,6 +18,7 @@ defmodule TriageWeb.Router do
     pipe_through :browser
 
     live "/", FindingLive.Index
+    live "/workspace", WorkspaceLive
 
     live "/triage", GuidedReviewLive
     live "/triage/history", TriageLive
