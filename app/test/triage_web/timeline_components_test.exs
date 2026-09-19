@@ -119,8 +119,12 @@ defmodule TriageWeb.TimelineComponentsTest do
     refute Map.has_key?(closed, "cases_after")
     assert Enum.count(LazyHTML.query(document, "#tl-case-truncated-10")) == 1
 
-    assert LazyHTML.attribute(LazyHTML.query(document, "#tl-case-open-10"), "href") == [
-             "/cases/10"
+    assert LazyHTML.attribute(LazyHTML.query(document, "#tl-case-open-10"), "phx-click") == [
+             "timeline-case"
+           ]
+
+    assert LazyHTML.attribute(LazyHTML.query(document, "#tl-case-open-10"), "phx-value-id") == [
+             "10"
            ]
 
     assert LazyHTML.text(LazyHTML.query(document, "#tl-drawer-lane")) =~ "73 recorded day(s)"

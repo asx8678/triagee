@@ -24,8 +24,8 @@ defmodule TriageWeb.TimelineLive.Chart do
   # so it fits the window to a desktop content width and leaves the region
   # scrollable at narrower viewports rather than guessing per request.
   # Measured container width is supplied by the resize hook.
-  @gutter 152
-  @row_height 26
+  @gutter 180
+  @row_height 34
   @axis_height 64
   @marker_gap 6
   @kinds ["open", "ended", "reopened", "suppressed"]
@@ -81,6 +81,11 @@ defmodule TriageWeb.TimelineLive.Chart do
       </p>
 
       <figure class="tl-chart-figure">
+        <p id="tl-chart-scroll-hint" class="supporting tl-chart-mobile-hint">
+          Scroll horizontally for later dates. With a keyboard, focus the chart and use the arrow keys.
+          <a href="#tl-lanes-table">Use the lane table</a>
+          for the full text detail.
+        </p>
         <div
           id="tl-chart-scroll"
           phx-hook="TimelineWidth"
@@ -274,7 +279,6 @@ defmodule TriageWeb.TimelineLive.Chart do
         </div>
 
         <figcaption class="supporting tl-chart-caption">
-          <span class="tl-chart-mobile-hint">Scroll for the complete chart on narrow screens, or use the lane table.</span>
           This chart is hidden from screen readers: every marker is a recorded observation, listed
           in the day bands and counted per CVE in the lane table.
         </figcaption>

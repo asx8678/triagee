@@ -31,7 +31,28 @@ mise x -- mix phx.server
 demo seed in development only, and builds assets. Test setup never seeds the demo
 implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener port.
 
-## Main workflows
+## Single workspace UI
+
+The homepage `/` is the new workspace; `/workspace` is an alias for the same UI.
+Overview, Vulnerabilities and Review use `/?page=...`. The full original timeline
+is restored at `/timeline` inside the same workspace shell; `/?page=timeline`
+also works. Navigation keeps the LiveView connection and unsaved review drafts.
+Retired screen URLs redirect into the workspace and no longer mount their old
+LiveViews. The old stylesheet and links back to old screens are not loaded.
+Stored inventory, decisions and case evidence are unchanged.
+
+The workspace currently supports inventory inspection and local scoped decisions.
+Timeline retains its connected observation chart (fit/daily scale), detection and
+response table, day bands, weekday heatmap, KEV context and paged CVE event/case
+history. Complete saved-case histories expand read-only in place. Team/environment
+scopes, 4/8/12-week windows and old timeline bookmarks are preserved. Imports, replay, intelligence
+refresh, external tickets and AI are not yet available in this UI. Decision history
+also remains in the CVE inspector.
+
+## Historical workflows (retired screen URLs)
+
+The following describes the previous UI and retained backend capabilities, not
+additional currently accessible screens.
 
 - **Findings / CVE details:** inspect recorded inventory, scope, lifecycle and
   cached intelligence. Unknown exposure is not evidence of safety.

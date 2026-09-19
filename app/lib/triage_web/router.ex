@@ -17,29 +17,29 @@ defmodule TriageWeb.Router do
   scope "/", TriageWeb do
     pipe_through :browser
 
-    live "/", FindingLive.Index
+    live "/", WorkspaceLive
     live "/workspace", WorkspaceLive
 
-    live "/triage", GuidedReviewLive
-    live "/triage/history", TriageLive
-    live "/triage/:cve", GuidedReviewLive
-    live "/intel", IntelLive
+    get "/triage", WorkspaceRedirectController, :show
+    get "/triage/history", WorkspaceRedirectController, :show
+    get "/triage/:cve", WorkspaceRedirectController, :show
+    get "/intel", WorkspaceRedirectController, :show
 
-    live "/cves/:id", CveLive.Show
+    get "/cves/:id", WorkspaceRedirectController, :show
 
-    live "/findings", FindingLive.Index
-    live "/findings/:id", FindingLive.Show
+    get "/findings", WorkspaceRedirectController, :show
+    get "/findings/:id", WorkspaceRedirectController, :show
 
-    live "/cases", CaseLive.Index
-    live "/cases/:id", CaseLive.Show
-    live "/cases/:id/exception", ExceptionLive
+    get "/cases", WorkspaceRedirectController, :show
+    get "/cases/:id", WorkspaceRedirectController, :show
+    get "/cases/:id/exception", WorkspaceRedirectController, :show
 
-    live "/whats-new", WhatsNewLive
-    live "/timeline", TimelineLive
-    live "/statistics", StatisticsLive
-    live "/replay", ReplayLive
-    live "/replay/history", ReplayHistoryLive
-    live "/imports", ImportLive
+    get "/whats-new", WorkspaceRedirectController, :show
+    live "/timeline", WorkspaceLive, :timeline
+    get "/statistics", WorkspaceRedirectController, :show
+    get "/replay", WorkspaceRedirectController, :show
+    get "/replay/history", WorkspaceRedirectController, :show
+    get "/imports", WorkspaceRedirectController, :show
   end
 
   # Other scopes may use custom stacks.

@@ -467,7 +467,7 @@ defmodule TriageWeb.WorkspaceComponents do
             </div>
             <details>
               <summary>External integrations</summary><p>
-                Ticket creation and AI are separate operations, unavailable in this rollout workspace. Existing integrations remain on legacy routes. Local save works independently.
+                Ticket creation and AI are not available in this workspace. Local save works independently.
               </p>
             </details>
             <button :if={@error} type="button" phx-click="reconcile">Reload current evidence</button>
@@ -645,7 +645,7 @@ defmodule TriageWeb.WorkspaceComponents do
                     )}. {if scope.active?,
                       do: "Still recorded affected.",
                       else: "No longer observed, not verified remediated."}
-                  </p><.link href={~p"/cves/#{@row.cve}"}>Legacy occurrence and assessment history</.link>
+                  </p>
                 </div>
               <% "evidence" -> %>
                 <div class="section">
@@ -749,16 +749,8 @@ defmodule TriageWeb.WorkspaceComponents do
             Operational inventory excludes public-reference records. Scan completeness and current production coverage are unverified.
           </p><p>
             Drafts survive navigation within this live connection, not reload or server restart. Local decisions are durable. Leaving this workspace may discard drafts.
-          </p><div class="evidence-row">
-            <.link href={~p"/imports"}>Imports and data receipts</.link>
-          </div><div class="evidence-row">
-            <.link href={~p"/intel"}>Intelligence cache and explicit refresh</.link>
-          </div><div class="evidence-row">
-            <.link href={~p"/replay"}>Replay local snapshots</.link>
-          </div><div class="evidence-row"><.link href={~p"/cases"}>Legacy assessments</.link></div><div class="evidence-row">
-            <.link href={~p"/triage/history"}>Legacy decision history</.link>
-          </div><div class="evidence-row"><.link href={~p"/"}>Legacy workspace</.link></div><p>
-            Ticket / AI controls are not enabled in this rollout. No remote operation is triggered by reading or saving local work.
+          </p><p>
+            Imports, replay, intelligence refresh, ticket creation and AI controls are not available in this workspace. Previously stored records are retained. No remote operation is triggered by reading or saving local work.
           </p>
         </div><footer class="modal-foot"><button phx-click="close-settings">Close</button></footer>
       </div>

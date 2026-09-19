@@ -132,7 +132,7 @@ defmodule TriageWeb.AssetsTest do
   # assertions are about the wiring, the scan and the served bytes - not about
   # committing a build artifact.
   describe "stylesheet wiring" do
-    test "loads the generated Tailwind stylesheet before the application stylesheet" do
+    test "loads only Tailwind and the workspace theme at both entry points" do
       hrefs =
         build_conn()
         |> get("/")
@@ -141,11 +141,9 @@ defmodule TriageWeb.AssetsTest do
         |> LazyHTML.filter("link[rel=stylesheet]")
         |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
 
-      # Order is precedence: the utilities load first, so app.css - this
-      # application's own classes and tokens - stays authoritative over them.
+      # The retired theme is never loaded into the single workspace.
       assert hrefs == [
                "/assets/css/tailwind.css",
-               "/assets/css/app.css",
                "/assets/css/workspace.css"
              ]
 

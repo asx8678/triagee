@@ -24,27 +24,36 @@ defmodule TriageWeb.TimelineLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(:page_title, "Timeline")
-     |> assign(:plot_width, 1000)
-     |> assign(:raw_params, %{})
-     |> assign(:filter_form, to_form(%{}))
-     |> assign(:options, %{owners: [], environments: []})
-     |> assign(:timeline, nil)
-     |> assign(:filters, TimelineFilters.defaults())
-     |> assign(:view_error, nil)
-     |> assign(:detail, nil)
-     |> assign(:selected_cve, nil)
-     |> assign(:detail_error, nil)
-     |> assign(:kev, %{})
-     |> assign(:kev_status, nil)}
+    {:ok, initialize(socket)}
+  end
+
+  @doc false
+  def initialize(socket) do
+    socket
+    |> assign(:page_title, "Timeline")
+    |> assign(:plot_width, 1000)
+    |> assign(:raw_params, %{})
+    |> assign(:filter_form, to_form(%{}))
+    |> assign(:timeline_options, %{owners: [], environments: []})
+    |> assign(:timeline, nil)
+    |> assign(:filters, TimelineFilters.defaults())
+    |> assign(:view_error, nil)
+    |> assign(:expanded_cases, %{})
+    |> assign(:detail, nil)
+    |> assign(:selected_cve, nil)
+    |> assign(:detail_error, nil)
+    |> assign(:kev, %{})
+    |> assign(:kev_status, nil)
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    {:noreply, socket |> assign(:raw_params, params) |> load_view()}
+    {:noreply, load(socket, params)}
   end
+
+  @doc false
+  def load(socket, params),
+    do: socket |> assign(raw_params: params, expanded_cases: %{}) |> load_view()
 
   @impl true
   def handle_event("filter", params, socket) do
@@ -55,6 +64,33 @@ defmodule TriageWeb.TimelineLive do
        push_patch(socket, to: TimelineFilters.path(parsed, %{cve: socket.assigns.selected_cve}))}
     else
       {:noreply, view_error(socket, parsed)}
+    end
+  end
+
+  def handle_event(
+        "timeline-case",
+        %{"id" => id},
+        %{assigns: %{detail: %{cases: cases}}} = socket
+      )
+      when is_binary(id) do
+    # Only a case in this CVE's currently displayed, scoped page can be expanded.
+    case Enum.find(cases.rows, &(Integer.to_string(&1.id) == id)) do
+      nil ->
+        {:noreply, socket}
+
+      entry ->
+        case Triage.Cases.get_case(entry.id) do
+          {:ok, data} ->
+            {:noreply,
+             update(
+               socket,
+               :expanded_cases,
+               &Map.put(&1, entry.id, CaseLive.Format.timeline_entries(data))
+             )}
+
+          _ ->
+            {:noreply, socket}
+        end
     end
   end
 
@@ -84,7 +120,7 @@ defmodule TriageWeb.TimelineLive do
           |> assign(:timeline, timeline)
           |> assign(:action_paths, action_paths(timeline, parsed.cve))
           |> assign(:filters, parsed)
-          |> assign(:options, Timeline.filter_options())
+          |> assign(:timeline_options, Timeline.filter_options())
           |> assign(:filter_form, to_form(filter_params(timeline, parsed)))
           |> assign(:kev, Intel.kev_index(Enum.map(timeline.lanes.rows, & &1.cve)))
           |> assign(:kev_status, Intel.kev_status())
@@ -221,6 +257,15 @@ defmodule TriageWeb.TimelineLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} active_page="timeline">
+      <.panel {assigns} />
+    </Layouts.app>
+    """
+  end
+
+  @doc false
+  def panel(assigns) do
+    ~H"""
+    <section id="workspace-timeline" class="restored-timeline">
       <.page_header
         title="Timeline"
         subtitle="Recorded local observations over time — not verified remediation."
@@ -228,19 +273,27 @@ defmodule TriageWeb.TimelineLive do
         <:actions>
           <.link
             id="timeline-observation-timing"
-            navigate={~p"/statistics"}
+            href="#tl-lanes"
             class="button button-secondary"
           >
-            Summary statistics
+            Detection &amp; response timing
           </.link>
         </:actions>
       </.page_header>
+      <nav class="timeline-jump" aria-label="Timeline sections">
+        <a href="#tl-chart">Observation chart</a>
+        <a href="#tl-lanes">Detection &amp; response</a>
+        <a href="#tl-bands">Daily observations</a>
+        <a href="#tl-grid">Weekday heatmap</a>
+      </nav>
       <.filter_bar id="timeline-form" form={@filter_form} change="filter">
         <.input
           field={@filter_form[:owner]}
           type="select"
           label="Team"
-          options={display_scope_options(@options[:owners], @filter_form[:owner].value, "All teams")}
+          options={
+            display_scope_options(@timeline_options[:owners], @filter_form[:owner].value, "All teams")
+          }
         />
         <.input
           field={@filter_form[:environment]}
@@ -248,7 +301,7 @@ defmodule TriageWeb.TimelineLive do
           label="Environment"
           options={
             display_scope_options(
-              @options[:environments],
+              @timeline_options[:environments],
               @filter_form[:environment].value,
               "All environments"
             )
@@ -358,6 +411,7 @@ defmodule TriageWeb.TimelineLive do
         <Drawer.cve_drawer
           :if={@detail}
           detail={@detail}
+          expanded_cases={@expanded_cases}
           action_paths={@action_paths}
           selected_cve={@selected_cve}
           filters={@filters}
@@ -389,7 +443,7 @@ defmodule TriageWeb.TimelineLive do
         />
         <Grid.weekday_grid grid={@timeline.grid} />
       </div>
-    </Layouts.app>
+    </section>
     """
   end
 end

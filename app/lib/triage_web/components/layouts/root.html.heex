@@ -5,16 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title default="Overview" suffix=" · Triage" phx-no-format>{assigns[:page_title]}</.live_title>
-    <%!-- The generated Tailwind sheet is layered and app.css is unlayered, so at
-           equal specificity app.css always wins the cascade: this application's
-           semantic classes and tokens stay authoritative over the utilities. --%>
+    <%!-- Only the workspace theme is loaded; retired UI styling must not leak in. --%>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/tailwind.css"} />
-    <link
-      :if={@conn.request_path != "/workspace"}
-      phx-track-static
-      rel="stylesheet"
-      href={~p"/assets/css/app.css"}
-    />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/workspace.css"} />
     <%!-- Same-origin Phoenix client distributions, generated from the
            mix.lock-pinned deps by `mix assets.setup` (see README.md "Assets").

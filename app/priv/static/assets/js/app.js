@@ -266,7 +266,9 @@ const WorkspaceDraftGuard = {
       if (!link || !this.dirty() || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       if (link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
       const url = new URL(link.href, location.href);
-      if (url.origin === location.origin && url.pathname === "/workspace" && link.getAttribute("data-phx-link") === "patch") return;
+      const current = new URL(location.href);
+      if (url.origin === current.origin && url.pathname === current.pathname && url.search === current.search && url.hash) return;
+      if (url.origin === location.origin && ["/", "/workspace", "/timeline"].includes(url.pathname) && link.getAttribute("data-phx-link") === "patch") return;
       if (!confirm("Leave this workspace? Drafts are held only in this live connection and may be lost.")) {
         event.preventDefault(); event.stopImmediatePropagation();
       } else {

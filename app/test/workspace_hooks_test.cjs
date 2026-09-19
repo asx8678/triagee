@@ -53,6 +53,12 @@ function guard(dirty = 'false', confirmed = false) {
 test('dirty guard preserves only LiveView patches, blocks destructive leave, and cleans up', () => {
   const g = guard('true');
   assert.equal(g.unload(),true);
+  assert.equal(g.click('http://localhost/workspace#tl-chart'),false);
+  assert.equal(g.click('http://localhost/timeline#tl-chart'),true);
+  assert.equal(g.click('http://localhost/timeline?weeks=4', true),false);
+  assert.equal(g.click('http://localhost/timeline?weeks=4'),true);
+  assert.equal(g.click('http://localhost/?page=review', true),false);
+  assert.equal(g.click('http://localhost/?page=review'),true);
   assert.equal(g.click('http://localhost/workspace?page=review', true),false);
   assert.equal(g.click('http://localhost/workspace?page=review'),true);
   assert.equal(g.click('http://localhost/import'),true);

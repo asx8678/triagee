@@ -53,3 +53,211 @@ dialog{border:1px solid var(--line);border-radius:4px;padding:0;color:var(--ink)
 @media(max-width:640px) { :scope .topnav a { min-height:40px; flex:1; } :scope .review-footer .save-state { display:block; width:100%; max-width:none; } :scope .topmeta .settings-text { display:inline; } }
 
 }
+
+/* Original full timeline: preserved chart/bands/history styles, scoped to its
+   panel so none of the retired application shell leaks into the new UI. */
+@scope (.restored-timeline) {
+  :scope {
+    --triage-border:var(--line); --triage-surface:var(--paper);
+    --triage-control-border:#9aaec6; --triage-accent:var(--blue);
+    --triage-focus:var(--blue); --triage-muted:var(--muted);
+    --triage-text:var(--ink); --triage-radius:4px;
+    --font-sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+    display:block; min-width:0;
+  }
+/* Timeline: read-only CVE timeline. Shape and text carry the meaning; colour only reinforces it. */
+.tl-section + .tl-section, .tl-drawer + .tl-section { margin-top: 1rem; }
+.tl-band-list { list-style: none; margin: .25rem 0 0; padding: 0; border-top: 1px solid var(--triage-border); }
+.tl-band { display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: .75rem 1.25rem; min-width: 0; padding: 1rem .75rem; border-bottom: 1px solid var(--triage-border); }
+.tl-band-observed { background: var(--triage-surface); }
+.tl-band-judged { background: #f2f7f4; }
+.tl-band-date { min-width: 0; padding-left: .75rem; border-left: 3px solid #536b91; }
+.tl-band-label { margin: 0; font-weight: 700; line-height: 1.4; }
+.tl-band-label time { display: grid; gap: .125rem; }
+.tl-band-weekday { display: block; font-size: .875rem; color: #344866; }
+.tl-band-calendar { display: block; font-size: 1.125rem; color: #18263d; font-variant-numeric: tabular-nums; }
+.tl-band-counts { margin: .5rem 0 0; line-height: 1.5; }
+.tl-band-empty .tl-band-date { border-left-color: #a5afbe; }
+.tl-gap { padding: .5rem .75rem; background: #edf1f6; border-bottom: 1px solid var(--triage-border); }
+.tl-gap > details > summary { padding: .5rem 0; color: #344866; line-height: 1.6; cursor: pointer; }
+.tl-gap > details > summary:focus-visible { outline: 2px solid var(--triage-focus); outline-offset: 2px; }
+.tl-row.tl-selected, #tl-lanes-table tr.tl-selected > * { background: #e8efff; box-shadow: inset 4px 0 #365acb; }
+.tl-row.tl-selected { border-radius: .4rem; outline: 2px solid #365acb; outline-offset: 2px; }
+.tl-selection-label { display: inline-block; margin-left: .5rem; padding: .125rem .5rem; border-radius: 1rem; background: #2848a3; color: #fff; font-size: .75rem; font-weight: 700; }
+.tl-chart-track.tl-selected .tl-c-band { fill: #dbe7ff; stroke: #365acb; stroke-width: 2; }
+.tl-chart-track.tl-selected .tl-chart-cve { fill: #2848a3; font-weight: 800; text-decoration: underline; }
+.tl-band-track { position: relative; min-width: 0; }
+.tl-band-none { margin: 0; }
+.tl-rows { list-style: none; display: grid; gap: .25rem; margin: 0; padding: 0; }
+.tl-row { position: relative; display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto; align-items: start; gap: .25rem .5rem; min-width: 0; padding: .25rem 0; }
+.tl-row-main { min-width: 0; }
+.tl-row-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25rem .5rem; margin: 0; }
+.tl-row-main > p { margin: .125rem 0 0; }
+.tl-row-actions { display: flex; flex-wrap: wrap; gap: .25rem; }
+.tl-arrow { font-size: .8125rem; line-height: 1.25; text-align: center; }
+.tl-arrow-open { color: #1f5c3d; }
+.tl-arrow-ended { color: #51606f; }
+.tl-arrow-suppressed { color: #7a4a11; }
+.tl-arrow-reopened { color: #173e91; font-weight: 700; }
+.tl-arrow-history { grid-column: 1; }
+/* Drawn only where the same CVE also has a recorded observation on the adjacent day. */
+.tl-connector { position: absolute; left: .5rem; width: .125rem; background: var(--triage-control-border); }
+.tl-connector-up { top: -.375rem; height: .5rem; }
+.tl-connector-down { bottom: -.5rem; height: .625rem; }
+.tl-history { list-style: none; display: grid; gap: .25rem; margin: .25rem 0 0; padding: 0; }
+.tl-history > li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: .5rem; min-width: 0; padding: .25rem 0; border-top: 1px solid var(--triage-border); }
+.tl-history p { margin: .125rem 0 0; }
+.tl-drawer { margin-top: .5rem; padding: .75rem; background: var(--triage-surface); border: 2px solid var(--triage-accent); border-radius: var(--triage-radius); }
+.tl-drawer > .cluster, .tl-drawer > .notice, .tl-drawer > section + section { margin-top: .5rem; }
+.tl-case { padding: .5rem 0; border-top: 1px solid var(--triage-border); }
+.tl-case > .section-header { gap: .25rem .5rem; }
+.tl-grid-table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tl-grid-table caption { text-align: left; }
+.tl-grid-table :is(th, td) { padding: .125rem .25rem; text-align: center; border: 1px solid var(--triage-border); }
+.tl-grid-table thead th, .tl-grid-table tbody th { font-size: .6875rem; color: var(--triage-muted); white-space: nowrap; }
+.tl-grid-table tbody th { text-align: left; }
+.tl-cell { min-width: 1.75rem; }
+.tl-cell-value { display: inline-block; min-width: 1.25rem; }
+.tl-cell-zero { color: var(--triage-muted); background: #fafbfc; }
+.tl-cell-low { background: #dfe7f4; }
+.tl-cell-medium { background: #b7c8e6; }
+.tl-cell-high { background: #5a7ab5; color: #fff; font-weight: 650; }
+.tl-cell-future { background: repeating-linear-gradient(45deg, #f3f5f8, #f3f5f8 3px, #fafbfc 3px, #fafbfc 6px); color: var(--triage-muted); }
+@media (max-width: 900px) {
+  .tl-band { grid-template-columns: minmax(0, 1fr); }
+  .tl-row { grid-template-columns: 1.25rem minmax(0, 1fr); }
+  .tl-row-actions { grid-column: 2; }
+}
+/* A keyboard-focusable horizontal scroll region, the house pattern: the wrapper
+   must also be the containing block for absolutely positioned descendants
+   (the sr-only text equivalents), otherwise those escape the clipping and
+   extend the document's scroll width. */
+.table-region:focus-visible { outline: 2px solid var(--triage-focus); outline-offset: 2px; }
+
+/* Connected lane chart: one SVG track per CVE across the window's days. The
+   kind classes reuse the arrow palette above, so one state never has two
+   colours in a single view, and every meaning is repeated in text: a solid
+   segment is two adjacent recorded days, a dashed segment is two recorded days
+   with no recorded observation in between. */
+.tl-chart-figure { margin: 0; }
+.tl-chart-region { padding: .25rem; }
+.tl-chart { display: block; }
+/* Keep fit geometry at its native SVG dimensions: stretching to a wide desktop
+   enlarges every label, marker and row. Narrow screens use the scroll region
+   rather than shrinking the chart's text. */
+.tl-chart-fit { width: auto; max-width: none; height: auto; }
+.tl-chart-fit .tl-c-grid:not(.tl-c-grid-week), .tl-chart-fit .tl-c-tick:not(.tl-c-tick-week) { opacity: .25; }
+.tl-chart-truncation { max-width: none; margin: .25rem 0 .5rem; }
+.tl-chart-mobile-hint { display: none; }
+@media (max-width: 960px) { .tl-chart-mobile-hint { display: block; } }
+.tl-chart text { font-family: var(--font-sans); }
+.tl-c-axis-line { stroke: var(--triage-control-border); }
+.tl-c-grid { stroke: #eef2f7; }
+.tl-c-grid-week { stroke: var(--triage-border); }
+.tl-c-tick { stroke: var(--triage-border); }
+.tl-c-tick-week { stroke: var(--triage-control-border); }
+.tl-c-weekday { font-size: 9px; fill: var(--triage-muted); }
+.tl-c-week-label { font-size: 10px; font-weight: 600; fill: var(--triage-muted); }
+.tl-c-today { stroke: var(--triage-focus); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.tl-c-today-label { font-size: 10px; font-weight: 700; fill: var(--triage-focus); }
+.tl-c-band { fill: #f8fafc; }
+.tl-chart-cve { font-family: var(--font-mono); font-size: 10.5px; fill: var(--triage-text); }
+.tl-c-sev { stroke-width: 1; stroke: none; }
+.tl-c-sev-critical { fill: #b42318; }
+.tl-c-sev-high { fill: #ea580c; }
+.tl-c-sev-medium { fill: #eab308; }
+.tl-c-sev-low { fill: #2563eb; }
+.tl-c-sev-unknown { fill: #64748b; }
+.tl-c-sev-text { font-size: 9px; font-weight: 700; }
+.tl-c-sev-text.tl-c-sev-critical { fill: #fff; }
+.tl-c-sev-text.tl-c-sev-high { fill: #fff; }
+.tl-c-sev-text.tl-c-sev-medium { fill: #3b2f00; }
+.tl-c-sev-text.tl-c-sev-low { fill: #fff; }
+.tl-c-sev-text.tl-c-sev-unknown { fill: #fff; }
+.tl-c-open { --tl-c: #15803d; --tl-c-soft: #e3f3e9; }
+.tl-c-ended { --tl-c: #64748b; --tl-c-soft: #eef1f5; }
+.tl-c-reopened { --tl-c: #b45309; --tl-c-soft: #fdf0da; }
+.tl-c-suppressed { --tl-c: #7c3aed; --tl-c-soft: #f2ebfd; }
+.tl-c-seg { stroke: var(--tl-c, #51606f); stroke-width: 2; stroke-linecap: round; }
+.tl-c-seg-dashed { stroke-dasharray: 4 4; }
+.tl-c-head { fill: var(--tl-c, #51606f); stroke: none; }
+.tl-c-halo { fill: var(--tl-c-soft, #e9edf1); stroke: none; }
+.tl-c-dot { fill: var(--tl-c, #51606f); stroke: #fff; stroke-width: 1.5; }
+.tl-c-ended .tl-c-dot { fill: #fff; stroke: var(--tl-c); stroke-width: 2; }
+.tl-c-pin { stroke: var(--tl-c, #51606f); stroke-width: 2; }
+.tl-c-entry { stroke: var(--triage-control-border); stroke-width: 2; stroke-dasharray: 2 3; }
+.tl-chart-caption { margin: .375rem 0 0; }
+.tl-chart-legend { list-style: none; display: flex; flex-wrap: wrap; gap: .25rem .75rem; margin: .25rem 0 0; padding: 0; font-size: .75rem; color: var(--triage-muted); }
+.tl-chart-legend-groups { display: grid; gap: .5rem .75rem; margin-top: .5rem; }
+.tl-chart-legend-group { min-width: 0; }
+.tl-chart-legend-title { margin: 0; font-size: .75rem; font-weight: 650; color: var(--triage-text); }
+.tl-chart-legend > li { display: inline-flex; align-items: center; gap: .25rem; }
+.tl-c-key { display: inline-block; width: .625rem; height: .625rem; border-radius: 50%; background: var(--tl-c, #51606f); }
+.tl-c-key.tl-c-ended { background: #fff; border: 2px solid var(--tl-c); box-sizing: border-box; }
+.tl-c-key-chip { display: inline-block; min-width: 1rem; padding: .05rem .25rem; border-radius: 3px; font-size: .65rem; font-weight: 700; text-align: center; }
+.tl-c-key-chip.tl-c-sev-critical { background: #b42318; color: #fff; }
+.tl-c-key-chip.tl-c-sev-high { background: #ea580c; color: #fff; }
+.tl-c-key-chip.tl-c-sev-medium { background: #eab308; color: #3b2f00; }
+.tl-c-key-chip.tl-c-sev-low { background: #2563eb; color: #fff; }
+.tl-c-key-chip.tl-c-sev-unknown { background: #64748b; color: #fff; }
+.tl-c-key-line { flex: 0 0 auto; width: 34px; height: 10px; }
+
+
+
+  .page-header { display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+  .page-header p { color:var(--muted); margin-top:6px; }
+  .page-actions, .cluster { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .timeline-jump { display:flex; flex-wrap:wrap; gap:8px 20px; margin:12px 0; font-size:12px; }
+  .filter-toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:end; padding:12px 16px; background:white; border:1px solid var(--line); border-radius:4px; }
+  .filter-toolbar .fieldset { margin:0; min-width:130px; flex:1; }
+  .filter-toolbar select { width:100%; }
+  .button { display:inline-flex; align-items:center; min-height:34px; padding:6px 10px; border:1px solid var(--line); border-radius:3px; background:white; font-size:12px; font-weight:600; text-decoration:none; }
+  .section-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:start; gap:8px 16px; margin-bottom:12px; }
+  .section-header h2 { font-size:17px; }
+  .section-header p { flex-basis:100%; }
+  .supporting { color:var(--muted); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+  .tl-section { background:white; border:1px solid var(--line); border-radius:4px; padding:16px; margin-top:16px; min-width:0; scroll-margin-top:12px; }
+  .tl-drawer { margin-block:16px; padding:16px; scroll-margin-top:12px; }
+  .table-region { position:relative; min-width:0; max-width:100%; overflow:auto; overscroll-behavior-x:contain; }
+  .metric-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:12px; margin:16px 0; }
+  .metric-strip > div { background:white; border:1px solid var(--line); border-radius:4px; padding:12px; }
+  .metric-strip dt { color:var(--muted); font-size:11px; }
+  .metric-strip dd { margin:4px 0 0; font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .metric-strip > div:first-child dd { font-size:12px; }
+  .explain, .notice { padding:12px 16px; margin-block:12px; background:#f7f9fc; border:1px solid var(--line); border-radius:4px; }
+  .explain summary, summary { cursor:pointer; }
+  .explain p, .notice p { margin-top:8px; font-size:12px; line-height:1.6; }
+  .tl-chart-cve { font-size:12px; }
+  .tl-c-week-label { font-size:11px; }
+  .tl-chart-caption { margin-top:10px; }
+  .tl-chart-legend-groups { padding:12px; background:#f5f8fc; border-radius:3px; }
+  .tl-chart-legend-title { margin-bottom:4px; }
+  .tl-grid-table { width:100%; min-width:680px; }
+  .tl-grid-table :is(th,td) { padding:8px; }
+  .data-table { min-width:1000px; white-space:normal; }
+  .data-table th { position:static; }
+  .data-table td { vertical-align:top; }
+  .data-table .supporting { display:block; margin-top:4px; }
+  .data-table th:first-child { min-width:155px; }
+  .data-table td:last-child { min-width:240px; }
+  .data-table details { margin-top:8px; }
+  .data-table ol { padding-left:18px; }
+  .data-table ol li { padding-block:6px; }
+  .key-value { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:16px 0; }
+  .key-value dt { font-size:11px; color:var(--muted); }
+  .key-value dd { margin:4px 0 0; overflow-wrap:anywhere; }
+  .tl-history > li { padding:10px 0; }
+  .tl-drawer h3 { margin-top:16px; margin-bottom:8px; }
+  .status-badge { display:inline-block; padding:2px 6px; background:#eef3fa; color:#344866; border-radius:3px; font-size:11px; }
+  .status-badge-critical { color:#9f1d29; background:#ffedef; }
+  .status-badge-high { color:#914105; background:#fff1e5; }
+  @media (max-width:640px) {
+    .tl-section, .tl-drawer { padding:12px; }
+    .filter-toolbar { padding:12px; gap:10px; }
+    .filter-toolbar .fieldset { min-width:calc(50% - 10px); }
+    .metric-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .tl-row-actions .button { white-space:normal; }
+  }
+
+}

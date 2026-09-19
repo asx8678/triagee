@@ -209,7 +209,7 @@ defmodule TriageWeb.TimelineLiveTest do
       {:ok, view, html} = live(conn, ~p"/timeline")
       document = LazyHTML.from_document(html)
 
-      assert has_element?(view, "#nav-timeline[aria-current='page']")
+      assert has_element?(view, "#workspace-nav-timeline[aria-current='page']")
       assert has_element?(view, "#tl-summary")
       assert has_element?(view, "#tl-bands")
       assert has_element?(view, "#tl-lanes-table")
@@ -712,7 +712,7 @@ defmodule TriageWeb.TimelineLiveTest do
 
       assert has_element?(
                view,
-               "a#tl-case-open-#{review_case.id}[href='/cases/#{review_case.id}']"
+               "button#tl-case-open-#{review_case.id}[phx-click='timeline-case']"
              )
 
       # The drawer's own advisory link, unscoped here because this visit is.
@@ -731,6 +731,56 @@ defmodule TriageWeb.TimelineLiveTest do
       # table's CVE cell and the bands rows' own "Advisory page" button.
       assert has_element?(scoped, "#tl-lane-cve-CVE-2026-5100[href='#{expected}']")
       assert has_element?(scoped, "[id^='tl-advisory-'][href='#{expected}']")
+    end
+
+    test "complete case history expands read-only without returning to the retired case UI", %{
+      conn: conn,
+      review_case: review_case
+    } do
+      for n <- 1..27 do
+        {:ok, data} = Cases.get_case(review_case.id)
+        attrs = Map.put(review_attrs(), "rationale", "Historical assessment #{n}")
+
+        assert {:ok, _} =
+                 Cases.submit_review(
+                   review_case.id,
+                   data.case.revision,
+                   data.snapshot.id,
+                   Ecto.UUID.generate(),
+                   attrs
+                 )
+      end
+
+      {:ok, before} = Cases.get_case(review_case.id)
+
+      {:ok, view, _} =
+        live(conn, "/timeline?cve=CVE-2026-5100&owner=alpha&environment=prod-cluster-1")
+
+      assert has_element?(view, "#tl-case-truncated-#{review_case.id}")
+
+      preview_count =
+        render(view)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#tl-case-#{review_case.id} .tl-history > li")
+        |> Enum.count()
+
+      assert preview_count < length(before.reviews) + length(before.events)
+      render_click(view, "timeline-case", %{"id" => "999999"})
+      refute has_element?(view, "#tl-case-#{review_case.id}", "Complete recorded history")
+      view |> element("#tl-case-open-#{review_case.id}") |> render_click()
+      assert has_element?(view, "#tl-case-#{review_case.id}", "Complete recorded history")
+
+      complete_count =
+        render(view)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#tl-case-#{review_case.id} .tl-history > li")
+        |> Enum.count()
+
+      assert complete_count == length(before.reviews) + length(before.events)
+      refute has_element?(view, "#tl-case-truncated-#{review_case.id}")
+      {:ok, after_data} = Cases.get_case(review_case.id)
+      assert after_data == before
+      refute has_element?(view, "a[href='/cases/#{review_case.id}']")
     end
 
     test "a suppression flag is described as imported state, not an action", %{conn: conn} do

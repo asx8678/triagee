@@ -1,14 +1,17 @@
 defmodule TriageWeb.WorkspaceLive do
-  @moduledoc "Reversible approved-design workspace over real inventory and advisory decisions."
+  @moduledoc "Primary workspace over real inventory and advisory decisions."
   use TriageWeb, :live_view
   alias Triage.Workspace
   alias Triage.Workspace.Commit
+  alias TriageWeb.{TimelineFilters, TimelineLive}
   import TriageWeb.WorkspaceComponents
 
   @pages ~w(overview inventory review timeline)
-  @keys ~w(page team environment mode q severity sort offset item inspect tab batch)
+  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview)
 
   def mount(_params, _session, socket) do
+    socket = TimelineLive.initialize(socket)
+
     {:ok,
      assign(socket,
        page_title: "Overview",
@@ -24,12 +27,28 @@ defmodule TriageWeb.WorkspaceLive do
      )}
   end
 
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
+    timeline? = URI.parse(uri).path == "/timeline" or params["page"] == "timeline"
+
+    timeline_params =
+      if Map.has_key?(params, "team"), do: Map.put(params, "owner", params["team"]), else: params
+
+    params =
+      if timeline?,
+        do:
+          params
+          |> Map.put("page", "timeline")
+          |> Map.put("team", params["team"] || params["owner"] || ""),
+        else: params
+
     valid =
-      Enum.all?(Map.take(params, @keys), fn {_k, v} -> is_binary(v) and byte_size(v) <= 2000 end)
+      Enum.all?(Map.take(params, @keys -- ~w(weeks tview)), fn {_k, v} ->
+        is_binary(v) and byte_size(v) <= 2000
+      end)
 
     valid = valid and valid_views?(params)
-    params = if valid, do: Map.take(params, @keys), else: %{}
+    params = if valid, do: Map.take(params, @keys -- ~w(weeks tview)), else: %{}
+    params = if timeline?, do: Map.put(params, "page", "timeline"), else: params
     socket = clear_changed_selection(socket, params)
     page = if params["page"] in @pages, do: params["page"], else: "overview"
     params = Map.put(params, "page", page) |> pin_review_item(socket)
@@ -38,6 +57,7 @@ defmodule TriageWeb.WorkspaceLive do
      socket
      |> assign(
        params: params,
+       timeline_params: if(valid, do: timeline_params, else: %{"filters" => "invalid"}),
        page: page,
        page_title: String.capitalize(page),
        invalid_params: not valid,
@@ -105,8 +125,29 @@ defmodule TriageWeb.WorkspaceLive do
         search_form: search_form(params)
       )
 
-    prepare_draft(socket, row, matching)
+    socket |> prepare_draft(row, matching) |> load_timeline()
   end
+
+  defp load_timeline(%{assigns: %{page: "timeline"}} = socket) do
+    socket = TimelineLive.load(socket, socket.assigns.timeline_params)
+    options = socket.assigns.timeline_options
+
+    assign(socket, :options, %{
+      teams:
+        Enum.uniq(
+          socket.assigns.options.teams ++ options.owners ++ [socket.assigns.params["team"]]
+        )
+        |> Enum.reject(&(&1 in [nil, ""])),
+      environments:
+        Enum.uniq(
+          socket.assigns.options.environments ++
+            options.environments ++ [socket.assigns.params["environment"]]
+        )
+        |> Enum.reject(&(&1 in [nil, ""]))
+    })
+  end
+
+  defp load_timeline(socket), do: socket
 
   defp inspector_source("inventory", mode, _targets, matching) when mode in ["unknown", "urgent"],
     do: matching
@@ -165,6 +206,27 @@ defmodule TriageWeb.WorkspaceLive do
       decision_form: to_form(draft.fields, as: :decision),
       hidden_targets: draft.targets -- visible_ids
     )
+  end
+
+  def handle_event("filter", params, %{assigns: %{page: "timeline"}} = socket),
+    do: TimelineLive.handle_event("filter", params, socket)
+
+  def handle_event("timeline-case", params, %{assigns: %{page: "timeline"}} = socket),
+    do: TimelineLive.handle_event("timeline-case", params, socket)
+
+  def handle_event("plot_width", params, %{assigns: %{page: "timeline"}} = socket),
+    do: TimelineLive.handle_event("plot_width", params, socket)
+
+  def handle_event("scope", %{"scope" => params}, %{assigns: %{page: "timeline"}} = socket) do
+    {:noreply,
+     push_patch(socket,
+       to:
+         TimelineFilters.path(socket.assigns.filters, %{
+           owner: params["team"],
+           environment: params["environment"],
+           cve: nil
+         })
+     )}
   end
 
   def handle_event("scope", %{"scope" => params}, socket) do
@@ -479,8 +541,15 @@ defmodule TriageWeb.WorkspaceLive do
       |> Map.reject(fn {_k, v} -> v in [nil, ""] end)
       |> URI.encode_query()
 
-    "/workspace?" <> query
+    "/?" <> query
   end
+
+  def nav_path(params, "timeline"),
+    do:
+      TimelineFilters.path(TimelineFilters.defaults(), %{
+        owner: params["team"],
+        environment: params["environment"]
+      })
 
   def nav_path(params, page),
     do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => page})
@@ -584,10 +653,16 @@ defmodule TriageWeb.WorkspaceLive do
             aria-label="Environment"
             options={[{"All environments", ""} | Enum.map(@options.environments, &{&1, &1})]}
           />
-          <span class="dataset"><span class="tag">Operational inventory</span></span>
+          <span class="dataset"><span class="tag">{if @page == "timeline",
+            do: "Recorded history",
+            else: "Operational inventory"}</span></span>
           <.link
             class="link"
-            patch={workspace_path(@params, %{"team" => nil, "environment" => nil, "offset" => nil})}
+            patch={
+              if @page == "timeline",
+                do: TimelineFilters.path(@filters, %{owner: nil, environment: nil, cve: nil}),
+                else: workspace_path(@params, %{"team" => nil, "environment" => nil, "offset" => nil})
+            }
           >Reset scope</.link>
           <button type="button" class="freshness quiet" phx-click="settings">Coverage unverified</button>
         </.form>
@@ -636,23 +711,10 @@ defmodule TriageWeb.WorkspaceLive do
             hidden_targets={@hidden_targets}
             queue_shown={@queue_shown}
           />
-          <section :if={@page == "timeline"} class="panel">
-            <div class="panel-head">
-              <h1>Timeline</h1>
-            </div>
-            <div class="panel-body">
-              <p>
-                The existing observation tracks and complete event history remain available. The new timeline presentation has not passed its parity gate.
-              </p><p>
-                Local decisions in this workspace are available in each CVE inspector’s History. No observation gap is a verified fix.
-              </p><.link href={
-                ~p"/timeline?#{Map.take(@params, ["environment"]) |> Map.put("owner", @params["team"] || "")}"
-              }>Open existing timeline</.link>
-            </div>
-          </section>
+          <TimelineLive.panel :if={@page == "timeline"} {assigns} />
         </main>
         <footer class="bottom-status">
-          <strong>Local · No sign-in</strong><span>Latest recorded evidence · not verified live coverage</span><span class="right">Workspace rollout · legacy routes preserved</span>
+          <strong>Local · No sign-in</strong><span>Latest recorded evidence · not verified live coverage</span><span class="right">Operational review workspace</span>
         </footer>
       </div>
       <.inspector

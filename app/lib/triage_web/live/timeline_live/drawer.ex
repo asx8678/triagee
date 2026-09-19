@@ -3,7 +3,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
   The per-CVE detail drawer: the lane across every recorded observation, the
   paged lifecycle events, and saved cases with bounded assessment previews.
   Aggregate totals are independent of the selected page; full case histories
-  remain reachable through the explicit Open case links.
+  expand read-only in this panel without leaving the workspace.
 
   The case history is rendered from `TriageWeb.CaseLive.Format.timeline_entries/1`,
   the same ordering the case detail page uses, so the drawer and the case page
@@ -19,6 +19,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
   alias TriageWeb.FindingFilters
   alias TriageWeb.TimelineFilters
 
+  attr :expanded_cases, :map, default: %{}
   attr :detail, :map, required: true
   attr :action_paths, :map, default: %{}
   attr :selected_cve, :string, required: true
@@ -160,28 +161,33 @@ defmodule TriageWeb.TimelineLive.Drawer do
         >
           <div class="section-header">
             <h4>Case #{case_entry.id} · {case_entry.case.owner} · {case_entry.case.environment}</h4>
-            <.link
+            <button
+              :if={not Map.has_key?(@expanded_cases, case_entry.id)}
               id={"tl-case-open-" <> Integer.to_string(case_entry.id)}
-              navigate={~p"/cases/#{case_entry.id}"}
+              phx-click="timeline-case"
+              phx-value-id={case_entry.id}
               class="button button-secondary"
             >
-              Open case
-            </.link>
+              Complete case history
+            </button>
+            <span :if={Map.has_key?(@expanded_cases, case_entry.id)} class="supporting">Complete recorded history</span>
           </div>
           <p class="supporting">
-            Case revision {case_entry.case.revision} · {length(case_entry.entries)} history entries shown
+            Case revision {case_entry.case.revision} · {length(
+              Map.get(@expanded_cases, case_entry.id, case_entry.entries)
+            )} history entries shown
           </p>
           <p
-            :if={case_entry.history_truncated?}
+            :if={case_entry.history_truncated? and not Map.has_key?(@expanded_cases, case_entry.id)}
             id={"tl-case-truncated-#{case_entry.id}"}
             class="supporting"
           >
             Recent assessments and audit events are shown (up to {@history_stream_limit} of each).
-            Open case for the complete recorded history.
+            Use Complete case history to read every recorded assessment and audit event here.
           </p>
           <ol class="tl-history">
             <li
-              :for={entry <- case_entry.entries}
+              :for={entry <- Map.get(@expanded_cases, case_entry.id, case_entry.entries)}
               id={"tl-case-entry-" <> entry.key}
             >
               <div>
