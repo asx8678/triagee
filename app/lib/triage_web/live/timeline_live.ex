@@ -61,7 +61,13 @@ defmodule TriageWeb.TimelineLive do
 
     if parsed.invalid == [] do
       {:noreply,
-       push_patch(socket, to: TimelineFilters.path(parsed, %{cve: socket.assigns.selected_cve}))}
+       push_patch(socket,
+         to:
+           TimelineFilters.path(parsed, %{
+             cve: socket.assigns.selected_cve,
+             chart: socket.assigns.filters.chart
+           })
+       )}
     else
       {:noreply, view_error(socket, parsed)}
     end
@@ -112,7 +118,8 @@ defmodule TriageWeb.TimelineLive do
       case Timeline.list_timeline(
              weeks: parsed.weeks,
              owner: parsed.owner,
-             environment: parsed.environment
+             environment: parsed.environment,
+             chart: parsed.chart
            ) do
         {:ok, timeline} ->
           socket
@@ -266,26 +273,6 @@ defmodule TriageWeb.TimelineLive do
   def panel(assigns) do
     ~H"""
     <section id="workspace-timeline" class="restored-timeline">
-      <.page_header
-        title="Timeline"
-        subtitle="Recorded local observations over time — not verified remediation."
-      >
-        <:actions>
-          <.link
-            id="timeline-observation-timing"
-            href="#tl-lanes"
-            class="button button-secondary"
-          >
-            Detection &amp; response timing
-          </.link>
-        </:actions>
-      </.page_header>
-      <nav class="timeline-jump" aria-label="Timeline sections">
-        <a href="#tl-chart">Observation chart</a>
-        <a href="#tl-lanes">Detection &amp; response</a>
-        <a href="#tl-bands">Daily observations</a>
-        <a href="#tl-grid">Weekday heatmap</a>
-      </nav>
       <.filter_bar id="timeline-form" form={@filter_form} change="filter">
         <.input
           field={@filter_form[:owner]}
@@ -425,6 +412,7 @@ defmodule TriageWeb.TimelineLive do
           lanes={@timeline.lanes}
           action_paths={@action_paths}
           selected_cve={@selected_cve}
+          filters={@filters}
         />
 
         <Lanes.lane_table

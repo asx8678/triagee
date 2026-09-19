@@ -1,19 +1,12 @@
 defmodule TriageWeb.TimelineLive.Chart do
   @moduledoc """
-  The connected lane chart: one SVG track per CVE across the window's days.
-
-  The chart can only ever restate what the day bands, the grid and the lane
-  table already say, so it is `aria-hidden` and its caption says so. A solid
-  segment joins two adjacent days this CVE was recorded on, a dashed segment
-  joins two recorded days with no recorded observation in between, and a lane
-  with one recorded day draws no segment at all: a line is never a claim of
-  continuous presence, and a missing line is never a claim that nothing existed.
-
-  Every segment and marker carries a `<title>` in the app's own vocabulary, so
-  hovering explains the geometry rather than leaving it to be guessed.
+  Recorded lifecycle state through today. Red denotes open state, grey denotes
+  advisory-wide whitelisting. Status lines are not continuous observation evidence.
+  Closure markers mean recorded disappearance, not independently verified remediation.
   """
 
   use TriageWeb, :html
+  alias TriageWeb.TimelineFilters
 
   # Spacing is a display choice, so it is an input to the chart rather than a
   # constant: "detail" keeps day-sized spacing and scrolls, "fit" narrows the
@@ -28,7 +21,7 @@ defmodule TriageWeb.TimelineLive.Chart do
   @row_height 34
   @axis_height 64
   @marker_gap 6
-  @kinds ["open", "ended", "reopened", "suppressed"]
+  @kinds ["open", "ended", "reopened", "suppressed", "whitelisted"]
 
   attr :chart, :map, required: true
   attr :lanes, :map, required: true
@@ -36,6 +29,7 @@ defmodule TriageWeb.TimelineLive.Chart do
   attr :width, :integer, default: 1000
   attr :action_paths, :map, default: %{}
   attr :selected_cve, :string, default: nil
+  attr :filters, :map, default: %{}
 
   def lane_chart(assigns) do
     chart = assigns.chart
@@ -77,7 +71,17 @@ defmodule TriageWeb.TimelineLive.Chart do
       <p id="tl-chart-truncation" class="supporting tl-chart-truncation">
         Showing <strong>{@chart.shown} of {@chart.total} CVEs</strong>, ranked by current scanner severity.
         <a href="#tl-lanes-table">View lane table ({@lanes.shown})</a>
-        · Unplotted lanes are not quiet lanes.
+        <.link
+          :if={@filters[:chart] != "all"}
+          id="tl-show-all"
+          patch={TimelineFilters.path(@filters, %{chart: "all"})}
+        >Show all</.link>
+        <.link
+          :if={@filters[:chart] == "all"}
+          id="tl-show-20"
+          patch={TimelineFilters.path(@filters, %{chart: "20"})}
+        >Show 20</.link>
+        <span :if={@chart.shown < @chart.total}>· Unplotted lanes are not quiet lanes.</span>
       </p>
 
       <figure class="tl-chart-figure">
@@ -110,8 +114,8 @@ defmodule TriageWeb.TimelineLive.Chart do
                 viewBox="0 0 10 10"
                 refX="10"
                 refY="5"
-                markerWidth="6.5"
-                markerHeight="6.5"
+                markerWidth="10"
+                markerHeight="10"
                 markerUnits="userSpaceOnUse"
                 orient="auto"
               >
@@ -191,14 +195,18 @@ defmodule TriageWeb.TimelineLive.Chart do
             <g
               :for={track <- @layout.tracks}
               id={"tl-track-" <> track.cve}
-              class={["tl-chart-track", track.cve == @selected_cve && "tl-selected"]}
+              class={[
+                "tl-chart-track",
+                track.cve == @selected_cve && "tl-selected",
+                track.severity_chip.class in ["tl-c-sev-critical", "tl-c-sev-high"] && "tl-c-danger"
+              ]}
               aria-current={if track.cve == @selected_cve, do: "true"}
             >
               <title>{track.span_label}</title>
 
               <rect
-                :if={track.band? or track.cve == @selected_cve}
-                class="tl-c-band"
+                :if={track.band? or track.cve == @selected_cve or track.ended?}
+                class={["tl-c-band", track.ended? && "tl-c-band-ended"]}
                 x={@layout.gutter}
                 y={track.y - div(@layout.row_height, 2)}
                 width={@layout.track_width}
@@ -249,6 +257,13 @@ defmodule TriageWeb.TimelineLive.Chart do
                 y2={track.y}
               />
 
+              <g :if={track.entry_detect?} class="tl-c-point tl-c-open">
+                <title>
+                  Detected before this window; the dashed line continues the recorded history.{track.affected_note}
+                </title>
+                <circle class="tl-c-chip" cx={@layout.gutter + 2} cy={track.y} r="3.5" />
+              </g>
+
               <line
                 :for={segment <- track.segments}
                 class={segment_class(segment)}
@@ -256,12 +271,35 @@ defmodule TriageWeb.TimelineLive.Chart do
                 y1={segment.y}
                 x2={segment.x2}
                 y2={segment.y}
-                marker-end={"url(#tl-c-arrow-" <> segment.kind <> ")"}
+                marker-end={if segment.arrow?, do: "url(#tl-c-arrow-" <> segment.kind <> ")"}
               >
                 <title>{segment.title}</title>
               </line>
 
-              <g :for={point <- track.points} class={["tl-c-point", "tl-c-" <> point.kind]}>
+              <g :for={wl <- track.whitelists} class="tl-c-whitelist-marker tl-c-whitelisted">
+                <title>
+                  {wl.label} — {wl.from}{if wl.reason, do: ". Reason: " <> wl.reason}{track.affected_note}
+                </title>
+                <circle class="tl-c-chip" cx={wl.x} cy={track.y} r="3.5" />
+              </g>
+              <g
+                :for={point <- track.points}
+                :if={point.detection? and point.kind == "ended"}
+                class="tl-c-point tl-c-open tl-c-same-day-detection"
+              >
+                <title>
+                  Detected on {point.iso_date}, before same-day disappearance{track.affected_note}
+                </title>
+                <circle class="tl-c-chip" cx={point.x - 16} cy={track.y} r="3.5" />
+              </g>
+              <g
+                :for={point <- track.points}
+                class={[
+                  "tl-c-point",
+                  "tl-c-" <> point.kind,
+                  point.whitelisted? && point.kind != "ended" && "tl-c-whitelisted"
+                ]}
+              >
                 <title>{point.kind_title}</title>
                 <line
                   :if={point.single?}
@@ -272,136 +310,29 @@ defmodule TriageWeb.TimelineLive.Chart do
                   y2={track.y - 2}
                 />
                 <circle class="tl-c-halo" cx={point.x} cy={track.y} r="7" />
-                <circle class="tl-c-dot" cx={point.x} cy={track.y} r="4.5" />
+                <circle class="tl-c-chip" cx={point.x} cy={track.y} r="3.5" />
               </g>
             </g>
           </svg>
         </div>
 
         <figcaption class="supporting tl-chart-caption">
-          This chart is hidden from screen readers: every marker is a recorded observation, listed
-          in the day bands and counted per CVE in the lane table.
+          This chart is hidden from screen readers: observations and decisions are described in the lane table. Lines show recorded status, not verified continuous exposure.
         </figcaption>
       </figure>
 
-      <.explain
-        id="tl-chart-key"
-        summary="How to read lines and gaps"
-      >
-        <p>
-          A solid line joins two adjacent days this CVE was recorded on. A dashed line joins two
-          recorded days with no recorded observation in between.
-          A line is not a claim that the CVE was present in between, and a missing line is not a claim that nothing existed.
-          The Scale control changes spacing only: the days drawn and the gaps between them do not change.
-        </p>
-      </.explain>
-      <div class="tl-chart-legend-groups">
-        <div class="tl-chart-legend-group">
-          <h3 class="tl-chart-legend-title">Markers — one per recorded observation</h3>
-          <ul class="tl-chart-legend">
-            <li :for={{class, text} <- legend_marks()}>
-              <span class={["tl-c-key", class]} aria-hidden="true"></span>
-              {text}
-            </li>
-          </ul>
-        </div>
-        <div class="tl-chart-legend-group">
-          <h3 class="tl-chart-legend-title">Lines — drawn only between two recorded days</h3>
-          <ul class="tl-chart-legend">
-            <li>
-              <svg
-                class="tl-c-key-line"
-                width="34"
-                height="10"
-                viewBox="0 0 34 10"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <line
-                  class="tl-c-seg tl-c-seg-solid tl-c-open"
-                  x1="1"
-                  y1="5"
-                  x2="22"
-                  y2="5"
-                  marker-end="url(#tl-c-arrow-open)"
-                />
-              </svg>
-              recorded on two adjacent days
-            </li>
-            <li>
-              <svg
-                class="tl-c-key-line"
-                width="34"
-                height="10"
-                viewBox="0 0 34 10"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <line
-                  class="tl-c-seg tl-c-seg-dashed tl-c-ended"
-                  x1="1"
-                  y1="5"
-                  x2="22"
-                  y2="5"
-                  marker-end="url(#tl-c-arrow-ended)"
-                />
-              </svg>
-              recorded at both ends; nothing recorded in between
-            </li>
-            <li>
-              <svg
-                class="tl-c-key-line"
-                width="34"
-                height="10"
-                viewBox="0 0 34 10"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <line class="tl-c-entry" x1="1" y1="5" x2="30" y2="5" />
-              </svg>
-              also recorded before this window starts
-            </li>
-            <li>
-              <svg
-                class="tl-c-key-line"
-                width="34"
-                height="10"
-                viewBox="0 0 34 10"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <line class="tl-c-today" x1="16" y1="0" x2="16" y2="10" />
-              </svg>
-              today, where the window ends
-            </li>
-            <li>
-              <svg
-                class="tl-c-key-line"
-                width="34"
-                height="10"
-                viewBox="0 0 34 10"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <line class="tl-c-pin tl-c-open" x1="16" y1="1" x2="16" y2="7" />
-                <circle class="tl-c-dot tl-c-open" cx="16" cy="7" r="3.5" />
-              </svg>
-              a single recorded day, so no line is drawn
-            </li>
-          </ul>
-        </div>
-      </div>
+      <p id="tl-chart-key" class="supporting">
+        Red dots record detection; the black line behind them carries the open state through
+        today. Every lane starts with a detection — a red dot at the window edge marks a CVE
+        detected before the window. Black dots record a whitelist decision and every observation
+        day it covers; the grey line behind the black dot runs while all displayed placements
+        stay whitelisted until expiry or a superseding decision. Partial whitelists do not grey
+        the whole CVE, and lane backgrounds stay white unless a whitelist or fix colors them.
+        Green dots record disappearance, not a verified fix. Missing observations do not prove
+        safety or continuous exposure.
+      </p>
     </section>
     """
-  end
-
-  defp legend_marks do
-    [
-      {"tl-c-open", "first recorded observation (filled marker)"},
-      {"tl-c-ended", "no longer observed in local inventory (hollow marker)"},
-      {"tl-c-reopened", "observed again locally"},
-      {"tl-c-suppressed", "suppression flag currently set (imported scanner data)"}
-    ]
   end
 
   ## Layout
@@ -481,23 +412,48 @@ defmodule TriageWeb.TimelineLive.Chart do
           label: point.label,
           x: Map.fetch!(xs, point.iso_date).x,
           kind: point_kind(point),
+          open?: Map.get(point, :open?, point_kind(point) != "ended"),
+          detected_on: Map.get(point, :detected_on),
+          detection?: Enum.any?(point.kinds, &(&1 in ["appeared", "reopened"])),
           single?: single?,
-          kind_title: kind_title(point)
+          kind_title: kind_title(point) <> affected_note(track) <> fix_note(point)
         }
       end)
+      |> Enum.map(&Map.put(&1, :whitelisted?, whitelisted_on?(track, &1.date, &1.detected_on)))
+      |> Enum.map(fn point ->
+        if point.detection?, do: Map.put(point, :whitelisted?, false), else: point
+      end)
 
-    segments =
-      points
-      |> Enum.chunk_every(2, 1, :discard)
-      |> Enum.map(fn [from, to] -> segment(from, to, y) end)
+    segments = status_segments(track, points, xs, y)
 
     %{
       cve: track.cve,
       y: y,
       band?: rem(index, 2) == 1,
+      ended?: Map.get(track, :state) == :no_longer_observed,
+      affected_note: affected_note(track),
       severity_chip: severity_chip(track.severity),
       points: points,
       segments: segments,
+      whitelists:
+        Map.get(track, :whitelists, [])
+        |> Enum.filter(
+          &(&1.decision == "accepted_risk" and Map.has_key?(xs, Date.to_iso8601(&1.from)))
+        )
+        |> Enum.map(fn w ->
+          x = xs[Date.to_iso8601(w.from)].x
+
+          # A whitelist decided hours after a same-day detection shares the day
+          # column: nudge it right so the red detection dot stays visible.
+          if Enum.any?(points, &(&1.iso_date == Date.to_iso8601(w.from))) do
+            Map.put(w, :x, x + 16)
+          else
+            Map.put(w, :x, x)
+          end
+        end),
+      entry_detect?:
+        Map.get(track, :recorded_before?, false) and points != [] and
+          hd(points).kind == "ended",
       entry_x: entry_x(track, points),
       span_label: span_label(track, points, segments)
     }
@@ -506,17 +462,72 @@ defmodule TriageWeb.TimelineLive.Chart do
   defp entry_x(%{recorded_before?: true}, [first | _rest]), do: first.x - @marker_gap
   defp entry_x(_track, _points), do: nil
 
-  defp segment(from, to, y) do
-    dashed? = Date.diff(to.date, from.date) != 1
+  # A day is whitelisted when every placement of the advisory is covered by an
+  # active accepted-risk decision recorded no earlier than the latest
+  # detection: the same coverage the grey line uses, so a W marker never
+  # contradicts the line beneath it.
+  defp whitelisted_on?(track, date, detected_on) do
+    decisions =
+      Map.get(track, :whitelists, []) |> Enum.filter(&(Date.compare(&1.from, date) != :gt))
 
-    %{
-      x1: from.x,
-      x2: to.x - @marker_gap,
-      y: y,
-      dashed?: dashed?,
-      kind: to.kind,
-      title: segment_title(from, to, dashed?)
-    }
+    latest = Enum.reduce(decisions, %{}, &Map.put(&2, &1.placement_id, &1))
+    ids = Map.get(track, :placement_ids, [])
+
+    ids != [] and
+      Enum.all?(ids, fn id ->
+        decision = latest[id] || latest[nil]
+
+        decision && decision.decision == "accepted_risk" &&
+          (is_nil(detected_on) || Date.compare(decision.from, detected_on) != :lt) &&
+          (is_nil(decision.until) || Date.compare(date, decision.until) == :lt)
+      end)
+  end
+
+  defp status_segments(track, points, xs, y) do
+    xs
+    |> Enum.sort_by(fn {date, _} -> date end)
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.flat_map(fn [{iso, from}, {_, to}] ->
+      date = Date.from_iso8601!(iso)
+      point = points |> Enum.filter(&(Date.compare(&1.date, date) != :gt)) |> List.last()
+
+      if point && point.open? do
+        covered = whitelisted_on?(track, date, point.detected_on)
+
+        kind = if covered, do: "whitelisted", else: "open"
+
+        [
+          %{
+            x1: from.x,
+            x2: to.x,
+            y: y,
+            dashed?: false,
+            kind: kind,
+            title:
+              "#{iso}: #{if covered, do: "Whitelisted", else: "Open / not fully whitelisted"}; recorded state, not continuous observation."
+          }
+        ]
+      else
+        []
+      end
+    end)
+    |> mark_run_arrows()
+  end
+
+  # An arrowhead closes each contiguous run — where the state changes and at
+  # the line's end — so the line keeps its direction without an arrow every day.
+  defp mark_run_arrows(segments) do
+    segments
+    |> Enum.with_index()
+    |> Enum.map(fn {segment, index} ->
+      next = Enum.at(segments, index + 1)
+
+      Map.put(
+        segment,
+        :arrow?,
+        is_nil(next) or next.kind != segment.kind or next.x1 != segment.x2
+      )
+    end)
   end
 
   defp segment_class(segment) do
@@ -524,25 +535,39 @@ defmodule TriageWeb.TimelineLive.Chart do
     ["tl-c-seg", style, "tl-c-" <> segment.kind]
   end
 
-  defp segment_title(from, to, false) do
-    "#{from.label} and #{to.label} are adjacent days this CVE is recorded on."
+  # The marker follows the day's latest recorded event: a re-detection after a
+  # fix draws D again and resumes the line, and a fix after a re-detection
+  # draws F and stops it. The full kinds list stays in the hover title.
+  defp point_kind(%{last_event: "resolved"}), do: "ended"
+  defp point_kind(%{last_event: "reopened"}), do: "reopened"
+  defp point_kind(_point), do: "open"
+
+  # Hover text: how many libraries the advisory affects and where it was
+  # first detected; on a fix day, how the fix was recorded.
+  defp affected_note(track) do
+    case Map.get(track, :packages, []) do
+      [] ->
+        ""
+
+      packages ->
+        names = packages |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+        count = length(names)
+        also = names |> Enum.drop(1) |> Enum.take(2)
+
+        "\n#{count} affected #{if(count == 1, do: "library", else: "libraries")} — " <>
+          "first affected: #{hd(names)}" <>
+          if(also == [], do: "", else: ", also: " <> Enum.join(also, ", "))
+    end
   end
 
-  defp segment_title(from, to, true) do
-    "#{from.label} and #{to.label} both have a recorded observation for this CVE; " <>
-      "the days in between have none recorded."
-  end
-
-  # Suppression first, then the lifecycle kind: the same precedence the day-band
-  # glyphs use, so one state never has two meanings in the same view.
-  defp point_kind(%{suppressed?: true}), do: "suppressed"
-  defp point_kind(%{kinds: kinds}) when is_list(kinds), do: kind_of(kinds)
-
-  defp kind_of(kinds) do
-    cond do
-      "resolved" in kinds -> "ended"
-      "reopened" in kinds -> "reopened"
-      true -> "open"
+  defp fix_note(point) do
+    if point_kind(point) == "ended" do
+      case Map.get(point, :fix_note) do
+        note when note in [nil, ""] -> "\nFix reason not recorded."
+        note -> "\nRecorded resolution: " <> note
+      end
+    else
+      ""
     end
   end
 

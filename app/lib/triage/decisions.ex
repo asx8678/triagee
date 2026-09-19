@@ -38,7 +38,7 @@ defmodule Triage.Decisions do
   @work_actions ~w(request_remediation investigate request_verification)
 
   @labels %{
-    "accepted_risk" => "Accepted risk",
+    "accepted_risk" => "Whitelisted",
     "not_affected" => "Not affected",
     "mitigated" => "Mitigated by a control",
     "request_remediation" => "Remediation requested",

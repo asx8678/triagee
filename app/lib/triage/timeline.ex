@@ -1,16 +1,16 @@
 defmodule Triage.Timeline do
   @default_weeks 12
   @min_weeks 1
-  @max_weeks 12
+  @max_weeks 16
   @day_row_limit Triage.Timeline.Days.row_limit()
   @event_limit 2_000
   @lane_limit 50
-  @chart_lane_limit 12
+  @chart_lane_limit 20
   @case_limit Triage.Timeline.History.case_page_size()
   @scope_max 120
   @unsafe_text ~r/[\x00-\x1F\x7F]/
   @window_opt_keys [:weeks, :owner, :environment, :cve]
-  @opt_keys @window_opt_keys ++ [:events_after, :cases_after]
+  @opt_keys @window_opt_keys ++ [:events_after, :cases_after, :chart]
   @weekdays ~w(Mon Tue Wed Thu Fri Sat Sun)
 
   @moduledoc """
@@ -81,7 +81,7 @@ defmodule Triage.Timeline do
   """
   @spec list_timeline(keyword()) :: {:ok, map()} | {:error, atom()}
   def list_timeline(opts \\ []) do
-    with {:ok, req} <- validate(opts, @window_opt_keys) do
+    with {:ok, req} <- validate(opts, @window_opt_keys ++ [:chart]) do
       {:ok, load(req)}
     end
   end
@@ -126,7 +126,8 @@ defmodule Triage.Timeline do
     [
       {"Last 4 weeks", 4},
       {"Last 8 weeks", 8},
-      {"Last 12 weeks", 12}
+      {"Last 12 weeks", 12},
+      {"Last 16 weeks", 16}
     ]
   end
 
@@ -158,11 +159,12 @@ defmodule Triage.Timeline do
          {:ok, cve} <- validate_cve(Keyword.get(opts, :cve)),
          {:ok, events_after} <- validate_cursor(Keyword.get(opts, :events_after)),
          {:ok, cases_after} <- validate_cursor(Keyword.get(opts, :cases_after)),
+         {:ok, chart_limit} <- validate_chart(Keyword.get(opts, :chart)),
          :ok <- history_selection(cve, events_after, cases_after) do
       {:ok,
        Map.merge(
          build_window(weeks, owner, environment, cve),
-         %{events_after: events_after, cases_after: cases_after}
+         %{events_after: events_after, cases_after: cases_after, chart_limit: chart_limit}
        )}
     end
   end
@@ -170,6 +172,13 @@ defmodule Triage.Timeline do
   defp validate_cursor(cursor) do
     if History.valid_cursor?(cursor), do: {:ok, cursor}, else: {:error, :invalid_cursor}
   end
+
+  # The chart lane bound: nil keeps the capped default; "20" widens it; "all"
+  # plots every lane in the window (bounded by the lane table's own cap).
+  defp validate_chart(nil), do: {:ok, @chart_lane_limit}
+  defp validate_chart("20"), do: {:ok, 20}
+  defp validate_chart("all"), do: {:ok, :all}
+  defp validate_chart(_other), do: {:error, :invalid_chart}
 
   defp history_selection(nil, events, cases) when not is_nil(events) or not is_nil(cases),
     do: {:error, :invalid_cursor}
@@ -272,7 +281,7 @@ defmodule Triage.Timeline do
   defp fetch_events(req) do
     # Bound a plain variable rather than an expression: `limit: ^expr` is only
     # reliably expanded by a full compile, not by in-process code reloading.
-    fetch_limit = @event_limit + 1
+    fetch_limit = if req.chart_limit == :all, do: nil, else: @event_limit + 1
 
     rows =
       from(e in FindingEvent,
@@ -289,7 +298,7 @@ defmodule Triage.Timeline do
       |> apply_finding_scope(req)
       |> Repo.all()
 
-    if length(rows) > @event_limit do
+    if req.chart_limit != :all and length(rows) > @event_limit do
       {Enum.take(rows, @event_limit), true}
     else
       {rows, false}
@@ -399,23 +408,28 @@ defmodule Triage.Timeline do
   # bands and the lane table use, so the picture cannot disagree with the
   # records it summarises. It is bounded to the most severe lanes; the lane
   # table still lists every lane, and the canvas states the bound.
-  @chart_lane_limit 12
-
   defp build_chart(req, events, lanes) do
+    limit = chart_limit(req, lanes.total)
     by_cve = chart_days_by_cve(events)
 
     %{
       available_tracks: Enum.map(lanes.rows, &chart_track(&1, by_cve, req)),
-      lane_limit: @chart_lane_limit,
-      shown: min(lanes.total, @chart_lane_limit),
+      lane_limit: limit,
+      shown: min(lanes.total, limit),
       total: lanes.total,
       dates: Enum.map(Date.range(req.from, req.to), &chart_date(&1, req.to)),
       tracks:
         lanes.rows
-        |> Enum.take(@chart_lane_limit)
+        |> Enum.take(limit)
         |> Enum.map(&chart_track(&1, by_cve, req))
     }
   end
+
+  # "all" plots every lane in the window, bounded by the lane table's own cap;
+  # any other request keeps an integer bound for the truncation note.
+  defp chart_limit(%{chart_limit: :all}, total), do: total
+  defp chart_limit(%{chart_limit: limit}, _total) when is_integer(limit), do: limit
+  defp chart_limit(_req, _total), do: @chart_lane_limit
 
   defp chart_date(date, today) do
     %{
@@ -437,18 +451,44 @@ defmodule Triage.Timeline do
       days =
         rows
         |> Enum.group_by(fn {e, _f, _i} -> DateTime.to_date(e.occurred_at) end)
-        |> Map.new(fn {date, day_rows} ->
-          {date,
-           %{
-             kinds:
-               day_rows
-               |> Enum.map(fn {e, _f, _i} -> e.event end)
-               |> Enum.uniq()
-               |> Enum.sort(),
-             count: length(day_rows),
-             suppressed?: Enum.any?(day_rows, fn {_e, f, _i} -> f.suppressed end)
-           }}
+        |> Enum.sort_by(fn {date, _} -> date end, Date)
+        |> Enum.map_reduce({%{}, nil}, fn {date, day_rows}, {states, detected_on} ->
+          ordered =
+            Enum.sort_by(day_rows, fn {e, _, _} ->
+              {DateTime.to_unix(e.occurred_at, :microsecond), e.id}
+            end)
+
+          states =
+            Enum.reduce(ordered, states, fn {e, f, _}, acc -> Map.put(acc, f.id, e.event) end)
+
+          detected_on =
+            if Enum.any?(ordered, fn {e, _, _} -> e.event in ["appeared", "reopened"] end),
+              do: date,
+              else: detected_on
+
+          {{date,
+            %{
+              kinds:
+                day_rows
+                |> Enum.map(fn {e, _f, _i} -> e.event end)
+                |> Enum.uniq()
+                |> Enum.sort(),
+              last_event: ordered |> List.last() |> then(fn {e, _, _} -> e.event end),
+              open?: Enum.any?(states, fn {_, event} -> event != "resolved" end),
+              detected_on: detected_on,
+              count: length(day_rows),
+              suppressed?: Enum.any?(day_rows, fn {_e, f, _i} -> f.suppressed end),
+              fix_note:
+                ordered
+                |> Enum.find(fn {e, _, _} -> e.event == "resolved" end)
+                |> then(fn
+                  nil -> nil
+                  {e, _, _} -> e.note
+                end)
+            }}, {states, detected_on}}
         end)
+        |> elem(0)
+        |> Map.new()
 
       {cve, days}
     end)
@@ -466,8 +506,12 @@ defmodule Triage.Timeline do
           date: date,
           iso_date: Date.to_iso8601(date),
           kinds: info.kinds,
+          last_event: info.last_event,
+          open?: info.open?,
+          detected_on: info.detected_on,
           count: info.count,
           suppressed?: info.suppressed?,
+          fix_note: info.fix_note,
           label: Calendar.strftime(date, "%a %d %b %Y")
         }
       end)
@@ -476,9 +520,48 @@ defmodule Triage.Timeline do
       cve: lane.cve,
       severity: lane.severity,
       state: lane.state,
+      packages: Map.get(lane, :packages, []),
       points: points,
+      whitelists: whitelist_spans(lane),
+      placement_ids: chart_placement_ids(lane.cve, req),
       recorded_before?: before_window?(lane.first_seen, req.from)
     }
+  end
+
+  # Preserve all decisions so superseding actions end a whitelist interval.
+  defp chart_placement_ids(cve, req) do
+    query =
+      from(p in ImagePlacement,
+        join: f in Finding,
+        on: f.image_id == p.image_id,
+        where: f.cve == ^cve,
+        select: p.id,
+        distinct: true
+      )
+
+    query = if req.owner, do: where(query, [p], p.owner == ^req.owner), else: query
+
+    query =
+      if req.environment, do: where(query, [p], p.environment == ^req.environment), else: query
+
+    Repo.all(query)
+  end
+
+  defp whitelist_spans(lane) do
+    Enum.map(Map.get(lane, :decisions, []), fn d ->
+      %{
+        from: DateTime.to_date(d.decided_at),
+        until: d.expires_at && DateTime.to_date(d.expires_at),
+        decision: d.decision,
+        placement_id: d.placement_id,
+        reason: d.reason,
+        label:
+          if(d.placement_id,
+            do: "Partially whitelisted — one placement only",
+            else: "Whitelisted"
+          )
+      }
+    end)
   end
 
   # A lane whose first recorded observation predates the window starts with an
@@ -512,7 +595,9 @@ defmodule Triage.Timeline do
       end)
       |> Enum.sort_by(fn lane -> {-severity_rank(lane.severity), lane.cve} end)
 
-    {shown, rest} = Enum.split(rows, @lane_limit)
+    {shown, rest} =
+      Enum.split(rows, if(req.chart_limit == :all, do: length(rows), else: @lane_limit))
+
     cases = cases_by_cve(Enum.map(shown, & &1.cve), req)
     decisions = lane_decisions(Enum.map(shown, & &1.cve), req)
 
@@ -573,6 +658,11 @@ defmodule Triage.Timeline do
       package_name: head.package_name,
       package_version: head.package_version,
       fix: head.fix,
+      packages:
+        findings
+        |> Enum.sort_by(& &1.first_seen, DateTime)
+        |> Enum.map(&{&1.package_name, &1.package_version, &1.fix})
+        |> Enum.uniq(),
       url: head.url,
       finding_ids: findings |> Enum.map(& &1.id) |> Enum.sort(),
       occurrence_count: length(findings),

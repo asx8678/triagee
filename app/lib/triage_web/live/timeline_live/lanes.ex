@@ -19,9 +19,14 @@ defmodule TriageWeb.TimelineLive.Lanes do
     <section id="tl-lanes" class="tl-section" aria-labelledby="tl-lanes-title">
       <div class="section-header">
         <h2 id="tl-lanes-title">CVE detection, actions &amp; time to fix</h2>
-        <p id="tl-timing-note" class="supporting">
-          For now, “Fixed” uses the recorded disappearance date, not a verified repair. Dates cover the occurrences represented in this filtered window, not necessarily the whole CVE. Timing starts at first detection; reopened history is not a fresh repair timer.
-        </p>
+        <details id="tl-timing-note" class="tl-note">
+          <summary>How to read this table</summary>
+          <p class="supporting">
+            “Fixed” uses the recorded disappearance date, not a verified repair. Dates cover the
+            occurrences represented in this filtered window, not necessarily the whole CVE.
+            Timing starts at first detection; reopened history is not a fresh repair timer.
+          </p>
+        </details>
       </div>
       <p :if={@lanes.total == 0} id="tl-lanes-empty" class="supporting">
         No recorded observation in this window. An empty window is not evidence of a clean estate.
@@ -46,7 +51,10 @@ defmodule TriageWeb.TimelineLive.Lanes do
             <tr
               :for={lane <- @lanes.rows}
               id={"tl-lane-" <> lane.cve}
-              class={lane.cve == @selected_cve && "tl-selected"}
+              class={[
+                lane.cve == @selected_cve && "tl-selected",
+                lane.state == :no_longer_observed && "tl-lane-fixed"
+              ]}
               aria-current={if lane.cve == @selected_cve, do: "true"}
             >
               <% action = response(lane, @now) %>
@@ -54,10 +62,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
                 <.link navigate={Map.get(@action_paths, lane.cve, ~p"/cves/#{lane.cve}")}>{lane.cve}</.link><span
                   :if={lane.cve == @selected_cve}
                   class="tl-selection-label"
-                >Selected</span><span class="supporting"><.status_badge
-                  label={display_value(lane.severity)}
-                  kind="severity"
-                /></span>
+                >Selected</span>
                 <.kev_marker id={"tl-lane-kev-" <> lane.cve} kev={Map.get(@kev, lane.cve)} />
               </th>
               <td><.timestamp value={lane.first_seen} /></td>

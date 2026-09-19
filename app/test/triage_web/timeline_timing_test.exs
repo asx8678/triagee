@@ -63,7 +63,7 @@ defmodule TriageWeb.TimelineTimingTest do
     assert cell(doc, 4) =~ "2 days 0 h"
     assert cell(doc, 5) =~ "Fixed"
     assert cell(doc, 5) =~ "recorded disappearance"
-    assert cell(doc, 6) =~ "Accepted risk"
+    assert cell(doc, 6) =~ "Whitelisted"
   end
 
   test "whitelist response is distinct from waiting, expired and placement-only decisions" do

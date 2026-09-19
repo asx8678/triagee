@@ -169,8 +169,14 @@ defmodule Triage.Workspace do
         first_seen: scopes |> Enum.map(& &1.first_seen) |> Enum.min(DateTime)
       }
     end)
-    |> Enum.sort_by(&{priority_rank(&1.risk), &1.cve})
+    |> Enum.sort_by(&{severity_sort(&1.severity), priority_rank(&1.risk), &1.cve})
   end
+
+  # Severity leads the queue: a critical advisory is never outranked by a high
+  # one, whatever review priority scores them. Review priority and the CVE id
+  # break ties, so the order is total and stable across pages. A row with no
+  # recorded severity sorts last.
+  defp severity_sort(severity), do: -Triage.Severity.rank(severity)
 
   defp priority_rank(nil), do: 9
   defp priority_rank(risk), do: Enum.find_index(Risk.priorities(), &(&1 == risk.priority))

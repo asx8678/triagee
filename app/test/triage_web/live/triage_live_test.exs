@@ -329,7 +329,7 @@ defmodule TriageWeb.TriageLiveTest do
     # operator to guess.
     refute has_element?(view, "#triage-lane-intake")
     refute has_element?(view, "#triage-lane-decision")
-    assert render(view) =~ "Accepted risk recorded for CVE-2026-7006"
+    assert render(view) =~ "Whitelisted recorded for CVE-2026-7006"
 
     {:ok, whitelisted_view, _html} = live(conn, ~p"/triage/history?filter=whitelisted")
     assert has_element?(whitelisted_view, "#triage-lane-decision")
@@ -337,7 +337,7 @@ defmodule TriageWeb.TriageLiveTest do
 
     assert text(whitelisted, "#triage-state-CVE-2026-7006") =~ "Covered by a decision"
     assert text(whitelisted, "#triage-decision-count") =~ "1"
-    assert text(whitelisted, "#triage-decision-CVE-2026-7006") =~ "Accepted risk"
+    assert text(whitelisted, "#triage-decision-CVE-2026-7006") =~ "Whitelisted"
     assert text(whitelisted, "#triage-decision-CVE-2026-7006") =~ "live-operator"
     assert text(whitelisted, "#triage-decision-CVE-2026-7006") =~ "active"
 

@@ -26,6 +26,29 @@ test('native dialog opens, cancels through the server, restores focus, and remov
   assert.equal(focused,true);
   assert.equal(listeners.size,0);
 });
+test('backdrop closes while inside clicks and drags do not', () => {
+  const events = [];
+  const listeners = new Map();
+  const el = {open: true, dataset: {closeEvent: 'close-inspector'},
+    getBoundingClientRect() { return {left: 100, right: 400, top: 0, bottom: 600}; },
+    addEventListener(k, v) { listeners.set(k, v); },
+    removeEventListener(k) { listeners.delete(k); }, close() {}};
+  const h = hooks({document: {activeElement: null, getElementById: () => null}}).WorkspaceDialog;
+  const instance = {el, pushEvent(name) { events.push(name); }};
+  h.mounted.call(instance);
+  const click = (start, end) => {
+    listeners.get('mousedown')({clientX: start, clientY: 300});
+    listeners.get('click')({clientX: end, clientY: 300});
+  };
+  click(200, 200);
+  click(200, 40);
+  click(40, 200);
+  assert.equal(events.length, 0);
+  click(40, 40);
+  assert.deepEqual(events, ['close-inspector']);
+  h.destroyed.call(instance);
+  assert.equal(listeners.size, 0);
+});
 function guard(dirty = 'false', confirmed = false) {
   const wrapper = new EventTarget();
   const window = new EventTarget();

@@ -21,10 +21,11 @@ defmodule TriageWeb.TimelineFilters do
   alias Triage.Timeline
   alias TriageWeb.FindingFilters
 
-  @recognized ~w(owner environment weeks cve scale events_after cases_after)
+  @recognized ~w(owner environment weeks cve scale events_after cases_after chart)
   @scales ~w(fit detail)
   @cursor_keys [:events_after, :cases_after]
   @weeks_digits ~r/\A[0-9]{1,2}\z/
+  @chart_limits ~w(20 all)
 
   @typedoc "The validated timeline state: scope, window size and selection."
   @type filters :: %{
@@ -33,6 +34,7 @@ defmodule TriageWeb.TimelineFilters do
           weeks: pos_integer() | nil,
           cve: String.t() | nil,
           scale: String.t() | nil,
+          chart: String.t() | nil,
           events_after: pos_integer() | nil,
           cases_after: pos_integer() | nil,
           invalid: [atom()]
@@ -47,6 +49,7 @@ defmodule TriageWeb.TimelineFilters do
       weeks: nil,
       cve: nil,
       scale: nil,
+      chart: nil,
       events_after: nil,
       cases_after: nil,
       invalid: []
@@ -68,6 +71,7 @@ defmodule TriageWeb.TimelineFilters do
       |> put_value(:weeks, Map.get(params, "weeks"), &weeks_value/1)
       |> put_value(:cve, Map.get(params, "cve"), &cve_value/1)
       |> put_value(:scale, Map.get(params, "scale"), &scale_value/1)
+      |> put_value(:chart, Map.get(params, "chart"), &chart_value/1)
       |> put_value(:events_after, Map.get(params, "events_after"), &cursor_value/1)
       |> put_value(:cases_after, Map.get(params, "cases_after"), &cursor_value/1)
       |> require_selection()
@@ -113,6 +117,7 @@ defmodule TriageWeb.TimelineFilters do
       weeks: emit_weeks(weeks),
       cve: emit_scope(cve),
       scale: emit_scale(Map.get(filters, :scale)),
+      chart: if(Map.get(filters, :chart) in @chart_limits, do: Map.get(filters, :chart)),
       events_after: emit_cursor(Map.get(filters, :events_after)),
       cases_after: emit_cursor(Map.get(filters, :cases_after))
     }
@@ -153,6 +158,7 @@ defmodule TriageWeb.TimelineFilters do
   def field_label(:weeks), do: "window"
   def field_label(:cve), do: "CVE"
   def field_label(:scale), do: "scale"
+  def field_label(:chart), do: "chart lanes"
   def field_label(:events_after), do: "event history cursor"
   def field_label(:cases_after), do: "case history cursor"
   def field_label(:filters), do: "filters wrapper"
@@ -230,6 +236,18 @@ defmodule TriageWeb.TimelineFilters do
   end
 
   defp scale_value(_other), do: {:error, :scale}
+
+  # The chart lane bound: absent means the capped default; "20" and "all" are
+  # the only widening choices, so an unrecognized value is reported, never
+  # silently widened.
+  defp chart_value(nil), do: {:ok, nil}
+  defp chart_value(""), do: {:ok, nil}
+
+  defp chart_value(value) when is_binary(value) do
+    if value in @chart_limits, do: {:ok, value}, else: {:error, :chart}
+  end
+
+  defp chart_value(_other), do: {:error, :chart}
 
   # A blank CVE is not a selection: unlike a scope, there is no All choice.
   defp cve_value(nil), do: {:ok, nil}

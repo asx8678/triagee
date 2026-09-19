@@ -1,48 +1,20 @@
 defmodule Triage.Seeds do
   @moduledoc """
-  Demo inventory fixtures built from REAL public advisories.
+  Offline demonstration inventory: public advisory metadata with simulated local
+  deployments, plus twenty-seven explicitly fictional CVE-2099-9001 through 9027
+  presentation examples. Fictional records have no public advisory URL.
 
-  Every advisory in @fleet is a genuine CVE record: identifiers, descriptions,
-  severities and fixed versions come from the NVD API
-  (https://services.nvd.nist.gov/rest/json/cves/2.0) and, for the Go ecosystem
-  entries, from the Go Vulnerability Database (https://vuln.go.dev) — fetched
-  2026-09-16 and pinned here so the demo runs offline. Severity labels are the
-  NVD CVSS v3.1 base severities at fetch time (scores noted in 
-  comments). What is simulated is the LOCAL estate: which package copies our
-  demo images happen to contain, who runs them, and whether the scanner still
-  sees each finding. A finding row therefore reads "this image contains this
-  package, which is affected by this real advisory" — never a claim that the
-  real project was shipped or fixed here.
+  Filter the Timeline to team `presentation` to see dates spread from late June
+  through September 2026: an advisory open since 27 June, three detection
+  cycles, long and hour-scale whitelists (two, five and six hours among them),
+  3h35m and four-hour clearances, two complete detect-and-fix cycles, a
+  whitelist after a redetection, an expired whitelist followed by a fix, and a
+  next-day clearance. A second batch from 29 June onward adds active and expired
+  whitelists (one still grey to today, one followed by a fix, one after a
+  redetection) and clearances from six hours to three days. These are
+  illustrative records, not verified remediation.
 
-  Fleet shape (69 findings, 64 distinct advisories):
-
-    * 30 CRITICAL advisories (containerd, Traefik, Jupyter Enterprise Gateway,
-      Budibase, Flowise, Apache NiFi, n8n, Perl, PJSIP, Casdoor, froxlor,
-      Chromium, Juggle, Dokku, Firefox ESR, plus Go-ecosystem Gitea, OpenChoreo
-      and Semaphore UI records), including five pinned lifecycle examples —
-      cleared after ten days, cleared within two days, still observed,
-      scanner-suppressed, and cleared/observed-again/suppressed;
-    * 20 HIGH advisories, including one advisory (CVE-2026-60002, OpenSSH)
-      reported against three package occurences across two teams, a reopened
-      finding (CVE-2026-57236, Nokogiri) that also demonstrates one advisory
-      recorded at two severities, and Go-ecosystem records for amqp091-go and
-      ffuf;
-    * 5 LOW advisories, one of them scanner-suppressed (suppression is not
-      mitigation evidence);
-    * 3 MEDIUM-only advisories (VictoriaMetrics, grpc, Infracost — all Go
-      ecosystem), one of which disappeared from a complete unfiltered
-      collection: disappearance is not proof of remediation;
-    * an image with unknown deployment context (namespace `(unknown)`;
-    * eight demo images, including edge gateway, search service, background worker
-      and media processor with curl/libcurl, Log4j Core, OpenSSL, zlib, libwebp
-      and glibc examples; the additional library descriptions are concise public
-      advisory summaries, with illustrative deployments;
-    * demo images across prod, staging and dev environments with
-      operator-declared exposure and impact evidence.
-
-  Running `seed/1` again updates `last_seen` timestamps but never duplicates
-  rows or lifecycle events, and never invents history that a real collection
-  did not record.
+  Seeding is repeatable without duplicating findings, decisions or events.
   """
 
   alias Triage.Inventory
@@ -69,10 +41,148 @@ defmodule Triage.Seeds do
   @crit_reappeared ~U[2026-08-28 06:00:00Z]
   @crit_still_open ~U[2026-08-15 06:00:00Z]
 
+  # Lifecycle showcase timestamps: hour-scale fixes, a whitelist that lasted
+  # about a day, a next-day fix, and a redetection on another library — all
+  # clustered inside the recent window so the timeline markers read at a
+  # glance. Local demo history, not vendor facts.
+  @hours_appeared ~U[2026-08-18 08:05:00Z]
+  @hours_resolved ~U[2026-08-18 11:40:00Z]
+  @four_appeared ~U[2026-09-03 09:15:00Z]
+  @four_resolved ~U[2026-09-03 13:15:00Z]
+  @wl_decided ~U[2026-09-08 10:00:00Z]
+  @wl_expired ~U[2026-09-10 14:30:00Z]
+  @backfast_appeared ~U[2026-09-08 07:30:00Z]
+  @backfast_resolved ~U[2026-09-09 06:40:00Z]
+  @backfast_reappeared ~U[2026-09-11 09:25:00Z]
+  @day_appeared ~U[2026-09-11 06:20:00Z]
+  @day_resolved ~U[2026-09-12 15:45:00Z]
+
+  # Extended presentation showcase: a spread of fictional lifecycles from late
+  # June through the window — long runners, repeated detections, whitelist
+  # stretches, and hour-scale turns. Local demo history, not vendor facts.
+  @jun_appeared ~U[2026-06-27 08:00:00Z]
+  @jun_fixed_appeared ~U[2026-06-29 09:30:00Z]
+  @jun_fixed_resolved ~U[2026-07-03 14:00:00Z]
+  @cyc_appeared ~U[2026-06-30 07:50:00Z]
+  @cyc_resolved ~U[2026-07-04 11:20:00Z]
+  @cyc_reopened ~U[2026-07-10 08:30:00Z]
+  @cyc_resolved2 ~U[2026-07-15 16:00:00Z]
+  @cyc_reopened2 ~U[2026-08-01 09:10:00Z]
+  @wl_long_appeared ~U[2026-07-05 10:00:00Z]
+  @wl_long_decided ~U[2026-07-08 12:00:00Z]
+  @wl_long_expires ~U[2026-10-06 00:00:00Z]
+  @wl_short_appeared ~U[2026-07-12 08:00:00Z]
+  @wl_short_decided ~U[2026-07-15 09:00:00Z]
+  @wl_short_expired ~U[2026-07-15 15:30:00Z]
+  @twice_appeared ~U[2026-07-18 06:40:00Z]
+  @twice_resolved ~U[2026-07-19 17:20:00Z]
+  @twice_reopened ~U[2026-08-05 08:00:00Z]
+  @twice_resolved2 ~U[2026-08-09 13:45:00Z]
+  @quick_aug_appeared ~U[2026-08-12 07:45:00Z]
+  @quick_aug_resolved ~U[2026-08-12 12:20:00Z]
+  @war_appeared ~U[2026-08-14 09:00:00Z]
+  @war_resolved ~U[2026-08-16 10:30:00Z]
+  @war_reopened ~U[2026-08-20 08:15:00Z]
+  @war_decided ~U[2026-08-22 11:00:00Z]
+  @war_expires ~U[2026-09-30 00:00:00Z]
+  @jun_wl_appeared ~U[2026-07-22 10:10:00Z]
+  @jun_wl_decided ~U[2026-07-24 09:00:00Z]
+  @jun_wl_expired ~U[2026-08-10 00:00:00Z]
+  @jun_wl_resolved ~U[2026-08-14 15:00:00Z]
+  @recent_appeared ~U[2026-09-16 14:00:00Z]
+
+  # Second presentation batch: lanes from 29 June onward — active and expired
+  # whitelists, a whitelist followed by a fix, one after a redetection, and
+  # clearances from six hours to three days.
+  @jun29_wl_appeared ~U[2026-06-29 08:15:00Z]
+  @jun29_wl_decided ~U[2026-06-29 14:00:00Z]
+  @jun29_wl_expires ~U[2026-07-20 00:00:00Z]
+  @jun29_fixed_appeared ~U[2026-06-29 09:40:00Z]
+  @jun29_fixed_resolved ~U[2026-07-01 16:30:00Z]
+  @jul_wl_long_appeared ~U[2026-07-02 10:00:00Z]
+  @jul_wl_long_decided ~U[2026-07-05 11:00:00Z]
+  @jul_wl_long_expires ~U[2026-09-28 00:00:00Z]
+  @jul_quick_appeared ~U[2026-07-06 08:20:00Z]
+  @jul_quick_resolved ~U[2026-07-06 19:50:00Z]
+  @jul_wl_fixed_appeared ~U[2026-07-09 07:55:00Z]
+  @jul_wl_fixed_decided ~U[2026-07-11 13:00:00Z]
+  @jul_wl_fixed_expired ~U[2026-07-25 00:00:00Z]
+  @jul_wl_fixed_resolved ~U[2026-08-02 10:40:00Z]
+  @jul_cyc_appeared ~U[2026-07-14 09:00:00Z]
+  @jul_cyc_resolved ~U[2026-07-18 15:20:00Z]
+  @jul_cyc_reopened ~U[2026-07-28 08:45:00Z]
+  @jul_cyc_decided ~U[2026-08-03 12:00:00Z]
+  @jul_cyc_expires ~U[2026-10-15 00:00:00Z]
+  @jul_fixed2_appeared ~U[2026-07-21 10:30:00Z]
+  @jul_fixed2_resolved ~U[2026-07-24 09:10:00Z]
+  @aug_wl_appeared ~U[2026-08-07 08:05:00Z]
+  @aug_wl_decided ~U[2026-08-09 10:00:00Z]
+  @aug_wl_expired ~U[2026-08-30 00:00:00Z]
+  @aug_day_appeared ~U[2026-08-25 11:15:00Z]
+  @aug_day_resolved ~U[2026-08-26 17:45:00Z]
+  @sep_quick_appeared ~U[2026-09-05 09:25:00Z]
+  @sep_quick_resolved ~U[2026-09-05 16:05:00Z]
+
   # Advisory fleet: {cve, package, installed version, reported fix, severity,
   # image, lifecycle role, description}. Descriptions are the vendors'/CNAs'
   # own text as published by NVD.
   @fleet [
+    {"CVE-2099-9003", "demo-ssh", "demo", nil, "HIGH", :showcase, "hours",
+     "FICTIONAL PRESENTATION EXAMPLE: resolved in 3 hours 35 minutes."},
+    {"CVE-2099-9004", "demo-http", "demo", nil, "HIGH", :showcase, "four",
+     "FICTIONAL PRESENTATION EXAMPLE: resolved in four hours."},
+    {"CVE-2099-9005", "demo-mail", "demo", nil, "CRITICAL", :showcase, "wl",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelist granted in 2.5 hours, now expired."},
+    {"CVE-2099-9006", "demo-transport", "demo", nil, "MEDIUM", :showcase, "backfast",
+     "FICTIONAL PRESENTATION EXAMPLE: disappeared then detected again."},
+    {"CVE-2099-9007", "demo-tls", "demo", nil, "MEDIUM", :showcase, "day",
+     "FICTIONAL PRESENTATION EXAMPLE: resolved the following day."},
+    {"CVE-2099-9001", "demo-gateway-library", "demo-1", nil, "HIGH", :showcase,
+     "whitelist-two-hours",
+     "FICTIONAL PRESENTATION EXAMPLE: detected then whitelisted after two hours; still present. Not a public advisory."},
+    {"CVE-2099-9002", "demo-worker-library", "demo-1", nil, "MEDIUM", :showcase,
+     "whitelist-five-hours",
+     "FICTIONAL PRESENTATION EXAMPLE: detected then whitelisted after five hours; still present. Not a public advisory."},
+    {"CVE-2099-9008", "demo-runner", "demo", nil, "CRITICAL", :showcase, "jun-open",
+     "FICTIONAL PRESENTATION EXAMPLE: detected 27 June and still open."},
+    {"CVE-2099-9009", "demo-cache", "demo", nil, "HIGH", :showcase, "jun-fixed",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed four and a half days after detection."},
+    {"CVE-2099-9010", "demo-parser", "demo", nil, "MEDIUM", :showcase, "cycles",
+     "FICTIONAL PRESENTATION EXAMPLE: three detection cycles across the window."},
+    {"CVE-2099-9011", "demo-queue", "demo", nil, "HIGH", :showcase, "wl-long",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted since early July; still covered."},
+    {"CVE-2099-9012", "demo-auth", "demo", nil, "MEDIUM", :showcase, "wl-short",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted for six hours in July; open again."},
+    {"CVE-2099-9013", "demo-render", "demo", nil, "HIGH", :showcase, "twice",
+     "FICTIONAL PRESENTATION EXAMPLE: two complete detect-and-fix cycles."},
+    {"CVE-2099-9014", "demo-router", "demo", nil, "CRITICAL", :showcase, "quick-aug",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed in under five hours in August."},
+    {"CVE-2099-9015", "demo-storage", "demo", nil, "MEDIUM", :showcase, "wl-after-reopen",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed, redetected, then whitelisted."},
+    {"CVE-2099-9016", "demo-metrics", "demo", nil, "LOW", :showcase, "wl-then-fixed",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted, whitelist expired, then fixed."},
+    {"CVE-2099-9017", "demo-fresh", "demo", nil, "HIGH", :showcase, "recent",
+     "FICTIONAL PRESENTATION EXAMPLE: detected days before today; still open."},
+    {"CVE-2099-9018", "demo-proxy", "demo", nil, "MEDIUM", :showcase, "jun29-wl",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted on 29 June; expired after three weeks."},
+    {"CVE-2099-9019", "demo-ingress", "demo", nil, "CRITICAL", :showcase, "jun29-fixed",
+     "FICTIONAL PRESENTATION EXAMPLE: detected 29 June, fixed within two days."},
+    {"CVE-2099-9020", "demo-search", "demo", nil, "HIGH", :showcase, "jul-wl-long",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted in July; grey line to today."},
+    {"CVE-2099-9021", "demo-registry", "demo", nil, "MEDIUM", :showcase, "jul-quick",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed in under twelve hours."},
+    {"CVE-2099-9022", "demo-gateway", "demo", nil, "LOW", :showcase, "jul-wl-fixed",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted, whitelist expired, then fixed."},
+    {"CVE-2099-9023", "demo-worker", "demo", nil, "HIGH", :showcase, "jul-cyc-wl",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed, redetected, then whitelisted to today."},
+    {"CVE-2099-9024", "demo-mailer", "demo", nil, "MEDIUM", :showcase, "jul-fixed2",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed three days after detection."},
+    {"CVE-2099-9025", "demo-vault", "demo", nil, "CRITICAL", :showcase, "aug-wl-exp",
+     "FICTIONAL PRESENTATION EXAMPLE: whitelisted in August; expired and open again."},
+    {"CVE-2099-9026", "demo-builder", "demo", nil, "HIGH", :showcase, "aug-day",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed the day after detection."},
+    {"CVE-2099-9027", "demo-scanner", "demo", nil, "MEDIUM", :showcase, "sep-quick",
+     "FICTIONAL PRESENTATION EXAMPLE: fixed in six and a half hours."},
     # Additional real library advisories. Descriptions are concise summaries of
     # https://cveawg.mitre.org/api/cve/<CVE-ID>; curl uses its vendor advisory:
     # https://curl.se/docs/CVE-2023-38545.html
@@ -394,7 +504,22 @@ defmodule Triage.Seeds do
           {key, image}
         end
 
-      images = Map.merge(%{a: image_a, b: image_b, c: image_c, x: image_x}, infrastructure)
+      showcase =
+        image!(
+          "sha256:" <> String.duplicate("9", 64),
+          "demo/presentation",
+          "synthetic",
+          "SIMULATED presentation history, not real exposure",
+          now
+        )
+
+      placement!(showcase, "demo", "presentation", @env_prod, now)
+
+      images =
+        Map.merge(
+          %{a: image_a, b: image_b, c: image_c, x: image_x, showcase: showcase},
+          infrastructure
+        )
 
       for {cve, package, version, fix, severity, image, life, description} <- @fleet do
         finding =
@@ -433,6 +558,30 @@ defmodule Triage.Seeds do
         decided_at: DateTime.add(now, -60, :day),
         expires_at: DateTime.add(now, -30, :day)
       })
+
+      for {cve, at, expiry} <- [
+            {"CVE-2099-9001", ~U[2026-08-26 12:10:00Z], ~U[2026-12-31 00:00:00Z]},
+            {"CVE-2099-9002", ~U[2026-09-15 17:30:00Z], ~U[2026-12-31 00:00:00Z]},
+            {"CVE-2099-9005", @wl_decided, @wl_expired},
+            {"CVE-2099-9011", @wl_long_decided, @wl_long_expires},
+            {"CVE-2099-9012", @wl_short_decided, @wl_short_expired},
+            {"CVE-2099-9015", @war_decided, @war_expires},
+            {"CVE-2099-9016", @jun_wl_decided, @jun_wl_expired},
+            {"CVE-2099-9018", @jun29_wl_decided, @jun29_wl_expires},
+            {"CVE-2099-9020", @jul_wl_long_decided, @jul_wl_long_expires},
+            {"CVE-2099-9022", @jul_wl_fixed_decided, @jul_wl_fixed_expired},
+            {"CVE-2099-9023", @jul_cyc_decided, @jul_cyc_expires},
+            {"CVE-2099-9025", @aug_wl_decided, @aug_wl_expired}
+          ] do
+        seed_decision!(%{
+          cve: cve,
+          decision: "accepted_risk",
+          actor: "demo-presenter",
+          reason: "SIMULATED presentation: temporary exception pending upgrade",
+          decided_at: at,
+          expires_at: expiry
+        })
+      end
 
       seed_intel!(now)
 
@@ -508,6 +657,252 @@ defmodule Triage.Seeds do
       events: [{"appeared", @appeared}, {"resolved", @resolved}]
     }
 
+  defp history_for(_finding, "hours"),
+    do: %{
+      first_seen: @hours_appeared,
+      resolved_at: @hours_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @hours_appeared}, {"resolved", @hours_resolved}]
+    }
+
+  defp history_for(_finding, "four"),
+    do: %{
+      first_seen: @four_appeared,
+      resolved_at: @four_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @four_appeared}, {"resolved", @four_resolved}]
+    }
+
+  defp history_for(_finding, "wl"),
+    do: %{
+      first_seen: @backfast_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @backfast_appeared}]
+    }
+
+  defp history_for(_finding, "backfast"),
+    do: %{
+      first_seen: @backfast_appeared,
+      resolved_at: nil,
+      reopen_count: 1,
+      events: [
+        {"appeared", @backfast_appeared},
+        {"resolved", @backfast_resolved},
+        {"reopened", @backfast_reappeared}
+      ]
+    }
+
+  defp history_for(_finding, "day"),
+    do: %{
+      first_seen: @day_appeared,
+      resolved_at: @day_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @day_appeared}, {"resolved", @day_resolved}]
+    }
+
+  defp history_for(_finding, "whitelist-two-hours"),
+    do: %{
+      first_seen: ~U[2026-08-26 10:10:00Z],
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", ~U[2026-08-26 10:10:00Z]}]
+    }
+
+  defp history_for(_finding, "whitelist-five-hours"),
+    do: %{
+      first_seen: ~U[2026-09-15 12:30:00Z],
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", ~U[2026-09-15 12:30:00Z]}]
+    }
+
+  # Extended presentation lifecycles: a runner open since late June, a
+  # multi-day fix, three detection cycles, long and short whitelists, two
+  # complete fix cycles, an hour-scale August fix, a whitelist after a
+  # redetection, an expired whitelist followed by a fix, and a fresh detection.
+  defp history_for(_finding, "jun-open"),
+    do: %{
+      first_seen: @jun_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @jun_appeared}]
+    }
+
+  defp history_for(_finding, "jun-fixed"),
+    do: %{
+      first_seen: @jun_fixed_appeared,
+      resolved_at: @jun_fixed_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @jun_fixed_appeared}, {"resolved", @jun_fixed_resolved}]
+    }
+
+  defp history_for(_finding, "cycles"),
+    do: %{
+      first_seen: @cyc_appeared,
+      resolved_at: nil,
+      reopen_count: 2,
+      events: [
+        {"appeared", @cyc_appeared},
+        {"resolved", @cyc_resolved},
+        {"reopened", @cyc_reopened},
+        {"resolved", @cyc_resolved2},
+        {"reopened", @cyc_reopened2}
+      ]
+    }
+
+  defp history_for(_finding, "wl-long"),
+    do: %{
+      first_seen: @wl_long_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @wl_long_appeared}]
+    }
+
+  defp history_for(_finding, "wl-short"),
+    do: %{
+      first_seen: @wl_short_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @wl_short_appeared}]
+    }
+
+  defp history_for(_finding, "twice"),
+    do: %{
+      first_seen: @twice_appeared,
+      resolved_at: @twice_resolved2,
+      reopen_count: 1,
+      events: [
+        {"appeared", @twice_appeared},
+        {"resolved", @twice_resolved},
+        {"reopened", @twice_reopened},
+        {"resolved", @twice_resolved2}
+      ]
+    }
+
+  defp history_for(_finding, "quick-aug"),
+    do: %{
+      first_seen: @quick_aug_appeared,
+      resolved_at: @quick_aug_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @quick_aug_appeared}, {"resolved", @quick_aug_resolved}]
+    }
+
+  defp history_for(_finding, "wl-after-reopen"),
+    do: %{
+      first_seen: @war_appeared,
+      resolved_at: nil,
+      reopen_count: 1,
+      events: [
+        {"appeared", @war_appeared},
+        {"resolved", @war_resolved},
+        {"reopened", @war_reopened}
+      ]
+    }
+
+  defp history_for(_finding, "wl-then-fixed"),
+    do: %{
+      first_seen: @jun_wl_appeared,
+      resolved_at: @jun_wl_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @jun_wl_appeared}, {"resolved", @jun_wl_resolved}]
+    }
+
+  defp history_for(_finding, "recent"),
+    do: %{
+      first_seen: @recent_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @recent_appeared}]
+    }
+
+  # Second presentation batch: whitelists from 29 June onward (active, expired,
+  # followed by a fix, and after a redetection) plus clearances from six hours
+  # to three days.
+  defp history_for(_finding, "jun29-wl"),
+    do: %{
+      first_seen: @jun29_wl_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @jun29_wl_appeared}]
+    }
+
+  defp history_for(_finding, "jun29-fixed"),
+    do: %{
+      first_seen: @jun29_fixed_appeared,
+      resolved_at: @jun29_fixed_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @jun29_fixed_appeared}, {"resolved", @jun29_fixed_resolved}]
+    }
+
+  defp history_for(_finding, "jul-wl-long"),
+    do: %{
+      first_seen: @jul_wl_long_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @jul_wl_long_appeared}]
+    }
+
+  defp history_for(_finding, "jul-quick"),
+    do: %{
+      first_seen: @jul_quick_appeared,
+      resolved_at: @jul_quick_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @jul_quick_appeared}, {"resolved", @jul_quick_resolved}]
+    }
+
+  defp history_for(_finding, "jul-wl-fixed"),
+    do: %{
+      first_seen: @jul_wl_fixed_appeared,
+      resolved_at: @jul_wl_fixed_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @jul_wl_fixed_appeared}, {"resolved", @jul_wl_fixed_resolved}]
+    }
+
+  defp history_for(_finding, "jul-cyc-wl"),
+    do: %{
+      first_seen: @jul_cyc_appeared,
+      resolved_at: nil,
+      reopen_count: 1,
+      events: [
+        {"appeared", @jul_cyc_appeared},
+        {"resolved", @jul_cyc_resolved},
+        {"reopened", @jul_cyc_reopened}
+      ]
+    }
+
+  defp history_for(_finding, "jul-fixed2"),
+    do: %{
+      first_seen: @jul_fixed2_appeared,
+      resolved_at: @jul_fixed2_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @jul_fixed2_appeared}, {"resolved", @jul_fixed2_resolved}]
+    }
+
+  defp history_for(_finding, "aug-wl-exp"),
+    do: %{
+      first_seen: @aug_wl_appeared,
+      resolved_at: nil,
+      reopen_count: 0,
+      events: [{"appeared", @aug_wl_appeared}]
+    }
+
+  defp history_for(_finding, "aug-day"),
+    do: %{
+      first_seen: @aug_day_appeared,
+      resolved_at: @aug_day_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @aug_day_appeared}, {"resolved", @aug_day_resolved}]
+    }
+
+  defp history_for(_finding, "sep-quick"),
+    do: %{
+      first_seen: @sep_quick_appeared,
+      resolved_at: @sep_quick_resolved,
+      reopen_count: 0,
+      events: [{"appeared", @sep_quick_appeared}, {"resolved", @sep_quick_resolved}]
+    }
+
   defp history_for(_finding, "lowsupp"), do: nil
   defp history_for(_finding, "medium"), do: nil
 
@@ -555,7 +950,11 @@ defmodule Triage.Seeds do
           severity: severity,
           fix: fix,
           description: description,
-          url: "https://nvd.nist.gov/vuln/detail/" <> cve,
+          url:
+            if(String.starts_with?(cve, "CVE-2099-"),
+              do: nil,
+              else: "https://nvd.nist.gov/vuln/detail/" <> cve
+            ),
           suppressed: suppressed
         },
         now,
@@ -639,6 +1038,17 @@ defmodule Triage.Seeds do
   defp elem_ok({:ok, value}), do: {:ok, value}
   defp elem_ok(other), do: other
 
+  # Hover text for the timeline: what each recorded lifecycle event means in
+  # this estate, instead of an opaque seed label.
+  defp event_note("appeared"), do: "Detected by the local scanner collection."
+
+  defp event_note("resolved"),
+    do: "Fixed version deployed; the scanner no longer observes the vulnerable copy."
+
+  defp event_note("reopened"), do: "Detected again locally after a fix."
+
+  defp event_note(_other), do: "Recorded by the local scanner collection."
+
   defp pin_history!(_finding, nil), do: :ok
 
   defp pin_history!(finding, %{events: events} = history) do
@@ -657,7 +1067,7 @@ defmodule Triage.Seeds do
         # `appeared` is already recorded by upsert_finding for a new row; never
         # duplicate an event kind, so replaying seeds never invents history.
         if event_name not in existing_events do
-          Inventory.record_event(finding.id, event_name, at, "seeded demo history")
+          Inventory.record_event(finding.id, event_name, at, event_note(event_name))
         end
       end)
 

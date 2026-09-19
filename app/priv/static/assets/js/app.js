@@ -220,12 +220,28 @@ const WorkspaceDialog = {
   mounted() {
     this.opener = document.activeElement;
     this.cancel = event => { event.preventDefault(); this.pushEvent(this.el.dataset.closeEvent, {}); };
+    // Clicking the modal backdrop — anywhere outside the dialog box — dismisses
+    // it exactly like Escape. A press that starts inside the panel is left
+    // alone, so selecting evidence text and releasing outside does not close it.
+    this.inside = event => {
+      const rect = this.el.getBoundingClientRect();
+      return event.clientX >= rect.left && event.clientX <= rect.right &&
+        event.clientY >= rect.top && event.clientY <= rect.bottom;
+    };
+    this.press = event => { this.pressOutside = !this.inside(event); };
+    this.backdrop = event => {
+      if (this.pressOutside && !this.inside(event)) this.pushEvent(this.el.dataset.closeEvent, {});
+    };
     this.el.addEventListener("cancel", this.cancel);
+    this.el.addEventListener("mousedown", this.press);
+    this.el.addEventListener("click", this.backdrop);
     if (!this.el.open) this.el.showModal();
   },
   updated() { if (!this.el.open) this.el.showModal(); },
   destroyed() {
     this.el.removeEventListener("cancel", this.cancel);
+    this.el.removeEventListener("mousedown", this.press);
+    this.el.removeEventListener("click", this.backdrop);
     this.el.close();
     if (this.opener?.isConnected) this.opener.focus({preventScroll: true});
     else document.getElementById("main-content")?.focus({preventScroll: true});

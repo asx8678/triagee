@@ -11,6 +11,77 @@ defmodule TriageWeb.TimelineLiveTest do
   import Phoenix.LiveViewTest
   import Triage.Fixtures
 
+  test "dot hover shows libraries, whitelist reason and recorded resolution", %{conn: conn} do
+    image = image!("hover")
+    placement!(image, "alpha", "prod")
+    first = finding!(image, "CVE-2026-9991", package_name: "early-lib", first_seen: at(6))
+    other = finding!(image, first.cve, package_name: "later-lib", first_seen: at(4))
+    event!(first, "appeared", at(6))
+    event!(other, "appeared", at(4))
+
+    Triage.Repo.insert!(%Triage.Decisions.Decision{
+      cve: first.cve,
+      decision: "accepted_risk",
+      reason: "Isolated runtime",
+      actor: "test",
+      decided_at: at(3)
+    })
+
+    resolution = event!(first, "resolved", at(1))
+
+    resolution
+    |> Ecto.Changeset.change(note: "Upgraded early-lib to 2.0")
+    |> Triage.Repo.update!()
+
+    {:ok, view, _} = live(conn, ~p"/timeline")
+
+    assert has_element?(
+             view,
+             "#tl-track-CVE-2026-9991 .tl-c-open title",
+             "2 affected libraries — first affected: early-lib"
+           )
+
+    assert has_element?(
+             view,
+             "#tl-track-CVE-2026-9991 .tl-c-whitelist-marker title",
+             "Reason: Isolated runtime"
+           )
+
+    assert has_element?(
+             view,
+             "#tl-track-CVE-2026-9991 .tl-c-ended title",
+             "Recorded resolution: Upgraded early-lib to 2.0"
+           )
+  end
+
+  test "chart toggles between 20 and all, including lanes beyond fifty", %{conn: conn} do
+    image = image!("all-lanes")
+    placement!(image, "alpha", "prod")
+
+    for n <- 1..55 do
+      finding = finding!(image, "CVE-2026-#{8000 + n}")
+      event!(finding, "appeared", at(1))
+    end
+
+    {:ok, view, html} = live(conn, "/timeline?owner=alpha")
+
+    assert html |> LazyHTML.from_document() |> LazyHTML.query(".tl-chart-track") |> Enum.count() ==
+             20
+
+    html = view |> element("#tl-show-all") |> render_click()
+    assert_patch(view, "/timeline?chart=all&owner=alpha")
+
+    assert html |> LazyHTML.from_document() |> LazyHTML.query(".tl-chart-track") |> Enum.count() ==
+             55
+
+    assert has_element?(view, "#tl-chart-truncation", "55 of 55")
+    html = view |> element("#tl-show-20") |> render_click()
+    assert_patch(view, "/timeline?chart=20&owner=alpha")
+
+    assert html |> LazyHTML.from_document() |> LazyHTML.query(".tl-chart-track") |> Enum.count() ==
+             20
+  end
+
   alias Triage.Cases
   alias Triage.Intel
 
@@ -491,59 +562,222 @@ defmodule TriageWeb.TimelineLiveTest do
       # One marker and one description per recorded day, and one arrowhead
       # definition per state, so a state never reuses another state's arrow.
       # Scoped to the chart itself: the legend keys below it reuse these classes.
-      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-dot") |> Enum.count() == 5
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-chip") |> Enum.count() ==
+               5
 
       assert document
              |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-point title")
              |> Enum.count() == 5
 
-      assert document |> LazyHTML.query("#tl-chart svg.tl-chart marker") |> Enum.count() == 4
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart marker") |> Enum.count() == 5
     end
 
-    test "joins adjacent recorded days solid, and a gap dashed", %{conn: conn} do
+    test "open status reaches today and ended status stops with a green dot", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/timeline")
-      document = LazyHTML.from_document(html)
+      doc = LazyHTML.from_document(html)
+      assert has_element?(view, "#tl-track-CVE-2026-5201.tl-c-danger .tl-c-seg.tl-c-open")
+      assert has_element?(view, "#tl-track-CVE-2026-5200 .tl-c-ended .tl-c-chip")
+      assert has_element?(view, "#tl-track-CVE-2026-5202 .tl-c-seg.tl-c-open")
+      today = doc |> LazyHTML.query(".tl-c-today") |> LazyHTML.attribute("x1")
 
-      solid =
-        document |> LazyHTML.query("#tl-track-CVE-2026-5201 .tl-c-seg-solid") |> Enum.to_list()
+      last =
+        doc
+        |> LazyHTML.query("#tl-track-CVE-2026-5201 .tl-c-seg")
+        |> Enum.to_list()
+        |> List.last()
 
-      assert length(solid) == 1
-      assert LazyHTML.attribute(hd(solid), "marker-end") == ["url(#tl-c-arrow-reopened)"]
-
-      assert element(view, "#tl-track-CVE-2026-5201") |> render() =~
-               "adjacent days this CVE is recorded on"
-
-      dashed =
-        document |> LazyHTML.query("#tl-track-CVE-2026-5200 .tl-c-seg-dashed") |> Enum.to_list()
-
-      assert length(dashed) == 1
-      assert LazyHTML.attribute(hd(dashed), "marker-end") == ["url(#tl-c-arrow-ended)"]
-
-      # The gap segment is described as a gap, not as continuous presence.
-      assert element(view, "#tl-track-CVE-2026-5200") |> render() =~
-               "the days in between have none recorded"
-
-      # A single recorded day draws a pin and no segment in either direction.
-      assert document |> LazyHTML.query("#tl-track-CVE-2026-5202 .tl-c-seg") |> Enum.count() == 0
-      assert document |> LazyHTML.query("#tl-track-CVE-2026-5202 .tl-c-pin") |> Enum.count() == 1
+      assert LazyHTML.attribute(last, "x2") == today
+      assert render(view) =~ "not a verified fix"
     end
 
-    test "the legend states what a line means and what it does not", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/timeline")
-      html = render(view)
+    test "same-day detection and resolution retain separate red and green dots", %{conn: conn} do
+      Triage.DataCase.reset_inventory!()
+      image = image!("same-day-dots")
+      placement!(image, "alpha", "prod-cluster-1")
+      finding = finding!(image, "CVE-2026-5699")
+      event!(finding, "appeared", at(2))
+      event!(finding, "resolved", DateTime.add(at(2), 60, :second))
+      {:ok, view, html} = live(conn, ~p"/timeline")
+      assert has_element?(view, "#tl-track-CVE-2026-5699 .tl-c-same-day-detection .tl-c-chip")
+      assert has_element?(view, "#tl-track-CVE-2026-5699 .tl-c-ended .tl-c-chip")
+      doc = LazyHTML.from_document(html)
 
-      assert html =~ "recorded on two adjacent days"
-      assert html =~ "recorded at both ends; nothing recorded in between"
-      assert html =~ "also recorded before this window starts"
-      assert html =~ "today, where the window ends"
-      assert html =~ "a single recorded day, so no line is drawn"
-      assert html =~ "suppression flag currently set (imported scanner data)"
-      assert html =~ "hidden from screen readers"
-      assert has_element?(view, "#tl-chart figcaption")
+      [red] =
+        doc
+        |> LazyHTML.query("#tl-track-CVE-2026-5699 .tl-c-same-day-detection .tl-c-chip")
+        |> LazyHTML.attribute("cx")
 
-      refute html =~ "Severity chips — current scanner severity"
-      refute html =~ "Scanner severity is not assessed impact"
-      refute has_element?(view, "#tl-chart .tl-chart-legend-groups .tl-c-key-chip")
+      [green] =
+        doc
+        |> LazyHTML.query("#tl-track-CVE-2026-5699 .tl-c-ended .tl-c-chip")
+        |> LazyHTML.attribute("cx")
+
+      assert elem(Float.parse(red), 0) + 13 < elem(Float.parse(green), 0)
+    end
+
+    test "a re-detection after a fix draws a red dot again and resumes the line", %{conn: conn} do
+      Triage.DataCase.reset_inventory!()
+
+      image = image!("live-chart-redetect")
+      placement!(image, "alpha", "prod-cluster-1")
+      finding = finding!(image, "CVE-2026-5600")
+      event!(finding, "appeared", at(10))
+      event!(finding, "resolved", at(6))
+      event!(finding, "reopened", at(2))
+
+      {:ok, view, _} = live(conn, ~p"/timeline")
+
+      assert has_element?(view, "#tl-track-CVE-2026-5600 .tl-c-ended .tl-c-chip")
+      assert has_element?(view, "#tl-track-CVE-2026-5600 .tl-c-open .tl-c-chip")
+      assert has_element?(view, "#tl-track-CVE-2026-5600 .tl-c-seg.tl-c-open")
+    end
+
+    test "whitelist persists to today, stops at resolution, and a new library restarts unwhitelisted",
+         %{conn: conn} do
+      Triage.DataCase.reset_inventory!()
+      image = image!("lifecycle-one")
+      placement!(image, "alpha", "prod-cluster-1")
+      finding = finding!(image, "CVE-2026-5610")
+      event!(finding, "appeared", at(10))
+
+      Triage.Repo.insert!(%Triage.Decisions.Decision{
+        cve: finding.cve,
+        decision: "accepted_risk",
+        reason: "test",
+        actor: "test",
+        decided_at: at(8),
+        expires_at: at(-5)
+      })
+
+      {:ok, _, html} = live(conn, ~p"/timeline")
+      doc = LazyHTML.from_document(html)
+
+      last =
+        doc
+        |> LazyHTML.query("#tl-track-CVE-2026-5610 .tl-c-seg")
+        |> Enum.to_list()
+        |> List.last()
+
+      assert LazyHTML.attribute(last, "class") |> hd() =~ "tl-c-whitelisted"
+
+      assert LazyHTML.attribute(last, "x2") ==
+               doc |> LazyHTML.query(".tl-c-today") |> LazyHTML.attribute("x1")
+
+      event!(finding, "resolved", at(6))
+      {:ok, _, html} = live(conn, ~p"/timeline")
+      doc = LazyHTML.from_document(html)
+
+      last =
+        doc
+        |> LazyHTML.query("#tl-track-CVE-2026-5610 .tl-c-seg")
+        |> Enum.to_list()
+        |> List.last()
+
+      fixed =
+        doc
+        |> LazyHTML.query("#tl-track-CVE-2026-5610 .tl-c-ended .tl-c-chip")
+        |> LazyHTML.attribute("cx")
+
+      assert LazyHTML.attribute(last, "x2") == fixed
+
+      other_image = image!("lifecycle-other-library")
+      placement!(other_image, "alpha", "prod-cluster-1")
+      other = finding!(other_image, finding.cve)
+      event!(other, "appeared", at(2))
+      {:ok, view, html} = live(conn, ~p"/timeline")
+      doc = LazyHTML.from_document(html)
+      assert count(doc, "#tl-track-CVE-2026-5610 .tl-c-open .tl-c-chip") == 2
+      assert has_element?(view, "#tl-track-CVE-2026-5610 .tl-c-open .tl-c-chip")
+      segments = doc |> LazyHTML.query("#tl-track-CVE-2026-5610 .tl-c-seg") |> Enum.to_list()
+      last = List.last(segments)
+      assert LazyHTML.attribute(last, "class") |> hd() =~ "tl-c-open"
+
+      assert LazyHTML.attribute(last, "x2") ==
+               doc |> LazyHTML.query(".tl-c-today") |> LazyHTML.attribute("x1")
+
+      refute Enum.any?(segments, fn seg ->
+               title = seg |> LazyHTML.query("title") |> LazyHTML.text()
+               String.starts_with?(title, Date.to_iso8601(Date.add(Date.utc_today(), -4)))
+             end)
+    end
+
+    test "whitelist begins at its decision date and expiry restores red", %{
+      conn: conn,
+      solid: finding
+    } do
+      Triage.Repo.insert!(%Triage.Decisions.Decision{
+        cve: finding.cve,
+        decision: "accepted_risk",
+        reason: "test",
+        actor: "test",
+        decided_at: at(1, ~T[00:00:00]),
+        expires_at: at(-2, ~T[00:00:00])
+      })
+
+      {:ok, view, _} = live(conn, ~p"/timeline")
+      assert has_element?(view, "#tl-track-CVE-2026-5201 .tl-c-whitelist-marker")
+
+      assert has_element?(
+               view,
+               "#tl-track-CVE-2026-5201 .tl-c-whitelist-marker .tl-c-chip"
+             )
+
+      assert has_element?(view, "#tl-track-CVE-2026-5201 .tl-c-seg.tl-c-open")
+      assert has_element?(view, "#tl-track-CVE-2026-5201 .tl-c-seg.tl-c-whitelisted")
+    end
+
+    test "expired whitelist does not grey today's line", %{
+      conn: conn,
+      solid: finding
+    } do
+      Triage.Repo.insert!(%Triage.Decisions.Decision{
+        cve: finding.cve,
+        decision: "accepted_risk",
+        reason: "test",
+        actor: "test",
+        decided_at: at(2, ~T[00:00:00]),
+        expires_at: at(1, ~T[00:00:00])
+      })
+
+      {:ok, _, html} = live(conn, ~p"/timeline")
+
+      segments =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#tl-track-CVE-2026-5201 .tl-c-seg")
+        |> Enum.to_list()
+
+      assert LazyHTML.attribute(hd(segments), "class") |> hd() =~ "tl-c-whitelisted"
+      assert LazyHTML.attribute(List.last(segments), "class") |> hd() =~ "tl-c-open"
+    end
+
+    test "partial whitelist stays red until every placement is covered", %{
+      conn: conn,
+      solid: finding
+    } do
+      image = Triage.Repo.get!(Triage.Inventory.Image, finding.image_id)
+      placement!(image, "beta", "prod-cluster-1")
+      placements = Triage.Repo.all(Triage.Inventory.ImagePlacement)
+      [first | rest] = placements
+
+      record = fn placement ->
+        Triage.Repo.insert!(%Triage.Decisions.Decision{
+          cve: finding.cve,
+          placement_id: placement.id,
+          decision: "accepted_risk",
+          reason: "test",
+          actor: "test",
+          decided_at: at(1, ~T[00:00:00]),
+          expires_at: at(-2, ~T[00:00:00])
+        })
+      end
+
+      record.(first)
+      {:ok, view, _} = live(conn, ~p"/timeline")
+      refute has_element?(view, "#tl-track-CVE-2026-5201 .tl-c-seg.tl-c-whitelisted")
+      Enum.each(rest, record)
+      {:ok, covered, _} = live(conn, ~p"/timeline")
+      assert has_element?(covered, "#tl-track-CVE-2026-5201 .tl-c-seg.tl-c-whitelisted")
     end
 
     test "a lane recorded before the window starts with an entry tick", %{conn: conn} do
@@ -558,7 +792,7 @@ defmodule TriageWeb.TimelineLiveTest do
       document = LazyHTML.from_document(html)
 
       assert has_element?(view, "#tl-track-CVE-2026-5300 .tl-c-entry")
-      assert document |> LazyHTML.query("#tl-track-CVE-2026-5300 .tl-c-seg") |> Enum.count() == 0
+      assert document |> LazyHTML.query("#tl-track-CVE-2026-5300 .tl-c-seg") |> Enum.count() == 1
 
       assert element(view, "#tl-track-CVE-2026-5300") |> render() =~
                "Also recorded before this window starts"
@@ -570,7 +804,7 @@ defmodule TriageWeb.TimelineLiveTest do
       image = image!("live-chart-bound")
       placement!(image, "alpha", "prod-cluster-1")
 
-      for index <- 1..13 do
+      for index <- 1..21 do
         cve = "CVE-2026-54" <> String.pad_leading(Integer.to_string(index), 2, "0")
 
         image
@@ -581,8 +815,11 @@ defmodule TriageWeb.TimelineLiveTest do
       {:ok, view, html} = live(conn, ~p"/timeline")
       document = LazyHTML.from_document(html)
 
-      assert document |> LazyHTML.query("#tl-chart .tl-chart-track") |> Enum.count() == 12
-      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-dot") |> Enum.count() == 12
+      assert document |> LazyHTML.query("#tl-chart .tl-chart-track") |> Enum.count() == 20
+
+      assert document |> LazyHTML.query("#tl-chart svg.tl-chart .tl-c-chip") |> Enum.count() ==
+               20
+
       assert render(view) =~ "ranked by current scanner severity"
 
       # The cap is stated before the chart as well as after it: an operator who
@@ -592,10 +829,10 @@ defmodule TriageWeb.TimelineLiveTest do
       truncation =
         document |> LazyHTML.query("#tl-chart-truncation") |> LazyHTML.text()
 
-      assert truncation =~ "12 of 13 CVEs"
+      assert truncation =~ "20 of 21 CVEs"
       assert truncation =~ "Unplotted lanes are not quiet lanes"
       assert has_element?(view, "#tl-chart-truncation a[href='#tl-lanes-table']")
-      assert has_element?(view, "#tl-chart > .tl-chart-legend-groups")
+      assert has_element?(view, "#tl-chart-key")
       refute has_element?(view, "#tl-chart-key .tl-chart-legend-groups")
 
       assert document
@@ -603,7 +840,7 @@ defmodule TriageWeb.TimelineLiveTest do
              |> Enum.count() == 1
 
       # The bound hides nothing: the table still lists every lane.
-      assert has_element?(view, "#tl-lane-CVE-2026-5413")
+      assert has_element?(view, "#tl-lane-CVE-2026-5421")
     end
 
     test "the scale control changes spacing without changing what is drawn", %{conn: conn} do
@@ -630,7 +867,7 @@ defmodule TriageWeb.TimelineLiveTest do
       # not a filter, so it can never hide an observation.
       for selector <- [
             "#tl-chart .tl-chart-track",
-            "#tl-chart svg.tl-chart .tl-c-dot",
+            "#tl-chart svg.tl-chart .tl-c-chip",
             "#tl-chart svg.tl-chart .tl-c-week-label"
           ] do
         assert count(fit, selector) == count(detail, selector),

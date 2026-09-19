@@ -20,6 +20,32 @@ defmodule TriageWeb.WorkspaceLiveTest do
     %{prod: prod, staging: staging, cve: first.cve, first: first, second: second}
   end
 
+  test "workspace content starts without redundant page headers", %{conn: conn} do
+    for page <- ["overview", "inventory", "review", "timeline"] do
+      {:ok, view, _html} = live(conn, "/?page=#{page}")
+      refute has_element?(view, "#main-content .page-head")
+      refute has_element?(view, "#main-content .page-header")
+      refute has_element?(view, ".timeline-jump")
+
+      case page do
+        "overview" ->
+          assert has_element?(view, ".callout button[phx-click=settings]")
+          assert has_element?(view, ".callout a", "Start review")
+
+        "inventory" ->
+          assert has_element?(view, ".tabs button[phx-click=density]")
+
+        "review" ->
+          assert has_element?(view, ".review-tools a", "Decision history")
+          assert has_element?(view, "#save-decision")
+          assert has_element?(view, "#save-next")
+
+        "timeline" ->
+          assert has_element?(view, "#timeline-form")
+      end
+    end
+  end
+
   test "homepage and workspace alias expose only the new shell", %{conn: conn} do
     for path <- ["/", "/workspace"] do
       {:ok, view, html} = live(conn, path)
@@ -184,7 +210,8 @@ defmodule TriageWeb.WorkspaceLiveTest do
   test "cancel acceptance preserves fields, confirmation and save target exact production", c do
     {:ok, view, _} = live(c.conn, "/?page=review&environment=prod&item=#{c.cve}")
     view |> form("#workspace-decision", decision: fields("accepted_risk")) |> render_submit()
-    assert has_element?(view, "#risk-confirmation")
+    assert has_element?(view, "#risk-confirmation", "Whitelist temporarily?")
+    assert has_element?(view, "#confirm-risk", "Confirm whitelist")
     assert Repo.aggregate(Decisions.Decision, :count) == 0
     view |> element("#cancel-risk") |> render_click()
 
@@ -198,9 +225,33 @@ defmodule TriageWeb.WorkspaceLiveTest do
     view |> element("#confirm-risk") |> render_click()
     assert Repo.aggregate(Decisions.Decision, :count) == 1
 
+    {:ok, whitelisted, _} =
+      live(c.conn, "/?page=review&mode=accepted&environment=prod&item=#{c.cve}")
+
+    assert has_element?(whitelisted, ".review-heading .whitelist-badge", "Whitelisted")
+    assert has_element?(whitelisted, ".review-tools a", "Whitelisted")
+
     assert Workspace.metrics(Workspace.targets(%{"cve" => c.cve}))["needs"].targets == [
              {c.cve, c.staging.id}
            ]
+  end
+
+  test "whitelist badge reflects only currently covered active scopes" do
+    alias TriageWeb.WorkspaceComponents
+    accepted = %{active?: true, covered?: true, decision: %{decision: "accepted_risk"}}
+    uncovered = %{active?: true, covered?: false, decision: nil}
+    expired = %{accepted | covered?: false}
+    work = %{accepted | decision: %{decision: "investigate"}}
+
+    assert WorkspaceComponents.whitelist_state(%{scopes: [accepted]}) == "Whitelisted"
+
+    assert WorkspaceComponents.whitelist_state(%{scopes: [accepted, uncovered]}) ==
+             "Partially whitelisted"
+
+    assert WorkspaceComponents.whitelist_state(%{scopes: [expired, work]}) == nil
+    assert WorkspaceComponents.whitelist_state(%{scopes: [%{accepted | active?: false}]}) == nil
+    assert WorkspaceComponents.whitelist_state(%{scopes: []}) == nil
+    assert WorkspaceComponents.whitelist_state(nil) == nil
   end
 
   test "scope changes never prune hidden draft targets", c do
