@@ -4,8 +4,8 @@
     "model": "openai-codex/gpt-6-astra",
     "thinking": "low",
     "mode": "trajectory",
-    "alwaysRearm": false,
-    "enabled": false
+    "alwaysRearm": true,
+    "enabled": true
   },
   "compaction": {
     "thresholds": {
@@ -17,5 +17,9 @@
   },
   "executor": {
     "kernel": "python"
+  },
+  "fullCodeMode": true,
+  "agents": {
+    "maxDepth": 4
   }
 }
