@@ -6,7 +6,7 @@ defmodule TriageWeb.WorkspaceLive do
   alias TriageWeb.{TimelineFilters, TimelineLive}
   import TriageWeb.WorkspaceComponents
 
-  @pages ~w(overview inventory review timeline)
+  @pages ~w(overview inventory review timeline news)
   @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview)
 
   def mount(_params, _session, socket) do
@@ -20,9 +20,23 @@ defmodule TriageWeb.WorkspaceLive do
        confirmation: nil,
        error: nil,
        message: nil,
+       action_toast: nil,
        expanded: false,
        queue_shown: false,
        settings: false,
+       manual_open: false,
+       manual_loading: false,
+       manual_preview: nil,
+       manual_error: nil,
+       manual_form: to_form(%{"cve" => ""}, as: :manual),
+       manual_cves: [],
+       news_started: false,
+       news_cves: nil,
+       news_headlines: nil,
+       news_cves_loading: false,
+       news_headlines_loading: false,
+       news_cves_error: nil,
+       news_headlines_error: nil,
        compact: false
      )}
   end
@@ -63,7 +77,8 @@ defmodule TriageWeb.WorkspaceLive do
        invalid_params: not valid,
        confirmation: nil
      )
-     |> load()}
+     |> load()
+     |> maybe_load_news()}
   end
 
   defp pin_review_item(%{"page" => "review"} = params, %{assigns: %{page: "review", item: item}})
@@ -108,6 +123,7 @@ defmodule TriageWeb.WorkspaceLive do
     socket =
       assign(socket,
         targets: targets,
+        manual_cves: Triage.ManualCves.list(),
         metrics: Workspace.metrics(targets),
         teams: teams,
         options: Workspace.options(),
@@ -184,11 +200,12 @@ defmodule TriageWeb.WorkspaceLive do
       Map.get(socket.assigns.drafts, row.cve) ||
         %{
           fields: %{
-            "action" => "request_remediation",
+            "action" => "fixed",
             "owner" => "",
             "actor" => "",
-            "reason" => "",
-            "due_on" => ""
+            "reason" =>
+              "Reviewed for this environment: this CVE does not currently affect our infrastructure. Reassess at the whitelist expiry date.",
+            "due_on" => Date.to_iso8601(Commit.default_due_on())
           },
           targets: Enum.map(initial_targets, & &1.id),
           versions: Map.new(row.scopes, &{&1.id, &1.fingerprint}),
@@ -252,9 +269,20 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   def handle_event("draft", %{"decision" => params}, socket) when is_map(params) do
+    fields = Map.merge(socket.assigns.draft.fields, Map.take(params, ~w(action reason due_on)))
+
+    fields =
+      if fields["action"] == "accepted_risk" and
+           (socket.assigns.draft.fields["action"] != "accepted_risk" or
+              fields["due_on"] in [nil, ""]) do
+        Map.put(fields, "due_on", Date.to_iso8601(Commit.default_due_on()))
+      else
+        fields
+      end
+
     {:noreply,
      update_draft(socket, %{
-       fields: Map.take(params, ~w(action owner actor reason due_on)),
+       fields: fields,
        saved: false
      })}
   end
@@ -299,19 +327,6 @@ defmodule TriageWeb.WorkspaceLive do
     {:noreply, assign(socket, selected: selected)}
   end
 
-  def handle_event("new-draft", _, %{assigns: %{item: item}} = socket) do
-    {:noreply,
-     socket
-     |> assign(
-       drafts: Map.delete(socket.assigns.drafts, item),
-       error: nil,
-       message: nil,
-       confirmation: nil
-     )
-     |> load()
-     |> push_event("workspace-draft-cleared", %{})}
-  end
-
   def handle_event("clear-selection", _, socket), do: {:noreply, assign(socket, selected: [])}
 
   def handle_event("review-selected", _, socket) do
@@ -331,12 +346,13 @@ defmodule TriageWeb.WorkspaceLive do
     end
   end
 
-  def handle_event("save", %{"decision" => fields} = params, %{assigns: %{draft: %{}}} = socket)
+  def handle_event("save", %{"decision" => fields}, %{assigns: %{draft: %{}}} = socket)
       when is_map(fields) do
     socket =
-      update_draft(socket, %{fields: Map.take(fields, ~w(action owner actor reason due_on))})
+      update_draft(socket, %{
+        fields: Map.merge(socket.assigns.draft.fields, Map.take(fields, ~w(action reason due_on)))
+      })
 
-    next? = params["advance"] == "true"
     changeset = Commit.form(socket.assigns.draft.fields)
 
     cond do
@@ -357,16 +373,34 @@ defmodule TriageWeb.WorkspaceLive do
       socket.assigns.draft.targets == [] ->
         {:noreply, assign(socket, error: "Select at least one affected scope.")}
 
-      fields["action"] == "accepted_risk" ->
-        {:noreply, assign(socket, confirmation: %{next?: next?}, error: nil)}
+      fields["action"] in ["accepted_risk", "create_ticket"] ->
+        {:noreply, assign(socket, confirmation: %{}, error: nil)}
 
       true ->
-        {:noreply, commit(socket, next?)}
+        {:noreply, commit(socket)}
     end
   end
 
-  def handle_event("confirm-risk", _, %{assigns: %{confirmation: %{next?: next?}}} = socket),
-    do: {:noreply, commit(socket, next?)}
+  def handle_event("confirm-ticket", _, %{assigns: %{confirmation: %{}, draft: %{fields: %{"action" => "create_ticket"}}}} = socket),
+    do: {:noreply, commit(socket)}
+
+  def handle_event("confirm-risk", _, %{assigns: %{confirmation: %{}, draft: %{fields: %{"action" => "accepted_risk"}}}} = socket),
+    do: {:noreply, commit(socket)}
+
+  def handle_event("cancel-decision", _, %{assigns: %{row: row}} = socket) when not is_nil(row) do
+    socket =
+      socket
+      |> assign(
+        drafts: Map.delete(socket.assigns.drafts, row.cve),
+        confirmation: nil,
+        error: nil,
+        message: nil
+      )
+      |> prepare_draft(row, [])
+      |> push_event("workspace-draft-cleared", %{})
+
+    {:noreply, socket}
+  end
 
   def handle_event("cancel-risk", _, socket), do: {:noreply, assign(socket, confirmation: nil)}
 
@@ -380,6 +414,52 @@ defmodule TriageWeb.WorkspaceLive do
     do: {:noreply, assign(socket, compact: not socket.assigns.compact)}
 
   def handle_event("settings", _, socket), do: {:noreply, assign(socket, settings: true)}
+
+  def handle_event("refresh-news", _, socket) do
+    if socket.assigns.news_cves_loading or socket.assigns.news_headlines_loading,
+      do: {:noreply, socket},
+      else: {:noreply, start_news(socket)}
+  end
+
+  def handle_event("manual-close", _, socket), do: {:noreply, assign(socket, manual_open: false)}
+
+  def handle_event("manual-open", _, socket),
+    do: {:noreply, assign(socket, manual_open: not socket.assigns.manual_open)}
+
+  def handle_event("manual-fetch", %{"manual" => %{"cve" => cve}}, socket) do
+    if socket.assigns.manual_loading do
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> assign(
+         manual_loading: true,
+         manual_preview: nil,
+         manual_error: nil,
+         manual_form: to_form(%{"cve" => cve}, as: :manual)
+       )
+       |> start_async(:manual_fetch, fn -> Triage.ManualCves.fetch(cve) end)}
+    end
+  end
+
+  def handle_event("manual-save", _, %{assigns: %{manual_preview: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("manual-save", _, socket) do
+    case Triage.ManualCves.save(socket.assigns.manual_preview) do
+      {:ok, _} ->
+        {:noreply,
+         assign(socket,
+           manual_preview: nil,
+           manual_cves: Triage.ManualCves.list(),
+           message: "CVE saved to your research list."
+         )}
+
+      {:error, _} ->
+        {:noreply, assign(socket, manual_error: "Could not save this CVE. Please try again.")}
+    end
+  end
+
   def handle_event("close-settings", _, socket), do: {:noreply, assign(socket, settings: false)}
 
   def handle_event("close-inspector", _, socket),
@@ -418,6 +498,9 @@ defmodule TriageWeb.WorkspaceLive do
        )}
     end
   end
+
+  def handle_event("dismiss-action-toast", _, socket),
+    do: {:noreply, assign(socket, action_toast: nil)}
 
   def handle_event(_, _, socket), do: {:noreply, socket}
 
@@ -462,7 +545,7 @@ defmodule TriageWeb.WorkspaceLive do
     Enum.all?(
       [
         {"page", @pages},
-        {"mode", ~w(active all history needs urgent unknown accepted progress)},
+        {"mode", ~w(active all history needs urgent unknown accepted progress fixed)},
         {"tab", ~w(summary assets history evidence)},
         {"sort", ~w(priority age)},
         {"severity", ~w(CRITICAL HIGH MEDIUM LOW)}
@@ -485,31 +568,40 @@ defmodule TriageWeb.WorkspaceLive do
     end
   end
 
-  defp commit(socket, next?) do
+  def handle_info({:dismiss_action_toast, id}, socket) do
+    if socket.assigns.action_toast && socket.assigns.action_toast.id == id,
+      do: {:noreply, assign(socket, action_toast: nil)},
+      else: {:noreply, socket}
+  end
+
+  defp action_message(cve, %{"action" => "fixed"}), do: "#{cve} marked as fixed"
+
+  defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}),
+    do: "#{cve} whitelisted until #{date}"
+
+  defp action_message(cve, _), do: "#{cve}: Azure DevOps ticket created — in progress"
+
+  defp commit(socket) do
     %{draft: draft, item: cve} = socket.assigns
 
     case Commit.save(cve, draft.targets, draft.versions, draft.operation, draft.fields) do
-      {:ok, decisions} ->
-        # Only a confirmed commit can advance. Preserve the stable pre-save ordering.
-        next =
-          socket.assigns.rows |> Enum.drop_while(&(&1.cve != cve)) |> Enum.drop(1) |> List.first()
+      {:ok, _decisions} ->
+        toast_id = System.unique_integer([:positive])
+        Process.send_after(self(), {:dismiss_action_toast, toast_id}, 4000)
 
         socket =
           socket
           |> update_draft(%{saved: true})
           |> assign(
             confirmation: nil,
+            action_toast: %{id: toast_id, action: draft.fields["action"], text: action_message(cve, draft.fields)},
             params: Map.put(socket.assigns.params, "item", cve),
-            message:
-              "Decision saved for #{length(decisions)} scopes. No ticket sent; active exposure is unchanged."
+            message: nil
           )
           |> load()
           |> push_event("workspace-draft-cleared", %{})
 
-        if next? and next,
-          do:
-            push_patch(socket, to: workspace_path(socket.assigns.params, %{"item" => next.cve})),
-          else: socket
+        socket
 
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket,
@@ -517,6 +609,9 @@ defmodule TriageWeb.WorkspaceLive do
           error: "Save failed. Your draft is unchanged.",
           decision_form: to_form(changeset, as: :decision)
         )
+
+      {:error, {:ticket, message}} ->
+        assign(socket, error: message)
 
       {:error, :past_date} ->
         assign(socket,
@@ -597,6 +692,56 @@ defmodule TriageWeb.WorkspaceLive do
   defp sort_rows(rows, "age"), do: Enum.sort_by(rows, &{DateTime.to_unix(&1.first_seen), &1.cve})
   defp sort_rows(rows, _), do: rows
 
+  defp maybe_load_news(socket) do
+    if socket.assigns.page == "news" and connected?(socket) and not socket.assigns.news_started,
+      do: start_news(socket),
+      else: socket
+  end
+
+  defp start_news(socket) do
+    socket
+    |> assign(
+      news_started: true,
+      news_cves_loading: true,
+      news_headlines_loading: true,
+      news_cves_error: nil,
+      news_headlines_error: nil
+    )
+    |> start_async(:news_cves, fn -> Triage.SecurityNews.critical() end)
+    |> start_async(:news_headlines, fn -> Triage.SecurityNews.headlines() end)
+  end
+
+  def handle_async(:news_cves, {:ok, {:ok, result}}, socket),
+    do: {:noreply, assign(socket, news_cves: result, news_cves_loading: false)}
+
+  def handle_async(:news_headlines, {:ok, {:ok, result}}, socket),
+    do: {:noreply, assign(socket, news_headlines: result, news_headlines_loading: false)}
+
+  def handle_async(:news_cves, result, socket),
+    do: {:noreply, assign(socket, news_cves_loading: false, news_cves_error: news_error(result))}
+
+  def handle_async(:news_headlines, result, socket),
+    do:
+      {:noreply,
+       assign(socket, news_headlines_loading: false, news_headlines_error: news_error(result))}
+
+  def handle_async(:manual_fetch, {:ok, {:ok, row}}, socket),
+    do: {:noreply, assign(socket, manual_loading: false, manual_preview: row)}
+
+  def handle_async(:manual_fetch, {:ok, {:error, error}}, socket),
+    do: {:noreply, assign(socket, manual_loading: false, manual_error: error)}
+
+  def handle_async(:manual_fetch, {:exit, _}, socket),
+    do:
+      {:noreply,
+       assign(socket,
+         manual_loading: false,
+         manual_error: "NVD request failed. Please try again."
+       )}
+
+  defp news_error({:ok, {:error, message}}) when is_binary(message), do: message
+  defp news_error(_), do: "Source could not be refreshed. Please try again."
+
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} workspace>
@@ -619,7 +764,8 @@ defmodule TriageWeb.WorkspaceLive do
                   {"overview", "Overview"},
                   {"inventory", "Vulnerabilities"},
                   {"review", "Review"},
-                  {"timeline", "Timeline"}
+                  {"timeline", "Timeline"},
+                  {"news", "News"}
                 ]
               }
               id={"workspace-nav-#{page}"}
@@ -637,7 +783,16 @@ defmodule TriageWeb.WorkspaceLive do
             ><span class="settings-text">Data &amp; settings</span></button>
           </div>
         </header>
-        <.form for={@scope_form} id="workspace-scope" class="scopebar" phx-change="scope">
+        <div :if={@page == "news"} class="scopebar">
+          <span class="scope-label">Public intelligence</span><span>Global CVE news · Independent of your inventory</span>
+        </div>
+        <.form
+          :if={@page != "news"}
+          for={@scope_form}
+          id="workspace-scope"
+          class="scopebar"
+          phx-change="scope"
+        >
           <span class="scope-label">Scope</span>
           <.input
             field={@scope_form[:team]}
@@ -679,6 +834,18 @@ defmodule TriageWeb.WorkspaceLive do
           <p :if={@invalid_params} class="form-error" role="alert">
             Invalid filters. No records loaded.
           </p>
+          <div
+            :if={@action_toast}
+            id={"action-toast-#{@action_toast.id}"}
+            class={["action-toast", @action_toast.action == "accepted_risk" && "whitelist-toast"]}
+            role="status"
+            aria-live="polite"
+          >
+            <span class="confirmation-icon" aria-hidden="true">✓</span>
+            <strong class="confirmation-title">{if @action_toast.action == "accepted_risk", do: "Whitelisted", else: "Action completed"}</strong>
+            <span>{@action_toast.text}</span>
+            <button type="button" phx-click="dismiss-action-toast" aria-label="Dismiss confirmation">×</button>
+          </div>
           <p :if={@message} class="workspace-notice" role="status">{@message}</p>
           <.overview
             :if={@page == "overview"}
@@ -712,6 +879,7 @@ defmodule TriageWeb.WorkspaceLive do
             queue_shown={@queue_shown}
           />
           <TimelineLive.panel :if={@page == "timeline"} {assigns} />
+          <TriageWeb.SecurityNewsComponents.panel :if={@page == "news"} {assigns} />
         </main>
         <footer class="bottom-status">
           <strong>Local · No sign-in</strong><span>Latest recorded evidence · not verified live coverage</span><span class="right">Operational review workspace</span>
@@ -726,7 +894,75 @@ defmodule TriageWeb.WorkspaceLive do
         params={@params}
         expanded={@expanded}
       />
-      <.risk_confirmation :if={@confirmation} row={@row} draft={@draft} />
+      <.risk_confirmation :if={@confirmation && @draft.fields["action"] == "accepted_risk"} row={@row} draft={@draft} />
+      <.ticket_confirmation :if={@confirmation && @draft.fields["action"] == "create_ticket"} row={@row} draft={@draft} error={@error} />
+      <dialog
+        :if={@manual_open}
+        id="manual-cves"
+        class="confirm manual-cves"
+        phx-hook="WorkspaceDialog"
+        data-close-event="manual-close"
+        aria-labelledby="manual-title"
+      >
+        <div class="confirmation-layout">
+          <header class="modal-head">
+            <h2 id="manual-title">Add CVE · Research list</h2>
+          </header>
+          <div class="modal-body">
+            <div class="panel-body">
+              <p class="muted">
+                Paste a CVE ID to fetch its description from NVD. Saved research CVEs do not count as affected inventory.
+              </p>
+              <.form
+                for={@manual_form}
+                id="manual-cve-form"
+                phx-submit="manual-fetch"
+                class="manual-cve-form"
+              >
+                <.input
+                  field={@manual_form[:cve]}
+                  label="CVE number"
+                  placeholder="CVE-2024-3094"
+                  required
+                  maxlength="40"
+                  disabled={@manual_loading}
+                />
+                <button type="submit" disabled={@manual_loading}>{if @manual_loading,
+                  do: "Fetching…",
+                  else: "Fetch from NVD"}</button>
+              </.form>
+              <p :if={@manual_error} id="manual-cve-error" class="form-error" role="alert">
+                {@manual_error}
+              </p>
+              <div :if={@manual_preview} id="manual-cve-preview">
+                <h3>{@manual_preview.external_id}</h3>
+                <p>{@manual_preview.summary}</p>
+                <p>
+                  <a
+                    href={"https://nvd.nist.gov/vuln/detail/" <> @manual_preview.external_id}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >Source: NVD</a>
+                </p>
+                <button id="manual-cve-save" phx-click="manual-save">Save to research list</button>
+              </div>
+            </div>
+            <div :if={@manual_cves != []} class="panel-body" id="manual-cve-list">
+              <details :for={cve <- @manual_cves} id={"research-#{cve.external_id}"}>
+                <summary>{cve.external_id}</summary>
+                <p>{cve.summary}</p>
+                <a
+                  href={"https://nvd.nist.gov/vuln/detail/" <> cve.external_id}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >Source: NVD</a>
+                <span class="muted"> · Fetched {time(cve.fetched_at)}</span>
+              </details>
+            </div>
+          </div>
+          <footer class="modal-foot"><button phx-click="manual-close">Close</button></footer>
+        </div>
+      </dialog>
       <.settings_dialog :if={@settings} />
     </Layouts.app>
     """

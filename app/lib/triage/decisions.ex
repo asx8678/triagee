@@ -33,11 +33,13 @@ defmodule Triage.Decisions do
   alias Triage.Inventory.ImagePlacement
   alias Triage.Repo
 
-  @decisions ~w(accepted_risk not_affected mitigated)
+  @decisions ~w(accepted_risk not_affected mitigated fixed)
   @expiry_required ~w(accepted_risk)
-  @work_actions ~w(request_remediation investigate request_verification)
+  @work_actions ~w(request_remediation investigate request_verification create_ticket)
 
   @labels %{
+    "fixed" => "Fixed",
+    "create_ticket" => "Ticket created",
     "accepted_risk" => "Whitelisted",
     "not_affected" => "Not affected",
     "mitigated" => "Mitigated by a control",
@@ -71,21 +73,25 @@ defmodule Triage.Decisions do
 
     def changeset(decision, attrs) do
       decision
-      |> cast(attrs, [
-        :cve,
-        :placement_id,
-        :decision,
-        :reason,
-        :actor,
-        :decided_at,
-        :expires_at,
-        :work_owner,
-        :due_on,
-        :operation_id,
-        :metadata
-      ])
-      |> validate_required([:cve, :decision, :reason, :actor, :decided_at])
-      |> validate_length(:reason, min: 3)
+      |> cast(
+        attrs,
+        [
+          :cve,
+          :placement_id,
+          :decision,
+          :reason,
+          :actor,
+          :decided_at,
+          :expires_at,
+          :work_owner,
+          :due_on,
+          :operation_id,
+          :metadata
+        ],
+        empty_values: []
+      )
+      |> validate_required([:cve, :decision, :actor, :decided_at])
+      |> validate_comment()
       |> validate_inclusion(
         :decision,
         Triage.Decisions.decisions() ++ Triage.Decisions.work_actions()
@@ -94,7 +100,21 @@ defmodule Triage.Decisions do
       |> validate_work()
     end
 
+    defp validate_comment(changeset) do
+      if get_field(changeset, :decision) in ["fixed", "accepted_risk", "create_ticket"],
+        do: changeset,
+        else: changeset |> validate_required([:reason]) |> validate_length(:reason, min: 3)
+    end
+
     defp validate_work(changeset) do
+      if get_field(changeset, :decision) == "create_ticket" do
+        validate_required(changeset, [:placement_id])
+      else
+        validate_legacy_work(changeset)
+      end
+    end
+
+    defp validate_legacy_work(changeset) do
       if get_field(changeset, :decision) in Triage.Decisions.work_actions() do
         validate_required(changeset, [:placement_id, :work_owner, :due_on, :expires_at])
       else

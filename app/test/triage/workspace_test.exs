@@ -93,6 +93,23 @@ defmodule Triage.WorkspaceTest do
     end
   end
 
+  test "fixed is durable, scoped and removed from actionable queues", c do
+    attrs = fields("fixed") |> Map.drop(["owner", "due_on"])
+    assert "fixed" in Commit.actions()
+
+    assert {:ok, [decision]} =
+             Commit.save(c.cve, [c.prod.id], versions(c.cve), Ecto.UUID.generate(), attrs)
+
+    assert decision.expires_at == nil
+    assert Decisions.label(decision.decision) == "Fixed"
+    targets = Workspace.targets()
+    assert Enum.map(Workspace.select(targets, "fixed"), & &1.id) == [c.prod.id]
+    assert Enum.map(Workspace.select(targets, "needs"), & &1.id) == [c.staging.id]
+    assert Workspace.select(targets, "progress") == []
+    assert Repo.reload!(c.finding).resolved_at == nil
+    assert Decisions.state(decision, DateTime.add(DateTime.utc_now(), 86400 * 365)) == :active
+  end
+
   test "operation retries return the same records, payload reuse is rejected", c do
     before = versions(c.cve)
     token = Ecto.UUID.generate()
@@ -149,7 +166,7 @@ defmodule Triage.WorkspaceTest do
           %{"owner" => "  "},
           %{"actor" => ""},
           %{"reason" => ""},
-          %{"action" => "fixed"},
+          %{"action" => "unknown_action"},
           %{"due_on" => "invalid"},
           %{"due_on" => Date.utc_today() |> Date.add(-1) |> Date.to_iso8601()}
         ] do

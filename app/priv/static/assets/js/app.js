@@ -269,7 +269,7 @@ const WorkspaceDraftGuard = {
       if (event.target.id === "workspace-decision") this.submittedVersion = this.editVersion;
     };
     this.confirming = event => {
-      if (event.target.closest?.('[phx-click="new-draft"], [phx-click="confirm-risk"]')) {
+      if (event.target.closest?.('[phx-click="confirm-risk"]')) {
         this.submittedVersion = this.editVersion;
       }
     };

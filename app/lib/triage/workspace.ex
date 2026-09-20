@@ -145,6 +145,9 @@ defmodule Triage.Workspace do
   defp matches?(target, "urgent"), do: target.active? and target.risk.priority == "critical"
   defp matches?(target, "unknown"), do: target.active? and target.exposure == "unknown"
 
+  defp matches?(target, "fixed"),
+    do: target.covered? and target.decision.decision == "fixed"
+
   defp matches?(target, "accepted"),
     do: target.active? and target.covered? and target.decision.decision == "accepted_risk"
 

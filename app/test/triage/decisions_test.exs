@@ -43,7 +43,7 @@ defmodule Triage.DecisionsTest do
 
     assert Decisions.latest_by_cve(["CVE-2098-6101"]) == %{}
     current = Decisions.latest_by_scope(["CVE-2098-6101"])[{"CVE-2098-6101", placement.id}]
-    assert current.label == "Accepted risk"
+    assert current.label == "Whitelisted"
     assert current.state == :active
     assert Decisions.active?(current)
     assert current.expires_at == decision.expires_at
@@ -175,9 +175,9 @@ defmodule Triage.DecisionsTest do
     assert Decisions.history_for_cve("CVE-2098-6101") == []
   end
 
-  test "a decision without a reason or an actor is refused" do
-    assert {:error, reason_changeset} = Decisions.record(attrs(%{reason: ""}))
-    assert "can't be blank" in errors_on(reason_changeset).reason
+  test "whitelist comments are optional but internal actor is required" do
+    assert {:ok, decision} = Decisions.record(attrs(%{reason: ""}))
+    assert decision.reason == ""
 
     assert {:error, actor_changeset} = Decisions.record(Map.delete(attrs(), :actor))
     assert "can't be blank" in errors_on(actor_changeset).actor

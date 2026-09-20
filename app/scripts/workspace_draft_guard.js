@@ -24,27 +24,23 @@ const confirmations = [];
 const off = session.onEvent((method, params) => {
   if (method !== 'Page.javascriptDialogOpening' || params.type !== 'confirm') return;
   confirmations.push(params.message);
-  // Cancel a real leave; allow the explicitly requested synthetic draft reset.
-  session.Page.handleJavaScriptDialog({accept:params.message.startsWith('Discard this draft')}).catch(()=>{});
+  // Cancel leaving so the unsaved draft remains intact.
+  session.Page.handleJavaScriptDialog({accept:false}).catch(()=>{});
 });
 try {
   const before = await read('location.href');
   await read('(()=>{const a=document.createElement("a");a.href="/imports";document.querySelector("#shell").append(a);a.click();a.remove();})()');
   if (await read('location.href') !== before) throw Error("Cancelled leave navigated away");
   if (!confirmations.some(s=>s.startsWith('Leave this workspace?'))) throw Error("Missing leave confirmation");
-  await read(`document.querySelector('button[phx-click="new-draft"]').click()`);
-  await wait('document.querySelector("#shell").dataset.dirty==="false"');
-  if (await guarded()) throw Error("Confirmed discard did not clear the local guard");
+  if (await read(`document.querySelector('button[phx-click="new-draft"]') !== null`)) throw Error("Removed draft button rendered");
   await read('window.liveSocket.disconnect()');
   await read('(()=>{const e=document.querySelector("#workspace-decision textarea");e.value="Unacknowledged offline draft";e.dispatchEvent(new Event("input",{bubbles:true}));})()');
   if (!await guarded()) throw Error("Unacknowledged offline input is unguarded");
-  if (await read('document.querySelector("#shell").dataset.dirty') !== 'false') throw Error("Offline draft unexpectedly acknowledged");
+  if (await read('document.querySelector("#shell").dataset.dirty') !== 'true') throw Error("Existing dirty draft unexpectedly cleared");
   await read('window.liveSocket.connect()');
   await wait('document.querySelector(".phx-connected #workspace-review")');
-  await read(`document.querySelector('button[phx-click="new-draft"]').click()`);
-  await wait('document.querySelector("#shell").dataset.dirty==="false" && document.querySelector("#workspace-decision textarea").value===""');
-  if (await guarded()) throw Error("Final explicit discard failed");
-  const result = {targetOnlyGuarded:true,cancelledLeavePreserved:true,explicitDiscardCleared:true,offlineInputGuarded:true,noDecisionSubmitted:true};
+  if (!await guarded()) throw Error("Reconnect lost the unsaved draft guard");
+  const result = {targetOnlyGuarded:true,cancelledLeavePreserved:true,newDraftButtonAbsent:true,offlineInputGuarded:true,noDecisionSubmitted:true};
   await (await import('node:fs/promises')).writeFile(`${out}/draft-guard.json`,JSON.stringify(result,null,2));
   return result;
 } finally {

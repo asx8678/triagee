@@ -42,6 +42,22 @@ LiveViews. The old stylesheet and links back to old screens are not loaded.
 Stored inventory, decisions and case evidence are unchanged.
 
 The workspace currently supports inventory inspection and local scoped decisions.
+In Vulnerabilities, **Add CVE** opens an optional dialog with the research list,
+accepts a CVE number and explicitly fetches its
+English description from NVD. Review the preview, then save it to the persistent
+research list. Duplicate IDs are saved only once. Research entries do not create
+affected deployments or change operational counts. This manual lookup works
+without enabling background intelligence collection and sends only the CVE ID
+to NVD; failed or unpublished lookups do not create entries.
+
+The **News** tab fetches this month's published critical CVEs from NVD (CVSS
+v3/v4) and recent vulnerability headlines from BleepingComputer when opened.
+Refresh reloads both sources independently; errors retain the last successful
+results in the current connection. The table shows CVE IDs, publication dates,
+CVSS scores and descriptions. This public news does not create findings,
+change inventory counts, or claim local exposure. Fetch timestamps and source
+links are visible. Each NVD severity query is capped at 2,000 records and the UI
+reports incomplete results if that limit is reached.
 Timeline retains its connected observation chart (fit/daily scale), detection and
 response table, day bands, weekday heatmap, KEV context and paged CVE event/case
 history. Complete saved-case histories expand read-only in place. Team/environment
