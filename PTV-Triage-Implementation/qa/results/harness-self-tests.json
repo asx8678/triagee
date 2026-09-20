@@ -1,0 +1,35 @@
+{
+  "target": "QA harness self-tests only, not application tests",
+  "passed": 7,
+  "total": 7,
+  "tests": [
+    {
+      "test": "Comparator accepts identical screenshot and geometry",
+      "passed": true
+    },
+    {
+      "test": "Comparator rejects deliberate visual drift",
+      "passed": true
+    },
+    {
+      "test": "Comparator rejects geometry drift even when pixels match",
+      "passed": true
+    },
+    {
+      "test": "Comparator rejects dimensions rather than rescaling",
+      "passed": true
+    },
+    {
+      "test": "Application runner refuses unmapped example before browser access",
+      "passed": true
+    },
+    {
+      "test": "Application runner requires test-environment acknowledgement",
+      "passed": true
+    },
+    {
+      "test": "Integrity tool detects tampering",
+      "passed": true
+    }
+  ]
+}

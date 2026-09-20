@@ -1,0 +1,24 @@
+<body>
+<a class="skip-link" href="#main">Skip to workspace</a>
+<div id="shell">
+<header class="topbar">
+<div class="brand"><svg aria-hidden="true" viewbox="0 0 32 32"><path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3"></path><path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3"></path></svg>PTV Triage</div>
+<nav aria-label="Main navigation" class="topnav" id="nav"></nav>
+<div class="topmeta"><span class="local-status">Local workspace</span><button aria-label="Data and settings" class="quiet" data-action="settings"><span class="settings-text">Data &amp; settings</span><svg class="icon-svg" viewbox="0 0 24 24"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"></path></svg></button></div>
+</header>
+<div aria-label="Shared scope filters" class="scopebar">
+<span class="scope-label">Scope</span>
+<label class="scope-group"><span class="sr-only">Team</span><select id="teamFilter"><option value="all">All teams</option><option value="data">Data</option><option value="alpha">Alpha</option><option value="beta">Beta</option><option value="platform">Platform</option><option value="unassigned">Unassigned</option></select></label>
+<label class="scope-group"><span class="sr-only">Environment</span><select id="envFilter"><option value="all">All environments</option><option value="prod">Production</option><option value="staging">Staging</option></select></label>
+<div class="dataset"><span class="tag">Sample deployment data</span></div>
+<button class="quiet" data-action="reset-filters" title="Clear team, environment and page filters">Reset scope</button>
+<button class="quiet freshness" data-action="data-health"><span style="font-size:10px">▲</span><span>Evidence has gaps</span><span aria-hidden="true">↗</span></button>
+</div>
+<main class="page" id="main" tabindex="-1"></main>
+<footer class="bottom-status"><strong>INTERACTIVE PROTOTYPE · SYNTHETIC DATA</strong><span>No external requests or real actions</span><span id="storageState"></span><span class="right">Sample clock: 19 Sep 2026, 10:00 UTC</span></footer>
+</div>
+<dialog aria-labelledby="inspectorTitle" class="inspector" id="inspector"></dialog>
+<dialog aria-labelledby="modalTitle" class="confirm" id="modal"></dialog>
+<div aria-live="polite" hidden="" id="toast" role="status"></div>
+
+</body>

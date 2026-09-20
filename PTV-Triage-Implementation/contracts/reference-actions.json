@@ -1,0 +1,387 @@
+{
+  "source": "reference/source/approved-exact.js",
+  "note": "Complete click-action inventory extracted from the reference event switch. Map every production action to an actual handler/test. Form-input behavior is included separately.",
+  "actions": [
+    {
+      "reference_action": "nav",
+      "operation_class": "read-or-local-ui",
+      "contract": "Navigate to destination; preserve global scope and noncommitted drafts.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "settings",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open compact settings summary; no import or outbound operation.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "data-health",
+      "operation_class": "read-or-local-ui",
+      "contract": "Read source/coverage details; no automatic refresh.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "policy",
+      "operation_class": "read-or-local-ui",
+      "contract": "Explain the versioned in-scope priority and evidence.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "reset-filters",
+      "operation_class": "read-or-local-ui",
+      "contract": "Reset visible scope/read filters; reconcile but never discard/expand draft targets silently.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "active-inventory",
+      "operation_class": "read-or-local-ui",
+      "contract": "Drill into exact active-CVE contributing scope.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "urgent-inventory",
+      "operation_class": "read-or-local-ui",
+      "contract": "Drill into exact in-scope immediate-priority set.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "unknown-inventory",
+      "operation_class": "read-or-local-ui",
+      "contract": "Drill into unknown-exposure target subset, retaining units.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "start-review",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open decision queue in current shared scope.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "team-review",
+      "operation_class": "read-or-local-ui",
+      "contract": "Set chosen team and open its exact decision queue, preserve environment.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "team-inventory",
+      "operation_class": "read-or-local-ui",
+      "contract": "Set chosen team and open active inventory, preserve environment.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "exceptions",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open exceptions view; retain active exposure semantics.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "inventory-view",
+      "operation_class": "read-or-local-ui",
+      "contract": "Change local inventory tab, reconcile selection.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "inspect",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open same advisory inspector from any page.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "event-detail",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open inspector History for exact event/advisory/scope.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "close-inspector",
+      "operation_class": "read-or-local-ui",
+      "contract": "Close only inspector; restore underlying context/focus.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "expand-inspector",
+      "operation_class": "read-or-local-ui",
+      "contract": "Toggle accepted widths, preserving tab/scroll/draft.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "inspector-tab",
+      "operation_class": "read-or-local-ui",
+      "contract": "Switch section only, with focus/selected-state handling.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "review-inspected",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open the inspected advisory in scope, not generic first queue item.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "queue-view",
+      "operation_class": "read-or-local-ui",
+      "contract": "Change work queue; preserve/reconcile current draft.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "select-review",
+      "operation_class": "read-or-local-ui",
+      "contract": "Select queue advisory without committing.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "toggle-queue",
+      "operation_class": "read-or-local-ui",
+      "contract": "Mobile queue/assessment switch; no draft loss.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "next-review",
+      "operation_class": "read-or-local-ui",
+      "contract": "Move to next item without committing.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "prev-review",
+      "operation_class": "read-or-local-ui",
+      "contract": "Move to previous item without committing.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "save-decision",
+      "operation_class": "explicit-local-commit",
+      "contract": "Validate and commit scoped local work, no external ticket.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "save-next",
+      "operation_class": "explicit-local-commit",
+      "contract": "Commit successfully before advancing; failure leaves current item/draft.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "confirm-decision",
+      "operation_class": "explicit-local-commit",
+      "contract": "Explicit scoped exception confirmation; cancel writes nothing.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "ticket-preview",
+      "operation_class": "read-or-local-ui",
+      "contract": "Read/preflight external destinations and payload; confirmation is separate.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "close-modal",
+      "operation_class": "read-or-local-ui",
+      "contract": "Cancel/close top dialog without implicit writes.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "density",
+      "operation_class": "read-or-local-ui",
+      "contract": "Change row density only; preserve state.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "export",
+      "operation_class": "explicit-export",
+      "contract": "Export exact filtered view and allowed scope metadata, no secrets.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "export-selected",
+      "operation_class": "explicit-export",
+      "contract": "Export exact selected items and scoped targets.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "export-events",
+      "operation_class": "explicit-export",
+      "contract": "Export exact time/type/scope event predicate.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "clear-selection",
+      "operation_class": "read-or-local-ui",
+      "contract": "Clear list selection only.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "batch-review",
+      "operation_class": "read-or-local-ui",
+      "contract": "Review exact selected advisory IDs, not a bulk decision.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "clear-batch",
+      "operation_class": "read-or-local-ui",
+      "contract": "Exit selected-only queue, preserve draft.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "timeline-tab",
+      "operation_class": "read-or-local-ui",
+      "contract": "Switch tracks/log/daily without losing shared scope/window.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "day-detail",
+      "operation_class": "read-or-local-ui",
+      "contract": "Drill to exact local day contributors with count units/coverage.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "save-view",
+      "operation_class": "read-or-local-ui",
+      "contract": "Open save-view naming dialog.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "saved-views",
+      "operation_class": "read-or-local-ui",
+      "contract": "Read current saved views.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "confirm-save-view",
+      "operation_class": "explicit-local-commit",
+      "contract": "Persist read filters/sort, not draft/secret content.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "load-view",
+      "operation_class": "read-or-local-ui",
+      "contract": "Restore valid read state; no implicit scope broadening if a target was removed.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "review-history",
+      "operation_class": "read-or-local-ui",
+      "contract": "Read unified scoped decision history with legacy provenance.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "reset-demo",
+      "operation_class": "demo-only",
+      "contract": "Synthetic fixture reset confirmation, not a production feature.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    },
+    {
+      "reference_action": "confirm-reset",
+      "operation_class": "demo-only",
+      "contract": "Reset only test/demo sample data; never map to production deletion.",
+      "production_handler": "TO_MAP_IN_REPOSITORY_AUDIT",
+      "test_ids": []
+    }
+  ],
+  "inputs": [
+    {
+      "reference_id": "teamFilter",
+      "contract": "Shared team scope; preserve draft identity."
+    },
+    {
+      "reference_id": "envFilter",
+      "contract": "Shared environment scope."
+    },
+    {
+      "reference_id": "inventorySearch",
+      "contract": "Case-insensitive read search; preserve cursor/focus."
+    },
+    {
+      "reference_id": "reviewSearch",
+      "contract": "Search current queue without committing."
+    },
+    {
+      "reference_id": "severityFilter",
+      "contract": "Severity filter; exact result set."
+    },
+    {
+      "reference_id": "sortFilter",
+      "contract": "Stable ordering with stable ID tie break."
+    },
+    {
+      "reference_id": "selectAll",
+      "contract": "Explicit page/all-results selection; indeterminate state."
+    },
+    {
+      "reference_id": "row-check",
+      "contract": "Select record, not open/commit."
+    },
+    {
+      "reference_id": "scope-check",
+      "contract": "Exact target selection; update both counts."
+    },
+    {
+      "reference_id": "decisionAction",
+      "contract": "Conditional fields; preserve common draft values."
+    },
+    {
+      "reference_id": "decisionOwner",
+      "contract": "Required responsible/attribution field; no invented auth."
+    },
+    {
+      "reference_id": "decisionDue",
+      "contract": "Real clock/timezone date validation."
+    },
+    {
+      "reference_id": "decisionReason",
+      "contract": "Required rationale; inert escaped text."
+    },
+    {
+      "reference_id": "windowFilter",
+      "contract": "Shared timeline/event-log range."
+    },
+    {
+      "reference_id": "eventFilter",
+      "contract": "Event-type filter with consistent counts."
+    },
+    {
+      "reference_id": "viewName",
+      "contract": "Validate saved-view name; no hidden side effects."
+    }
+  ]
+}

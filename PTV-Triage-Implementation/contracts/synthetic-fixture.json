@@ -1,0 +1,953 @@
+{
+  "synthetic": true,
+  "fixture_id": "ptv-approved-v1",
+  "clock": "2026-09-19T10:00:00.000Z",
+  "records": [
+    {
+      "id": "DEMO-2026-001",
+      "pkg": "log4j-core",
+      "severity": "Critical",
+      "priority": 1,
+      "scopes": [
+        {
+          "id": "s01",
+          "team": "data",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Internet",
+          "stale": false,
+          "service": "search-service",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        },
+        {
+          "id": "s02",
+          "team": "data",
+          "env": "staging",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "search-service",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-15T06:00:00Z",
+      "fix": true,
+      "kev": "Listed (sample)",
+      "due": "2026-09-17",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-15T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s01",
+            "s02"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s01",
+            "s02"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-19T09:42:00Z",
+          "description": "Observed in latest sample import",
+          "scope_ids": [
+            "s01",
+            "s02"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-002",
+      "pkg": "chromium",
+      "severity": "Critical",
+      "priority": 1,
+      "scopes": [
+        {
+          "id": "s03",
+          "team": "beta",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Internet",
+          "stale": false,
+          "service": "customer-web",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-09-09T06:00:00Z",
+      "fix": true,
+      "kev": "Listed (sample)",
+      "due": "2026-09-18",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s03"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-19T09:42:00Z",
+          "description": "Observed in latest sample import",
+          "scope_ids": [
+            "s03"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-003",
+      "pkg": "libssl",
+      "severity": "High",
+      "priority": 1,
+      "scopes": [
+        {
+          "id": "s04",
+          "team": "alpha",
+          "env": "prod",
+          "status": "planned",
+          "observation": "observed",
+          "exposure": "Internet",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Listed (sample)",
+      "due": "2026-09-18",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s04"
+          ]
+        },
+        {
+          "type": "requested",
+          "date": "2026-09-10T09:00:00Z",
+          "description": "Remediation plan recorded locally",
+          "scope_ids": [
+            "s04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-004",
+      "pkg": "grpc",
+      "severity": "Critical",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s05",
+          "team": "alpha",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        },
+        {
+          "id": "s06",
+          "team": "alpha",
+          "env": "staging",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-22",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s05",
+            "s06"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s05",
+            "s06"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-005",
+      "pkg": "systemd",
+      "severity": "Critical",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s07",
+          "team": "beta",
+          "env": "prod",
+          "status": "investigating",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": true,
+          "service": "customer-web",
+          "observed": "2026-09-09T06:00:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": false,
+      "kev": "Unknown",
+      "due": "2026-09-22",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s07"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s07"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-006",
+      "pkg": "n8n",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s08",
+          "team": "alpha",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Internet",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-09-09T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s08"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-007",
+      "pkg": "zlib",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s09",
+          "team": "alpha",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        },
+        {
+          "id": "s10",
+          "team": "beta",
+          "env": "staging",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": true,
+          "service": "customer-web",
+          "observed": "2026-09-09T06:00:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-20",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s09",
+            "s10"
+          ]
+        },
+        {
+          "type": "absent",
+          "date": "2026-08-27T06:00:00Z",
+          "description": "Not observed in a comparable sample scan; repair not verified",
+          "scope_ids": [
+            "s09",
+            "s10"
+          ]
+        },
+        {
+          "type": "reobserved",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed again in sample inventory",
+          "scope_ids": [
+            "s09",
+            "s10"
+          ]
+        }
+      ],
+      "reopened": true
+    },
+    {
+      "id": "DEMO-2026-008",
+      "pkg": "curl",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s11",
+          "team": "platform",
+          "env": "prod",
+          "status": "planned",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "build-platform",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s11"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s11"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-009",
+      "pkg": "libxml2",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s12",
+          "team": "data",
+          "env": "prod",
+          "status": "verification",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "search-service",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s12"
+          ]
+        },
+        {
+          "type": "requested",
+          "date": "2026-09-12T14:00:00Z",
+          "description": "Verification requested; current observation state unchanged",
+          "scope_ids": [
+            "s12"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-010",
+      "pkg": "argo-workflows",
+      "severity": "Critical",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s13",
+          "team": "platform",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "build-platform",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": true
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": false,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-28T06:00:00Z",
+          "description": "First recorded observation with scanner suppression; approver and decision date unknown",
+          "scope_ids": [
+            "s13"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-011",
+      "pkg": "nodejs",
+      "severity": "Medium",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s14",
+          "team": "alpha",
+          "env": "prod",
+          "status": "accepted",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "Sample time-limited exception",
+          "owner": "Demo operator",
+          "due": "2026-09-23",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s14"
+          ]
+        },
+        {
+          "type": "accepted",
+          "date": "2026-09-12T11:00:00Z",
+          "description": "Risk accepted for a specific scope until 23 Sep, sample operator",
+          "scope_ids": [
+            "s14"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-012",
+      "pkg": "openssl",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s15",
+          "team": "beta",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "customer-web",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s15"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s15"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-013",
+      "pkg": "rsync",
+      "severity": "Low",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s16",
+          "team": "data",
+          "env": "staging",
+          "status": "accepted",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "search-service",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "Sample time-limited exception",
+          "owner": "Demo operator",
+          "due": "2026-09-22",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s16"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s16"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-014",
+      "pkg": "busybox",
+      "severity": "Medium",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s17",
+          "team": "unassigned",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "unmapped-worker",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": false,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s17"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s17"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-015",
+      "pkg": "traefik",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s18",
+          "team": "platform",
+          "env": "prod",
+          "status": "not_observed",
+          "observation": "not_observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "build-platform",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s18"
+          ]
+        },
+        {
+          "type": "absent",
+          "date": "2026-08-26T06:00:00Z",
+          "description": "Not observed in comparable sample scan; no remediation evidence",
+          "scope_ids": [
+            "s18"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-016",
+      "pkg": "unbound",
+      "severity": "Medium",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s19",
+          "team": "platform",
+          "env": "prod",
+          "status": "verified",
+          "observation": "verified_remediated",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "build-platform",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s19"
+          ]
+        },
+        {
+          "type": "verified",
+          "date": "2026-09-14T08:30:00Z",
+          "description": "Remediation verified against sample deployment and scan evidence",
+          "scope_ids": [
+            "s19"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-017",
+      "pkg": "mongodb-c-driver",
+      "severity": "Low",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s20",
+          "team": "data",
+          "env": "prod",
+          "status": "planned",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "search-service",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s20"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s20"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-018",
+      "pkg": "git",
+      "severity": "High",
+      "priority": 2,
+      "scopes": [
+        {
+          "id": "s21",
+          "team": "alpha",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": false,
+          "service": "api-gateway",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-09-09T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s21"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-019",
+      "pkg": "pip",
+      "severity": "Medium",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s22",
+          "team": "unassigned",
+          "env": "staging",
+          "status": "investigating",
+          "observation": "observed",
+          "exposure": "Unknown",
+          "stale": true,
+          "service": "unmapped-worker",
+          "observed": "2026-09-09T06:00:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": false,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s22"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s22"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DEMO-2026-020",
+      "pkg": "libpng",
+      "severity": "Medium",
+      "priority": 3,
+      "scopes": [
+        {
+          "id": "s23",
+          "team": "beta",
+          "env": "prod",
+          "status": "needs_review",
+          "observation": "observed",
+          "exposure": "Internal",
+          "stale": false,
+          "service": "customer-web",
+          "observed": "2026-09-19T09:42:00Z",
+          "reason": "",
+          "owner": "",
+          "due": "2026-09-26",
+          "suppressed": false
+        }
+      ],
+      "first": "2026-08-24T06:00:00Z",
+      "fix": true,
+      "kev": "Unknown",
+      "due": "2026-09-26",
+      "events": [
+        {
+          "type": "new",
+          "date": "2026-08-24T06:00:00Z",
+          "description": "First recorded observation",
+          "scope_ids": [
+            "s23"
+          ]
+        },
+        {
+          "type": "observed",
+          "date": "2026-09-09T06:00:00Z",
+          "description": "Observed in sample import",
+          "scope_ids": [
+            "s23"
+          ]
+        }
+      ]
+    }
+  ]
+}

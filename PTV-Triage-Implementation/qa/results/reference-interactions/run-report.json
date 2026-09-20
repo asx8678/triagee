@@ -1,0 +1,7 @@
+{
+  "target": "immutable standalone reference, not production application",
+  "exit_code": 0,
+  "browser_path": "/usr/bin/chromium",
+  "source_test": "reference/original-design/test_prototype.py",
+  "reference_modified": false
+}

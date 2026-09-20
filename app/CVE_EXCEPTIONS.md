@@ -1,6 +1,12 @@
 # CVE assessment and local exceptions
 
-## Start from a CVE
+This guide preserves the case-exception domain and former operator procedure.
+The old finding/case/exception URLs now redirect to the workspace, so the steps
+below are not currently mounted screens. See [README](README.md) for current UI
+availability and [review actions](docs/REVIEW_ACTIONS.md) for placement decisions;
+those decisions are distinct from the case-bound exceptions described here.
+
+## Former case workflow: start from a CVE
 
 1. Click the CVE in Findings, Activity, Timeline or the review queue.
 2. At **Triage / action required**, find the exact package/version, image, team and environment. Click **Open assessment**. This opens the existing case or explicitly captures local evidence for a new one; simply viewing a CVE never creates cases.

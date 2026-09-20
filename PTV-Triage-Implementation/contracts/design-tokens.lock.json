@@ -1,0 +1,49 @@
+{
+  "authority": "Exact :root extraction; component-specific values are in reference/source/approved-exact.css. Do not substitute older approximate token JSON.",
+  "tokens": {
+    "--ink": "#17263c",
+    "--muted": "#57677c",
+    "--line": "#d5dde7",
+    "--paper": "#fff",
+    "--bg": "#f3f5f8",
+    "--navy": "#15243a",
+    "--blue": "#2554ce",
+    "--blue-soft": "#edf3ff",
+    "--orange": "#f66b29",
+    "--red": "#b52832",
+    "--red-soft": "#fff0f1",
+    "--amber": "#8c5a0b",
+    "--amber-soft": "#fff7e7",
+    "--green": "#196945",
+    "--green-soft": "#edf7f1",
+    "--purple": "#7144a7",
+    "--radius": "3px",
+    "--row": "49px"
+  },
+  "geometry": {
+    "shell_rows_px": [
+      52,
+      46,
+      "minmax(0,1fr)",
+      26
+    ],
+    "page_gutter_default_px": 24,
+    "page_gutter_wide_px": 32,
+    "review_queue_default_px": 278,
+    "review_queue_wide_px": 310,
+    "review_decision_default_px": 300,
+    "review_decision_wide_px": 350,
+    "review_gap_px": 14,
+    "inspector_default": "min(780px,96vw)",
+    "inspector_expanded": "min(1240px,100vw)",
+    "standard_control_min_height_px": 34,
+    "scope_control_min_height_px": 30,
+    "review_footer_min_height_px": 58
+  },
+  "breakpoints": {
+    "wide_min_px": 1750,
+    "stack_decision_max_px": 1150,
+    "compact_nav_max_px": 850,
+    "single_review_pane_max_px": 640
+  }
+}

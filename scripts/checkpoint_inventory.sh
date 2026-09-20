@@ -14,7 +14,6 @@ mkdir -p "$out"
 # Tracked files modified in place and reviewed individually for this checkpoint.
 modified=(
   .gitignore
-  IMPLEMENTATION_ROADMAP.md
 )
 
 # Untracked source trees taken whole; ignore rules inside them still apply.
@@ -26,22 +25,9 @@ trees=(
   .github
 )
 
-# Root documents written by this workstream.
+# Current repository entry point and verification scripts.
 docs=(
-  CURRENT_STATUS.md
-  CHECKPOINT_REVIEW.md
-  NEXT_STEPS_PLAN.md
-  A_B_EXECUTION.md
-  FINDINGS_PAGING_EXECUTION.md
-  INTEL_WIRING_EXECUTION.md
-  UI_REDESIGN_BRIEF.md
-  UI_REDESIGN_PLAN.md
-  UI_REDESIGN_REPORT.md
-  UI_IMPROVEMENTS_PLAN.md
-  UI_IMPROVEMENTS_REPORT.md
-  OVERVIEW_INTELLIGENCE_PLAN.md
-  CODE_REVIEW_FIXES_EXECUTION.md
-  TAILWIND_EXECUTION.md
+  README.md
   scripts/checkpoint_inventory.sh
   scripts/tailwind_assets_probe.exs
 )
@@ -63,7 +49,10 @@ mapfile -t evidence_docs < <(git ls-files --cached --others --exclude-standard e
   git ls-files --cached --others --exclude-standard -- "${trees[@]}"
   printf '%s\n' "${present_docs[@]}"
   if [ "${#evidence_docs[@]}" -gt 0 ]; then printf '%s\n' "${evidence_docs[@]}"; fi
-} | sed '/^$/d' | sort -u > "$out/source-only.paths"
+} | sed '/^$/d' | sort -u | while IFS= read -r path; do
+  # Git still lists unstaged deletions; inventory only files that remain.
+  if [ -f "$path" ]; then printf '%s\n' "$path"; fi
+done > "$out/source-only.paths"
 
 # Self-check: no credential, database, dependency, build or crash artifact may
 # appear in the inventory. Fails loudly instead of producing a bad list.
@@ -81,7 +70,7 @@ shasum -a 256 $(cat "$out/source-only.paths") | sed "s|$root/||" > "$out/MANIFES
   echo "## Harness state (tracked modifications plus untracked journals)"
   git status --short -- .pi | sed 's/^/  /'
   echo
-  echo "## Root input document, excluded pending explicit owner approval"
+  echo "## Historical architecture input outside checkpoint scope"
   for f in 'architecture(3).md'; do
     if [ -f "$f" ]; then echo "  $f"; fi
   done

@@ -1,0 +1,307 @@
+[
+  {
+    "test": "Initial dashboard totals are derived and correct",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Team filter updates overview",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Environment filter narrows affected scopes",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "P1 card drills into precisely matching CVEs",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Search is case insensitive and filters records",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Filtered-empty state is explicit",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector opens with persistent review action",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector affected content works",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector history content works",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector evidence content works",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector summary content works",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector expands",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Escape dismisses inspector",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Batch selection is explicit",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Batch review retains exact selected CVEs",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Missing decision details show validation errors",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Explicit scope count updates",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Only selected scope changes",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "A work decision never fixes the observed vulnerability",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Partial decisions retain remaining review work",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Risk acceptance requires explicit confirmation",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Cancelling acceptance makes no state change",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Scoped acceptance leaves vulnerability active",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Decision audit retains exact scope IDs",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Timeline does not silently cap CVE lanes",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Timeline marker opens same inspector on history",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Timeline window narrows real event range",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Future heatmap day is not shown as zero",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Unknown coverage days are visibly distinct",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Day drilldown is interactive",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Accessible event log provides all events",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Saved view restores filter state in-session",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 1920x1080",
+    "passed": true,
+    "detail": "{'x': 1741.140625, 'y': 991.5, 'width': 115.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 1920px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 1920x1080",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 1600x900",
+    "passed": true,
+    "detail": "{'x': 1429.140625, 'y': 811.5, 'width': 115.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 1600px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 1600x900",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 1440x900",
+    "passed": true,
+    "detail": "{'x': 1269.140625, 'y': 811.5, 'width': 115.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 1440px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 1440x900",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 1366x768",
+    "passed": true,
+    "detail": "{'x': 1195.140625, 'y': 679.5, 'width': 115.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 1366px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 1366x768",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 1280x720",
+    "passed": true,
+    "detail": "{'x': 1109.140625, 'y': 631.5, 'width': 115.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 1280px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 1280x720",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 1024x768",
+    "passed": true,
+    "detail": "{'x': 863.140625, 'y': 679.5, 'width': 111.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 1024px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 1024x768",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 768x1024",
+    "passed": true,
+    "detail": "{'x': 607.140625, 'y': 935.5, 'width': 111.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 768px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 768x1024",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 640x900",
+    "passed": true,
+    "detail": "{'x': 490.140625, 'y': 813.5, 'width': 111.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 640px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 640x900",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Review Save & next is on-screen at 390x844",
+    "passed": true,
+    "detail": "{'x': 240.140625, 'y': 757.5, 'width': 111.859375, 'height': 34}"
+  },
+  {
+    "test": "No document-wide horizontal overflow at 390px",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "Inspector actions on-screen at 390x844",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "test": "No JavaScript runtime errors",
+    "passed": true,
+    "detail": "[]"
+  },
+  {
+    "test": "Prototype makes no network requests",
+    "passed": true,
+    "detail": "[]"
+  }
+]

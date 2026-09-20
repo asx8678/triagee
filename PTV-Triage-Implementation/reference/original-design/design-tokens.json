@@ -1,0 +1,80 @@
+{
+  "name": "PTV Triage Precision",
+  "version": "1.0",
+  "purpose": "Proposed visual tokens; not a production framework dependency",
+  "color": {
+    "ink": "#17263C",
+    "muted": "#57677C",
+    "border": "#D5DDE7",
+    "surface": "#FFFFFF",
+    "background": "#F3F5F8",
+    "navigation": "#15243A",
+    "primary": "#2554CE",
+    "primarySoft": "#EDF3FF",
+    "brandAccent": "#F66B29",
+    "critical": "#B52832",
+    "criticalSoft": "#FFF0F1",
+    "warning": "#8C5A0B",
+    "warningSoft": "#FFF7E7",
+    "verified": "#196945",
+    "verifiedSoft": "#EDF7F1",
+    "reobserved": "#7144A7"
+  },
+  "radius": {
+    "panel": 3,
+    "control": 3,
+    "badge": 2
+  },
+  "borderWidth": 1,
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "type": {
+    "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif",
+    "pageTitle": 24,
+    "sectionTitle": 16,
+    "selectedItemTitle": 19,
+    "body": 14,
+    "denseContent": 12,
+    "metadata": 11,
+    "tertiaryLabel": 10,
+    "metric": 31,
+    "lineHeight": 1.45
+  },
+  "layout": {
+    "topbar": 52,
+    "scopebar": 46,
+    "pageGutter": 24,
+    "controlHeight": 34,
+    "tableRowComfortable": 49,
+    "tableRowCompact": 40,
+    "reviewQueueWidth": 278,
+    "reviewDecisionWidth": 300,
+    "inspectorDefaultWidth": 780,
+    "inspectorExpandedWidth": 1240,
+    "actionRowMinHeight": 58
+  },
+  "focus": {
+    "outlineWidth": 2,
+    "outlineOffset": 3,
+    "color": "#2554CE"
+  },
+  "breakpoints": {
+    "wide": 1750,
+    "stackDecision": 1150,
+    "compactNavigation": 850,
+    "singleAssessment": 640
+  },
+  "meaning": {
+    "blue": "Interactive action or observation; labels distinguish them",
+    "red": "Critical severity / immediate work, never automatically compromise",
+    "amber": "High-priority warning, uncertainty or explicit exception",
+    "green": "Verified positive outcome only, not first detection",
+    "purple": "Re-observation with an explicit marker label"
+  }
+}

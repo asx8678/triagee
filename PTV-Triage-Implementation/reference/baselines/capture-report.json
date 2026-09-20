@@ -1,0 +1,334 @@
+{
+  "reference_sha256": "24e9924c98c459fa8dae750a9e71a3ef2d23808946a0225b8adc71e66beb06d2",
+  "python": "3.13.5",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "playwright": "1.57.0",
+  "locale": "en-US",
+  "timezone": "UTC",
+  "device_scale_factor": 1,
+  "origin": "page.set_content / about:blank; fresh isolated context per case",
+  "clock": "2026-09-19T10:00:00Z, set in reference source",
+  "cases": [
+    {
+      "id": "overview-1600",
+      "screenshot": "overview-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "e46d362d9ac05d32d7a080b754e2b21d8b3063ffe12311cb500c83e179b21e41",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inventory-1600",
+      "screenshot": "inventory-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "5d6458beb0bef8488397330453f2eb97eb33524a73b4c7cd8ec1b8137be61565",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1600",
+      "screenshot": "review-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "79e8b54f010874e5a61eb8d0bed00767a3bff8224f7c743b43dbed3b7e448a49",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inspector-summary-1600",
+      "screenshot": "inspector-summary-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "3acd8a0b8b4eaa7bb7413727dc8441481f3c457c5658a9d9af24d99b251b936c",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inspector-affected-1600",
+      "screenshot": "inspector-affected-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "ae83bd0117c2e302a6ab7fdc0864cfc5c6b0a55565f7a8291766391d3bc98818",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inspector-history-1600",
+      "screenshot": "inspector-history-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "c02394689fc8c4bf16e087ff7c6beef4c4441ff16b078fe377b071027d354e87",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inspector-evidence-1600",
+      "screenshot": "inspector-evidence-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "9869bed725acf381613097dbb07997bd6c5d1f4813685751e36830c8b232eae0",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inspector-expanded-1600",
+      "screenshot": "inspector-expanded-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "b3d0d17b8a3d276f92dcbe977a455fe311a1f3fee8221ed9de0f51117644e2c8",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "timeline-tracks-1600",
+      "screenshot": "timeline-tracks-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "3dcb711711ab8863c8c3df78fcfcff3777fec033e726db77434337612f8351c3",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "timeline-log-1600",
+      "screenshot": "timeline-log-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "41fa85ff6800a97cfd997d035baa3f9bc31929b524d76777ed35869756727a69",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "timeline-daily-1600",
+      "screenshot": "timeline-daily-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "ebb5b9eec391e773d8d6b0ab219380ffe9a3d16becd48fedb150ebf33a143ef2",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "settings-1600",
+      "screenshot": "settings-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "e7c9e8b82a36cdaeb26e085d15dce4ed16702dd908417c4dd279196afe77acde",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-validation-1600",
+      "screenshot": "review-validation-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "d20624a8f2d738a37e2ff25d8db3e6bb039fb1b906809e795896148e5df4e04f",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-acceptance-1600",
+      "screenshot": "review-acceptance-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "900b4992f74ccd0ee528df88dc98b770e8d36e130eb8a1024151926727a8649c",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-ticket-preview-1600",
+      "screenshot": "review-ticket-preview-1600.png",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "32ee2390337d9b96539acee165c8ff7226be0934fc8561e4842b04e1e42bcbd3",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1920",
+      "screenshot": "review-1920.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "99efca4f540c7790cccd0225f283125163184bd061c510434b4b59b85c4af3a9",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1366",
+      "screenshot": "review-1366.png",
+      "width": 1366,
+      "height": 768,
+      "sha256": "9fe8c6fa1fdf876ff0400ddb4b0a3884cd5d9b977eb9d1c77c05b285e6d7a610",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1280",
+      "screenshot": "review-1280.png",
+      "width": 1280,
+      "height": 720,
+      "sha256": "0d62382f0672ba2386134981d56df678f0d7a14998eb1517f6d79833a711da60",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1151",
+      "screenshot": "review-1151.png",
+      "width": 1151,
+      "height": 768,
+      "sha256": "8d79def86c824e7cbd832f772941b2d9ee82a0602d109c9d1e31baf947f74fb0",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1150",
+      "screenshot": "review-1150.png",
+      "width": 1150,
+      "height": 768,
+      "sha256": "8e0129b06483bbde039372a3ffaf52261abe85a4f2be25d843bfbc9c58e916ff",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1024",
+      "screenshot": "review-1024.png",
+      "width": 1024,
+      "height": 768,
+      "sha256": "6fd191ad96765686b3b2ab523f913c92868d93576111726ed88d694c26e2a8bd",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-851",
+      "screenshot": "review-851.png",
+      "width": 851,
+      "height": 900,
+      "sha256": "03e48acef31aa0eaffe9f893e210c13bc033c0cdf13c0c3f2c98d9b207afec7f",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-850",
+      "screenshot": "review-850.png",
+      "width": 850,
+      "height": 900,
+      "sha256": "d2fcdff95108ce2e90f3c649463c910c4bc74b8502e95182b5321652102fb665",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-641",
+      "screenshot": "review-641.png",
+      "width": 641,
+      "height": 900,
+      "sha256": "07d6172bb527b4099b74dacffd3aeff4756ca9e3a70d614ab8b6e274b82cf481",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-640",
+      "screenshot": "review-640.png",
+      "width": 640,
+      "height": 900,
+      "sha256": "6486d24a6ea8b92469d3b527aae1291296933ea7ba1028d3c2b1dce50fe423a3",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-390",
+      "screenshot": "review-390.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "9106ff4ed3ea0f717017c279cdab9121143c93c73023d47262653ee651fcc20e",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-queue-390",
+      "screenshot": "review-queue-390.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "a97250211efd69ae4d11f1bdf59aecc3fe8582729c2b12aaa7dfd25c1b3785b4",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "inspector-390",
+      "screenshot": "inspector-390.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "15da3ff99e0d755a6e6ff3ce23918129017497afcfd5c89a9c9c277a0803c907",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "overview-390",
+      "screenshot": "overview-390.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "c752dc7f340faf2942b4f03902e09667fd209e747da71b49ea950754be89bbe1",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "overview-1920",
+      "screenshot": "overview-1920.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "c33a19249a17a243f7bb033ce2dc700007c0126f596c741bf4f9bd4b0510e6d7",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1749",
+      "screenshot": "review-1749.png",
+      "width": 1749,
+      "height": 1000,
+      "sha256": "cf3238bc48e764af3f7c723f8354bb47029ff0a519c4fc21ebe524d137ba7955",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    },
+    {
+      "id": "review-1750",
+      "screenshot": "review-1750.png",
+      "width": 1750,
+      "height": 1000,
+      "sha256": "00f202cd78a0f2f31740853878133ba05a7e02f974037f9a1b428218286ed960",
+      "runtime_errors": [],
+      "network_requests": [],
+      "document_overflow": false
+    }
+  ],
+  "browser_version": "144.0.7559.96"
+}

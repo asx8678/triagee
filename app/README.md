@@ -62,7 +62,9 @@ Timeline retains its connected observation chart (fit/daily scale), detection an
 response table, day bands, weekday heatmap, KEV context and paged CVE event/case
 history. Complete saved-case histories expand read-only in place. Team/environment
 scopes, 4/8/12-week windows and old timeline bookmarks are preserved. Imports, replay, intelligence
-refresh, external tickets and AI are not yet available in this UI. Decision history
+refresh and AI are not yet available in this UI. Explicit Azure ticket creation
+uses the separate [review actions](docs/REVIEW_ACTIONS.md) workflow and `ADO_*`
+configuration. Decision history
 also remains in the CVE inspector.
 
 ## Historical workflows (retired screen URLs)
@@ -88,7 +90,7 @@ additional currently accessible screens.
   and [PR7_HISTORY.md](PR7_HISTORY.md).
 - **Imports (`/imports`):** preview an approved historical snapshot, then review
   and explicitly confirm. Apply rechecks evidence under the import lock;
-  changed previews must be uploaded again. See [UI_WORKFLOWS_PLAN.md](UI_WORKFLOWS_PLAN.md).
+  changed previews must be uploaded again. See [Domain/API guide](docs/DOMAIN_API.md#approved-historical-snapshot-import).
 
 ### Decision policy
 
@@ -159,11 +161,22 @@ not a substitute for database-backed verification.
 
 `mise x -- mix assets.setup` builds Tailwind and copies Phoenix browser clients.
 The pinned standalone Tailwind CLI downloads on a cold cache; subsequent builds
-use the cached binary. CSS source is `assets/css/tailwind.css`; semantic overrides
-are `priv/static/assets/css/app.css`. Generated vendor assets and Tailwind output
-are not committed. No Node bundler or browser CDN is required.
+use the cached binary. CSS source is `assets/css/tailwind.css`; the current root
+layout loads generated `priv/static/assets/css/tailwind.css` followed by
+`priv/static/assets/css/workspace.css`. The retained legacy `app.css` is not loaded.
+`source(none)` plus the explicit `lib/` source keeps dependency/build/evidence
+files out of Tailwind scanning; the development watcher uses the same profile.
+
+Phoenix vendor scripts are copied from fetched dependencies pinned in `mix.lock`,
+not a browser CDN. The root loads those deferred scripts before the tracked
+`priv/static/assets/js/app.js` LiveSocket bootstrap. Generated vendor assets and
+Tailwind output are not committed; setup/test/quality aliases build them. If the
+browser reports missing Phoenix scripts, run `mix assets.setup` and reload.
+Release packaging must include generated assets, not only tracked sources.
+No Node bundler is required.
 
 See [REAL_CVES.md](REAL_CVES.md) for the separate public-reference dataset workflow.
-Historical development notes and verification reports are preserved in
-[README_HISTORY.md](README_HISTORY.md). Their old PASS/FAIL verdicts and temporary
-artifact paths do not certify the current code.
+See [Domain/API guide](docs/DOMAIN_API.md) for retained backend contracts and
+[Workspace boundaries](docs/WORKSPACE.md) for source paths, rollback safety and
+remaining acceptance requirements. Historical test counts do not certify the
+current code.

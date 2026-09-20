@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "files": [
+    {
+      "file": "ptv-triage-prototype.html",
+      "sha256": "24e9924c98c459fa8dae750a9e71a3ef2d23808946a0225b8adc71e66beb06d2",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/01-overview.png",
+      "sha256": "e46d362d9ac05d32d7a080b754e2b21d8b3063ffe12311cb500c83e179b21e41",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/02-review.png",
+      "sha256": "584ee87abba8c7f9289316b8575a959c1bb25041b496694d4a996bb7a96feeba",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/03-inventory.png",
+      "sha256": "b53640cb886e2abd9fba105ae7a68150d48f09148c4a7b776d0615a90f67fe6a",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/04-inspector.png",
+      "sha256": "f3fe86f23dd0f53b7ceaaa5d6198db5245eaa695fcf91a112660ce6b4551788e",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/05-timeline.png",
+      "sha256": "ac40ae989d495c6a0ecb780a22bb0d89cc5eabaf2a11372e1dee401d6c9063a3",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/06-review-laptop.png",
+      "sha256": "ad596e99c7c73f30fd680f6bc2a731d39538795d9d671cc478939ac167487b09",
+      "byte_identical_to_original_bundle": true
+    },
+    {
+      "file": "previews/07-review-mobile.png",
+      "sha256": "9106ff4ed3ea0f717017c279cdab9121143c93c73023d47262653ee651fcc20e",
+      "byte_identical_to_original_bundle": true
+    }
+  ]
+}

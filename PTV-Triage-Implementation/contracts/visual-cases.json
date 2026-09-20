@@ -1,0 +1,230 @@
+{
+  "fixture_id": "ptv-approved-v1",
+  "note": "setup_js is only for the immutable standalone reference. Do not execute it against production. All viewport dimensions are CSS pixels, DPR=1.",
+  "cases": [
+    {
+      "id": "overview-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "",
+      "description": "Default landing, synthetic fixture, all teams and environments"
+    },
+    {
+      "id": "inventory-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('inventory')",
+      "description": "Active inventory; no selection; default comfortable rows"
+    },
+    {
+      "id": "review-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('review')",
+      "description": "First CVE; two scopes checked; blank owner and note"
+    },
+    {
+      "id": "inspector-summary-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('inventory');showInspector('DEMO-2026-001','summary')",
+      "description": "Inspector summary; underlying active inventory"
+    },
+    {
+      "id": "inspector-affected-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('inventory');showInspector('DEMO-2026-001','affected')",
+      "description": "Inspector affected; underlying active inventory"
+    },
+    {
+      "id": "inspector-history-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('inventory');showInspector('DEMO-2026-001','history')",
+      "description": "Inspector history; underlying active inventory"
+    },
+    {
+      "id": "inspector-evidence-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('inventory');showInspector('DEMO-2026-001','evidence')",
+      "description": "Inspector evidence; underlying active inventory"
+    },
+    {
+      "id": "inspector-expanded-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('inventory');showInspector('DEMO-2026-001');document.getElementById('inspector').classList.add('expanded')",
+      "description": "Expanded inspector"
+    },
+    {
+      "id": "timeline-tracks-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "state.timelineTab='tracks';navigate('timeline')",
+      "description": "Timeline tracks; twelve-week window"
+    },
+    {
+      "id": "timeline-log-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "state.timelineTab='log';navigate('timeline')",
+      "description": "Timeline log; twelve-week window"
+    },
+    {
+      "id": "timeline-daily-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "state.timelineTab='daily';state.eventFilter='observations';navigate('timeline')",
+      "description": "Timeline daily; twelve-week window"
+    },
+    {
+      "id": "settings-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "settings()",
+      "description": "Data and settings modal over overview"
+    },
+    {
+      "id": "review-validation-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('review');prepareDecision(false)",
+      "description": "Inline validation; no committed action"
+    },
+    {
+      "id": "review-acceptance-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('review');document.getElementById('decisionAction').value='accepted';captureDraft();render();document.getElementById('decisionOwner').value='Demo operator';document.getElementById('decisionReason').value='Temporary acceptance for the explicitly selected demo scopes. Compensating controls require verification.';prepareDecision(false)",
+      "description": "Risk acceptance confirmation; no commit"
+    },
+    {
+      "id": "review-ticket-preview-1600",
+      "width": 1600,
+      "height": 1000,
+      "setup_js": "navigate('review');ticketPreview()",
+      "description": "Disconnected Azure DevOps preview; no outbound operation"
+    },
+    {
+      "id": "review-1920",
+      "width": 1920,
+      "height": 1080,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-1366",
+      "width": 1366,
+      "height": 768,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-1280",
+      "width": 1280,
+      "height": 720,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-1151",
+      "width": 1151,
+      "height": 768,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-1150",
+      "width": 1150,
+      "height": 768,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-1024",
+      "width": 1024,
+      "height": 768,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-851",
+      "width": 851,
+      "height": 900,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-850",
+      "width": 850,
+      "height": 900,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-641",
+      "width": 641,
+      "height": 900,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-640",
+      "width": 640,
+      "height": 900,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-390",
+      "width": 390,
+      "height": 844,
+      "setup_js": "navigate('review')",
+      "description": "Default assessment at responsive boundary or supported viewport"
+    },
+    {
+      "id": "review-queue-390",
+      "width": 390,
+      "height": 844,
+      "setup_js": "navigate('review');state.queueShown=true;render()",
+      "description": "Mobile queue replaces assessment; not a squeezed extra column"
+    },
+    {
+      "id": "inspector-390",
+      "width": 390,
+      "height": 844,
+      "setup_js": "navigate('inventory');showInspector('DEMO-2026-001')",
+      "description": "Mobile inspector with fixed action footer"
+    },
+    {
+      "id": "overview-390",
+      "width": 390,
+      "height": 844,
+      "setup_js": "",
+      "description": "Mobile overview with two-by-two metrics"
+    },
+    {
+      "id": "overview-1920",
+      "width": 1920,
+      "height": 1080,
+      "setup_js": "",
+      "description": "Wide overview at 32px page gutters"
+    },
+    {
+      "id": "review-1749",
+      "width": 1749,
+      "height": 1000,
+      "setup_js": "navigate('review')",
+      "description": "Just below wide breakpoint"
+    },
+    {
+      "id": "review-1750",
+      "width": 1750,
+      "height": 1000,
+      "setup_js": "navigate('review')",
+      "description": "Wide breakpoint with 310px queue and 350px decision"
+    }
+  ]
+}

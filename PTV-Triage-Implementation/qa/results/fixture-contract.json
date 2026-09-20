@@ -1,0 +1,335 @@
+{
+  "target": "synthetic fixture only; production semantic acceptance is separate",
+  "passed": 82,
+  "total": 82,
+  "tests": [
+    {
+      "test": "Fixture is explicitly synthetic",
+      "passed": true
+    },
+    {
+      "test": "Fixture clock fixed",
+      "passed": true
+    },
+    {
+      "test": "20unique advisory IDs",
+      "passed": true
+    },
+    {
+      "test": "Scope IDs are unique",
+      "passed": true
+    },
+    {
+      "test": "all/all/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/all/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/all/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/all/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "all/prod/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/prod/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/prod/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/prod/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "all/staging/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/staging/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/staging/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "all/staging/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "data/all/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/all/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/all/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/all/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "data/prod/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/prod/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/prod/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/prod/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "data/staging/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/staging/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/staging/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "data/staging/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/all/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/all/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/all/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/all/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/prod/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/prod/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/prod/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/prod/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/staging/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/staging/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/staging/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "alpha/staging/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/all/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/all/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/all/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/all/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/prod/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/prod/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/prod/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/prod/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/staging/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/staging/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/staging/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "beta/staging/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/all/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/all/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/all/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/all/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/prod/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/prod/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/prod/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/prod/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/staging/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/staging/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/staging/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "platform/staging/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/all/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/all/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/all/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/all/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/prod/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/prod/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/prod/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/prod/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/staging/active_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/staging/decision_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/staging/priority_cve_ids",
+      "passed": true
+    },
+    {
+      "test": "unassigned/staging/unknown_exposure_scope_ids",
+      "passed": true
+    },
+    {
+      "test": "Default metric quantities",
+      "passed": true
+    },
+    {
+      "test": "Production-only sample plan leaves staging unresolved",
+      "passed": true
+    },
+    {
+      "test": "Production-only plan preserves active ID set",
+      "passed": true
+    },
+    {
+      "test": "Staging keeps advisory in decision queue",
+      "passed": true
+    },
+    {
+      "test": "Sample exception does not remove active CVE",
+      "passed": true
+    },
+    {
+      "test": "Event scopes reference known targets",
+      "passed": true
+    }
+  ]
+}

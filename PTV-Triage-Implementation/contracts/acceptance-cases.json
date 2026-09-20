@@ -1,0 +1,1177 @@
+{
+  "version": "1.0",
+  "status": "Requirements catalog only; target application not supplied or tested.",
+  "count": 90,
+  "cases": [
+    {
+      "id": "SHELL-01",
+      "priority": "must-pass",
+      "title": "Default landing",
+      "given": "Open the application root",
+      "expected": "Overview is default, with four destinations and shared scope bar.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-02",
+      "priority": "must-pass",
+      "title": "Navigation geometry",
+      "given": "Render the 1600\u00d71000 fixture",
+      "expected": "52px nav,46px scope,26px status; exact accepted colors and typography.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-03",
+      "priority": "must-pass",
+      "title": "Shared filter",
+      "given": "Change team/environment then navigate all destinations",
+      "expected": "Same predicate is applied; no silent reset/broadening.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-04",
+      "priority": "must-pass",
+      "title": "Browser history",
+      "given": "Search/filter, inspect, review, then Back/Forward",
+      "expected": "Logical read state and selected context restored; no mutation.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-05",
+      "priority": "must-pass",
+      "title": "No unintended network",
+      "given": "Navigate/inspect all pages with integration spies",
+      "expected": "No ticket, AI, refresh or new third-party asset requests.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-06",
+      "priority": "must-pass",
+      "title": "Small viewport",
+      "given": "Use 390\u00d7844 and breakpoint boundaries",
+      "expected": "No document overflow; correct queue-or-assessment layout.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-07",
+      "priority": "must-pass",
+      "title": "Real zoom",
+      "given": "Use actual 200% browser zoom",
+      "expected": "Main actions remain reachable; readable reflow.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "SHELL-08",
+      "priority": "must-pass",
+      "title": "Local identity",
+      "given": "Use existing no-sign-in mode",
+      "expected": "Self-declared names are not represented as authenticated approval.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-01",
+      "priority": "must-pass",
+      "title": "Fixture totals",
+      "given": "Reset ptv-approved-v1 visual fixture",
+      "expected": "18 active CVEs,12 decision CVEs,3 P1 CVEs,10 unknown-exposure scopes.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-02",
+      "priority": "must-pass",
+      "title": "Scope count sets",
+      "given": "Apply all 18 team/environment combinations",
+      "expected": "Contributing sets match fixture-expectations.json, not only totals.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-03",
+      "priority": "must-pass",
+      "title": "Active drilldown",
+      "given": "Click Active metric",
+      "expected": "Returns exact active CVE set and matching underlying targets.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-04",
+      "priority": "must-pass",
+      "title": "Decision drilldown",
+      "given": "Click decision metric and team counts",
+      "expected": "Exact queue predicate retained with current environment.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-05",
+      "priority": "must-pass",
+      "title": "Unknown unit",
+      "given": "Click unknown-exposure metric",
+      "expected": "Scope count and exact unknown target subset retained.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-06",
+      "priority": "must-pass",
+      "title": "Shared ownership",
+      "given": "CVE exists in two teams",
+      "expected": "Global dedupe; within-team dedupe; team rows not misleadingly summed.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-07",
+      "priority": "must-pass",
+      "title": "Unassigned",
+      "given": "Remove team ownership on test target",
+      "expected": "Unassigned bucket and action are visible; no dropped count.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-08",
+      "priority": "must-pass",
+      "title": "Reference-only record",
+      "given": "Add public-reference advisory without deployment",
+      "expected": "Excluded from operational active counts.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-09",
+      "priority": "must-pass",
+      "title": "Stale/partial summary",
+      "given": "Delay or fail one relevant source",
+      "expected": "As-of/coverage qualifier; no false current/safe total.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "OVERVIEW-10",
+      "priority": "must-pass",
+      "title": "Scoped priority",
+      "given": "P1 in production, lower priority in staging for same CVE",
+      "expected": "Staging-only view does not inherit out-of-scope P1.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-01",
+      "priority": "must-pass",
+      "title": "Visible filters",
+      "given": "Open inventory",
+      "expected": "Search and primary controls immediately visible, not accordion-hidden.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-02",
+      "priority": "must-pass",
+      "title": "Search",
+      "given": "Search ZLIB, then nonexistent string",
+      "expected": "Case-insensitive exact result; truthful filtered-empty state.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-03",
+      "priority": "must-pass",
+      "title": "Stable sort",
+      "given": "Sort priority/age with ties",
+      "expected": "Stable ID tie breaker; no selection loss.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-04",
+      "priority": "must-pass",
+      "title": "Selection separation",
+      "given": "Click checkbox then CVE link",
+      "expected": "Checkbox selects only; link opens inspector only.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-05",
+      "priority": "must-pass",
+      "title": "Select-all scope",
+      "given": "Use paginated results and header checkbox",
+      "expected": "Explicit current-page/all-matching semantics; correct indeterminate state.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-06",
+      "priority": "must-pass",
+      "title": "Batch review",
+      "given": "Select two CVEs and Review selected",
+      "expected": "Only those advisory IDs in queue; target decisions still explicit.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-07",
+      "priority": "must-pass",
+      "title": "Saved view",
+      "given": "Save and reload filters/sort",
+      "expected": "Correct read state restored, no draft/secret content persisted in view.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-08",
+      "priority": "must-pass",
+      "title": "Long values",
+      "given": "Use long registry path/version/description",
+      "expected": "No outer overflow or character-by-character version breaks.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-09",
+      "priority": "must-pass",
+      "title": "Mixed states",
+      "given": "Same CVE open/accepted/stale across targets",
+      "expected": "Facts coexist or clearly summarized as Mixed, not false resolved.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-10",
+      "priority": "must-pass",
+      "title": "Pagination completeness",
+      "given": "Use larger fixture exceeding initial page size",
+      "expected": "True total/pagination; no silent cap.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-11",
+      "priority": "must-pass",
+      "title": "Export scope",
+      "given": "Export filtered and selected sets",
+      "expected": "Only intended targets; metadata/units correct; no secrets.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INVENTORY-12",
+      "priority": "must-pass",
+      "title": "Density",
+      "given": "Toggle compact/comfortable",
+      "expected": "40px base compact and49px comfortable reference rows; context preserved.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-01",
+      "priority": "must-pass",
+      "title": "Shared component",
+      "given": "Open from overview/inventory/review/timeline",
+      "expected": "Same inspector structure and correct record/scope.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-02",
+      "priority": "must-pass",
+      "title": "Default/expanded width",
+      "given": "Open and expand at a 1600px viewport",
+      "expected": "780px default;1240px expanded; no lost tab/draft.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-03",
+      "priority": "must-pass",
+      "title": "Sections",
+      "given": "Use Summary/Affected/History/Evidence",
+      "expected": "Actual scoped data and useful unknown states in each.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-04",
+      "priority": "must-pass",
+      "title": "Fixed controls",
+      "given": "Scroll body to bottom at 1280\u00d7720",
+      "expected": "Close/Expand/Review reachable and unobscured.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-05",
+      "priority": "must-pass",
+      "title": "Return state",
+      "given": "Close after multiple tab changes",
+      "expected": "Exact originating table position/filter/selection retained.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-06",
+      "priority": "must-pass",
+      "title": "Direct review",
+      "given": "Activate Review this CVE",
+      "expected": "Same advisory/scoped assessment, not generic queue first item.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-07",
+      "priority": "must-pass",
+      "title": "Scope filtered out",
+      "given": "Deep link outside current scope",
+      "expected": "Explicit out-of-scope state, never fallback to all targets.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-08",
+      "priority": "must-pass",
+      "title": "History scoping",
+      "given": "Decision exists only for another team",
+      "expected": "No false attribution to current filtered team; legacy/global labeled.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-09",
+      "priority": "must-pass",
+      "title": "Focus lifecycle",
+      "given": "Keyboard open/tab/Escape/close",
+      "expected": "Top-dialog containment and logical opener restoration.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INSPECTOR-10",
+      "priority": "must-pass",
+      "title": "Mobile",
+      "given": "Use 390\u00d7844 long evidence",
+      "expected": "Readable drawer and persistent action footer.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-01",
+      "priority": "must-pass",
+      "title": "No wizard",
+      "given": "Open eligible CVE",
+      "expected": "Evidence/targets/decision on single workspace, not four mandatory steps.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-02",
+      "priority": "must-pass",
+      "title": "Default scope count",
+      "given": "Open DEMO-2026-001",
+      "expected": "s01 and s02 selected, both count indicators show 2.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-03",
+      "priority": "must-pass",
+      "title": "Production-only commit",
+      "given": "Uncheck s02; request remediation for s01",
+      "expected": "Only s01 is planned; s02 remains unresolved; active CVE total stays 18.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-04",
+      "priority": "must-pass",
+      "title": "Draft preservation",
+      "given": "Type note,inspect,next,previous",
+      "expected": "Same values/action/date/target IDs recovered; not submitted.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-05",
+      "priority": "must-pass",
+      "title": "Filter narrowing",
+      "given": "Draft contains hidden scope then narrow/broaden filter",
+      "expected": "No silent irreversible target deletion or expansion.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-06",
+      "priority": "must-pass",
+      "title": "New target",
+      "given": "Import new deployment while draft open",
+      "expected": "New target not auto-selected; explicit reconciliation.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-07",
+      "priority": "must-pass",
+      "title": "Required fields",
+      "given": "Submit missing owner/rationale/targets/date",
+      "expected": "Visible accessible errors, no commit, draft intact.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-08",
+      "priority": "must-pass",
+      "title": "Action fields",
+      "given": "Change all four action types",
+      "expected": "Correct conditional labels/validation; no state change yet.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-09",
+      "priority": "must-pass",
+      "title": "Save without next",
+      "given": "Commit valid local decision with Save decision",
+      "expected": "Confirmed scoped result without forced unintended advancement.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-10",
+      "priority": "must-pass",
+      "title": "Save and next",
+      "given": "Commit through Save and next",
+      "expected": "Success before deterministic advance; remaining scopes stay actionable.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-11",
+      "priority": "must-pass",
+      "title": "Failed save",
+      "given": "Make backend reject/time out before confirmation",
+      "expected": "No success toast; fields/position preserved; retry safe.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-12",
+      "priority": "must-pass",
+      "title": "Double click",
+      "given": "Submit same operation twice",
+      "expected": "Single logical decision/audit result; pending state visible.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-13",
+      "priority": "must-pass",
+      "title": "Concurrency",
+      "given": "Another operator changes targets/decision before save",
+      "expected": "Conflict/reconcile flow, no silent overwrite.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-14",
+      "priority": "must-pass",
+      "title": "Footer visibility",
+      "given": "Scroll evidence/decision at all supported sizes",
+      "expected": "Primary actions unobscured; save-without-next available at compact widths.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-15",
+      "priority": "must-pass",
+      "title": "Queue toggle",
+      "given": "Switch mobile queue/assessment",
+      "expected": "Same selected advisory and draft; one pane at a time.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-16",
+      "priority": "must-pass",
+      "title": "Decision history",
+      "given": "Save and open history",
+      "expected": "Immutable scoped audit with time/attribution/rationale.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-17",
+      "priority": "must-pass",
+      "title": "Risk cancel",
+      "given": "Prepare acceptance and Cancel",
+      "expected": "No state/count/audit change; draft intact.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-18",
+      "priority": "must-pass",
+      "title": "Risk confirm",
+      "given": "Accept only s01 through a chosen UTC date",
+      "expected": "Exact immutable target set ; active CVEs stay 18; s02 stays unresolved; correct expiry.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-19",
+      "priority": "must-pass",
+      "title": "Expiry",
+      "given": "Advance test clock beyond inclusive end date",
+      "expected": "Affected target returns to work; history preserved.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-20",
+      "priority": "must-pass",
+      "title": "Attribution",
+      "given": "No-sign-in operator enters name",
+      "expected": "Stored/displayed self-declared, not authenticated.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-21",
+      "priority": "must-pass",
+      "title": "Request verification",
+      "given": "Save verification work",
+      "expected": "Not a verified fix; observation unchanged.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-22",
+      "priority": "must-pass",
+      "title": "Inert text",
+      "given": "Use markup-like note/advisory payload",
+      "expected": "Rendered inert; no script execution.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "REVIEW-23",
+      "priority": "must-pass",
+      "title": "All work complete",
+      "given": "Finish current queue",
+      "expected": "Truthful no-decisions state, not Safe; active view still reachable.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-01",
+      "priority": "must-pass",
+      "title": "Sibling views",
+      "given": "Open tracks/log/daily",
+      "expected": "Three sibling tabs, not large stacked page.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-02",
+      "priority": "must-pass",
+      "title": "Event reconciliation",
+      "given": "Filter window/type/team/environment",
+      "expected": "Same eventIDs/units across stats,tracks and log.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-03",
+      "priority": "must-pass",
+      "title": "All lanes",
+      "given": "Dataset exceeds old 12/50-lane limit",
+      "expected": "Explicit complete pagination/scroll access, no hidden cap.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-04",
+      "priority": "must-pass",
+      "title": "Marker semantics",
+      "given": "Exercise all event types",
+      "expected": "Distinct labels/shapes; no green new detection or false fixed.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-05",
+      "priority": "must-pass",
+      "title": "Marker detail",
+      "given": "Click recorded event",
+      "expected": "Same advisory inspector on scoped History with exact event.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-06",
+      "priority": "must-pass",
+      "title": "Coverage gaps",
+      "given": "Incomplete/missing/comparable completed scans",
+      "expected": "Different coverage states; absence inferred only when supported.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-07",
+      "priority": "must-pass",
+      "title": "No repair inference",
+      "given": "Disappear or close ticket without verification",
+      "expected": "No longer observed/verification pending, not Fixed.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-08",
+      "priority": "must-pass",
+      "title": "Future day",
+      "given": "Inspect tomorrow on heatmap",
+      "expected": "Dash/unavailable, not zero.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-09",
+      "priority": "must-pass",
+      "title": "Distinct daily count",
+      "given": "Same CVE first appears in multiple scopes on day",
+      "expected": "Distinct-CVE bucket deduped; scope event count separately labeled.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-10",
+      "priority": "must-pass",
+      "title": "Unknown dates",
+      "given": "Import suppression with unknown action date",
+      "expected": "Unknown preserved; no less-than-minute fabricated response.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-11",
+      "priority": "must-pass",
+      "title": "Out-of-order import",
+      "given": "Import late older observation and duplicate scan",
+      "expected": "Evidence time ordering correct; no duplicate first/event inflation.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-12",
+      "priority": "must-pass",
+      "title": "Time boundaries",
+      "given": "Window endpoints and timezone/daylight-saving fixtures",
+      "expected": "Deterministic buckets/expiry; not double-counted.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "TIMELINE-13",
+      "priority": "must-pass",
+      "title": "Accessible alternative",
+      "given": "Use event log without chart interaction",
+      "expected": "Every relevant event accessible with same scope/window.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-01",
+      "priority": "must-pass",
+      "title": "Disconnected",
+      "given": "No Azure DevOps or AI configuration",
+      "expected": "Local review works; no giant blocking setup section.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-02",
+      "priority": "must-pass",
+      "title": "Preview",
+      "given": "Prepare ticket operation",
+      "expected": "Exact team destinations/payload/existing links before outbound confirm.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-03",
+      "priority": "must-pass",
+      "title": "Preview invalidation",
+      "given": "Edit targets/note after preview",
+      "expected": "Material change requires renewed preview/confirmation.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-04",
+      "priority": "must-pass",
+      "title": "Separate local save",
+      "given": "Save remediation decision normally",
+      "expected": "No external work item created.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-05",
+      "priority": "must-pass",
+      "title": "Partial success",
+      "given": "One test team succeeds, one fails",
+      "expected": "Successful link retained; retry only remaining targets.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-06",
+      "priority": "must-pass",
+      "title": "Unknown remote result",
+      "given": "Simulate timeout after possible creation",
+      "expected": "Reconcile before retry; no guarantee of exactly-once.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-07",
+      "priority": "must-pass",
+      "title": "AI advisory only",
+      "given": "Run sanctioned test AI advice",
+      "expected": "Explicit provider/context, advice not approval/fix.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-08",
+      "priority": "must-pass",
+      "title": "Settings read",
+      "given": "Open data settings/health",
+      "expected": "No automatic refresh or exposed secret.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "INTEGRATION-09",
+      "priority": "must-pass",
+      "title": "Reset",
+      "given": "Inspect production settings",
+      "expected": "Demo reset not mapped to production deletion.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "MIGRATION-01",
+      "priority": "must-pass",
+      "title": "Legacy route",
+      "given": "Follow old CVE/review/history deep links",
+      "expected": "Compatible route to equivalent record/scope/history.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "MIGRATION-02",
+      "priority": "must-pass",
+      "title": "Legacy meaning",
+      "given": "Migrate global/unknown-scope assessments",
+      "expected": "Original meaning/provenance retained; no invented author/date/scope.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "MIGRATION-03",
+      "priority": "must-pass",
+      "title": "Data reconciliation",
+      "given": "Compare pre/post stable IDs and history",
+      "expected": "No loss or duplicated decision; counts explained.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "MIGRATION-04",
+      "priority": "must-pass",
+      "title": "Rollback",
+      "given": "Revert feature flag on isolated migrated copy",
+      "expected": "Old reads remain compatible; new writes recoverable; no data loss.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    },
+    {
+      "id": "MIGRATION-05",
+      "priority": "must-pass",
+      "title": "Delivery honesty",
+      "given": "Inspect final report",
+      "expected": "Reference/application tests distinguished; actual screenshots/results and limitations.",
+      "required_evidence": [
+        "repository test path/result",
+        "screenshot or structured assertion appropriate to case"
+      ],
+      "implementation_status": "NOT_RUN_IN_TARGET_APP",
+      "notes": "Translate compact wording into actual tests; supplied fixtures are synthetic, not production findings."
+    }
+  ]
+}

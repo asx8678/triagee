@@ -1,5 +1,12 @@
 # Guided action review
 
+This documents the retained legacy guided-review backend and former UI procedure.
+`/triage` and `/triage/:cve` now redirect to the workspace rather than mounting
+these screens. See [README](../README.md) for current routes and
+[Review actions](REVIEW_ACTIONS.md) for the separate workspace `ADO_*` integration.
+The `TRIAGE_AZURE_*` and AI contracts below still describe the legacy adapters.
+
+
 `/triage` is an action-required queue across all severities, with one card per CVE. `/triage/:cve` guides the operator through description/libraries, teams and exposure, explainable local risk, and a final human action. Historical assessment tools remain at `/triage/history`. Fixed and scanner-suppressed occurrences, inactive placements, actively covered whitelist scopes and scopes with confirmed remediation tickets are excluded. A partial whitelist never hides uncovered teams. Ticketing is not a deployed fix. Queue priority is local policy, not a fabricated CVSS score.
 
 Run migrations before use: `cd app && mise exec -- mix ecto.migrate`.

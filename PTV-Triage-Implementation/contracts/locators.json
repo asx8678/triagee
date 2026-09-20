@@ -1,0 +1,224 @@
+{
+  "fixture_ready_selector": "[data-testid=\"fixture-ready\"][data-fixture-id=\"ptv-approved-v1\"]",
+  "fixture_marker_rule": "Render only in isolated QA fixture mode. This is not an unauthenticated production fixture switch.",
+  "locators": [
+    {
+      "name": "shell",
+      "reference_selector": "#shell",
+      "recommended_test_id": "shell",
+      "production_selector": "[data-testid=\"shell\"]"
+    },
+    {
+      "name": "navigation",
+      "reference_selector": ".topbar",
+      "recommended_test_id": "navigation",
+      "production_selector": "[data-testid=\"navigation\"]"
+    },
+    {
+      "name": "scopebar",
+      "reference_selector": ".scopebar",
+      "recommended_test_id": "scopebar",
+      "production_selector": "[data-testid=\"scopebar\"]"
+    },
+    {
+      "name": "page",
+      "reference_selector": ".page",
+      "recommended_test_id": "page",
+      "production_selector": "[data-testid=\"page\"]"
+    },
+    {
+      "name": "overview-metrics",
+      "reference_selector": ".metrics",
+      "recommended_test_id": "overview-metrics",
+      "production_selector": "[data-testid=\"overview-metrics\"]"
+    },
+    {
+      "name": "metric-active",
+      "reference_selector": "[data-action=\"active-inventory\"].metric",
+      "recommended_test_id": "metric-active",
+      "production_selector": "[data-testid=\"metric-active\"]"
+    },
+    {
+      "name": "metric-decision",
+      "reference_selector": "[data-action=\"start-review\"].metric",
+      "recommended_test_id": "metric-decision",
+      "production_selector": "[data-testid=\"metric-decision\"]"
+    },
+    {
+      "name": "metric-priority",
+      "reference_selector": "[data-action=\"urgent-inventory\"].metric",
+      "recommended_test_id": "metric-priority",
+      "production_selector": "[data-testid=\"metric-priority\"]"
+    },
+    {
+      "name": "metric-unknown",
+      "reference_selector": "[data-action=\"unknown-inventory\"].metric",
+      "recommended_test_id": "metric-unknown",
+      "production_selector": "[data-testid=\"metric-unknown\"]"
+    },
+    {
+      "name": "inventory-search",
+      "reference_selector": "#inventorySearch",
+      "recommended_test_id": "inventory-search",
+      "production_selector": "[data-testid=\"inventory-search\"]"
+    },
+    {
+      "name": "inventory-table",
+      "reference_selector": ".data-table",
+      "recommended_test_id": "inventory-table",
+      "production_selector": "[data-testid=\"inventory-table\"]"
+    },
+    {
+      "name": "review-queue",
+      "reference_selector": ".queue-list",
+      "recommended_test_id": "review-queue",
+      "production_selector": "[data-testid=\"review-queue\"]"
+    },
+    {
+      "name": "review-workspace",
+      "reference_selector": ".review-workspace",
+      "recommended_test_id": "review-workspace",
+      "production_selector": "[data-testid=\"review-workspace\"]"
+    },
+    {
+      "name": "review-content",
+      "reference_selector": ".review-content",
+      "recommended_test_id": "review-content",
+      "production_selector": "[data-testid=\"review-content\"]"
+    },
+    {
+      "name": "evidence-column",
+      "reference_selector": ".evidence-column",
+      "recommended_test_id": "evidence-column",
+      "production_selector": "[data-testid=\"evidence-column\"]"
+    },
+    {
+      "name": "decision-column",
+      "reference_selector": ".decision-column",
+      "recommended_test_id": "decision-column",
+      "production_selector": "[data-testid=\"decision-column\"]"
+    },
+    {
+      "name": "decision-action",
+      "reference_selector": "#decisionAction",
+      "recommended_test_id": "decision-action",
+      "production_selector": "[data-testid=\"decision-action\"]"
+    },
+    {
+      "name": "decision-owner",
+      "reference_selector": "#decisionOwner",
+      "recommended_test_id": "decision-owner",
+      "production_selector": "[data-testid=\"decision-owner\"]"
+    },
+    {
+      "name": "decision-date",
+      "reference_selector": "#decisionDue",
+      "recommended_test_id": "decision-date",
+      "production_selector": "[data-testid=\"decision-date\"]"
+    },
+    {
+      "name": "decision-note",
+      "reference_selector": "#decisionReason",
+      "recommended_test_id": "decision-note",
+      "production_selector": "[data-testid=\"decision-note\"]"
+    },
+    {
+      "name": "review-footer",
+      "reference_selector": ".review-footer",
+      "recommended_test_id": "review-footer",
+      "production_selector": "[data-testid=\"review-footer\"]"
+    },
+    {
+      "name": "save-decision",
+      "reference_selector": "[data-action=\"save-decision\"]",
+      "recommended_test_id": "save-decision",
+      "production_selector": "[data-testid=\"save-decision\"]"
+    },
+    {
+      "name": "save-next",
+      "reference_selector": "[data-action=\"save-next\"]",
+      "recommended_test_id": "save-next",
+      "production_selector": "[data-testid=\"save-next\"]"
+    },
+    {
+      "name": "inspector",
+      "reference_selector": "#inspector",
+      "recommended_test_id": "inspector",
+      "production_selector": "[data-testid=\"inspector\"]"
+    },
+    {
+      "name": "inspector-body",
+      "reference_selector": ".inspector-body",
+      "recommended_test_id": "inspector-body",
+      "production_selector": "[data-testid=\"inspector-body\"]"
+    },
+    {
+      "name": "inspector-footer",
+      "reference_selector": ".inspector-foot",
+      "recommended_test_id": "inspector-footer",
+      "production_selector": "[data-testid=\"inspector-footer\"]"
+    },
+    {
+      "name": "inspector-close",
+      "reference_selector": "[data-action=\"close-inspector\"]",
+      "recommended_test_id": "inspector-close",
+      "production_selector": "[data-testid=\"inspector-close\"]"
+    },
+    {
+      "name": "inspector-expand",
+      "reference_selector": "[data-action=\"expand-inspector\"]",
+      "recommended_test_id": "inspector-expand",
+      "production_selector": "[data-testid=\"inspector-expand\"]"
+    },
+    {
+      "name": "review-inspected",
+      "reference_selector": "[data-action=\"review-inspected\"]",
+      "recommended_test_id": "review-inspected",
+      "production_selector": "[data-testid=\"review-inspected\"]"
+    },
+    {
+      "name": "timeline-chart",
+      "reference_selector": ".timeline-chart",
+      "recommended_test_id": "timeline-chart",
+      "production_selector": "[data-testid=\"timeline-chart\"]"
+    },
+    {
+      "name": "timeline-window",
+      "reference_selector": "#windowFilter",
+      "recommended_test_id": "timeline-window",
+      "production_selector": "[data-testid=\"timeline-window\"]"
+    },
+    {
+      "name": "event-filter",
+      "reference_selector": "#eventFilter",
+      "recommended_test_id": "event-filter",
+      "production_selector": "[data-testid=\"event-filter\"]"
+    },
+    {
+      "name": "heatmap",
+      "reference_selector": ".heatmap",
+      "recommended_test_id": "heatmap",
+      "production_selector": "[data-testid=\"heatmap\"]"
+    },
+    {
+      "name": "confirm-dialog",
+      "reference_selector": "#modal",
+      "recommended_test_id": "confirm-dialog",
+      "production_selector": "[data-testid=\"confirm-dialog\"]"
+    },
+    {
+      "name": "confirm-decision",
+      "reference_selector": "[data-action=\"confirm-decision\"]",
+      "recommended_test_id": "confirm-decision",
+      "production_selector": "[data-testid=\"confirm-decision\"]"
+    }
+  ],
+  "parameterized": {
+    "cve_link": "[data-testid=\"cve-open\"][data-cve-id=\"DEMO-2026-001\"]",
+    "queue_item": "[data-testid=\"queue-item\"][data-cve-id=\"DEMO-2026-001\"]",
+    "scope_checkbox": "[data-testid=\"scope-checkbox\"][data-scope-id=\"s01\"]",
+    "nav": "[data-testid=\"nav-review\"]",
+    "inspector_tab": "[data-testid=\"inspector-tab-history\"]",
+    "timeline_tab": "[data-testid=\"timeline-tab-log\"]"
+  }
+}

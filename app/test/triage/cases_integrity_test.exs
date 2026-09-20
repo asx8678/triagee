@@ -2,7 +2,7 @@ defmodule Triage.CasesIntegrityTest do
   @moduledoc """
   Adversarial integration tests for the PR 2 review-case contract in `Triage.Cases`.
 
-  These tests exercise the public contract from `app/PR2_PLAN.md` end to end:
+  These tests exercise the public contract from `app/docs/DOMAIN_API.md` end to end:
   concurrent-open convergence, GET-path purity, database-enforced append-only
   evidence/reviews/events, refresh semantics, exact retry replay vs token
   reuse, conflict and rollback atomicity, scope separation and source-table

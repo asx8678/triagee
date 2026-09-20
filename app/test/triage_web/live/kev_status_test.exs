@@ -1,6 +1,6 @@
 defmodule TriageWeb.KevStatusTest do
   @moduledoc """
-  KEV source freshness on the CVE surfaces (CVE_VISIBILITY_PLAN phase 2.2).
+  KEV source freshness on the CVE surfaces.
 
   Findings, queue, case header and timeline each show the cache source, the
   whole-source row count and the latest refresh result/timestamp once — with or

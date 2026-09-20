@@ -1,0 +1,396 @@
+{
+  "target": "actual screenshots supplied by caller; reference/application distinction must be recorded separately",
+  "baseline_directory": "/mnt/data/PTV-Triage-Implementation/reference/baselines",
+  "actual_directory": "/mnt/data/ptv-handoff-work/recheck",
+  "threshold": 16,
+  "max_diff_ratio": 0.005,
+  "geometry_skipped": false,
+  "passed": 32,
+  "total": 32,
+  "cases": [
+    {
+      "id": "overview-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 37,
+        "errors": []
+      }
+    },
+    {
+      "id": "inventory-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 25,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "inspector-summary-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 32,
+        "errors": []
+      }
+    },
+    {
+      "id": "inspector-affected-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 36,
+        "errors": []
+      }
+    },
+    {
+      "id": "inspector-history-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 32,
+        "errors": []
+      }
+    },
+    {
+      "id": "inspector-evidence-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 33,
+        "errors": []
+      }
+    },
+    {
+      "id": "inspector-expanded-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 32,
+        "errors": []
+      }
+    },
+    {
+      "id": "timeline-tracks-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 27,
+        "errors": []
+      }
+    },
+    {
+      "id": "timeline-log-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 25,
+        "errors": []
+      }
+    },
+    {
+      "id": "timeline-daily-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 16,
+        "errors": []
+      }
+    },
+    {
+      "id": "settings-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 41,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-validation-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-acceptance-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 38,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-ticket-preview-1600",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 38,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1920",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1366",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1280",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1151",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1150",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1024",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-851",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-850",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 33,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-641",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 33,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-640",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 30,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-390",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 30,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-queue-390",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 18,
+        "errors": []
+      }
+    },
+    {
+      "id": "inspector-390",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 32,
+        "errors": []
+      }
+    },
+    {
+      "id": "overview-390",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 37,
+        "errors": []
+      }
+    },
+    {
+      "id": "overview-1920",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 37,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1749",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    },
+    {
+      "id": "review-1750",
+      "passed": true,
+      "changed_pixels": 0,
+      "changed_ratio": 0.0,
+      "pixel_passed": true,
+      "geometry": {
+        "passed": true,
+        "elements_compared": 34,
+        "errors": []
+      }
+    }
+  ]
+}

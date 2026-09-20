@@ -1,0 +1,396 @@
+{
+  "fixture_id": "ptv-approved-v1",
+  "cases": [
+    {
+      "team": "all",
+      "environment": "all",
+      "active_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-002",
+        "DEMO-2026-003",
+        "DEMO-2026-004",
+        "DEMO-2026-005",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-008",
+        "DEMO-2026-009",
+        "DEMO-2026-010",
+        "DEMO-2026-011",
+        "DEMO-2026-012",
+        "DEMO-2026-013",
+        "DEMO-2026-014",
+        "DEMO-2026-017",
+        "DEMO-2026-018",
+        "DEMO-2026-019",
+        "DEMO-2026-020"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-002",
+        "DEMO-2026-004",
+        "DEMO-2026-005",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-010",
+        "DEMO-2026-012",
+        "DEMO-2026-014",
+        "DEMO-2026-018",
+        "DEMO-2026-019",
+        "DEMO-2026-020"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-002",
+        "DEMO-2026-003"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s02",
+        "s05",
+        "s07",
+        "s09",
+        "s10",
+        "s13",
+        "s15",
+        "s17",
+        "s21",
+        "s22"
+      ]
+    },
+    {
+      "team": "all",
+      "environment": "prod",
+      "active_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-002",
+        "DEMO-2026-003",
+        "DEMO-2026-004",
+        "DEMO-2026-005",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-008",
+        "DEMO-2026-009",
+        "DEMO-2026-010",
+        "DEMO-2026-011",
+        "DEMO-2026-012",
+        "DEMO-2026-014",
+        "DEMO-2026-017",
+        "DEMO-2026-018",
+        "DEMO-2026-020"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-002",
+        "DEMO-2026-004",
+        "DEMO-2026-005",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-010",
+        "DEMO-2026-012",
+        "DEMO-2026-014",
+        "DEMO-2026-018",
+        "DEMO-2026-020"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-002",
+        "DEMO-2026-003"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s05",
+        "s07",
+        "s09",
+        "s13",
+        "s15",
+        "s17",
+        "s21"
+      ]
+    },
+    {
+      "team": "all",
+      "environment": "staging",
+      "active_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-004",
+        "DEMO-2026-007",
+        "DEMO-2026-013",
+        "DEMO-2026-019"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-004",
+        "DEMO-2026-007",
+        "DEMO-2026-019"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s02",
+        "s10",
+        "s22"
+      ]
+    },
+    {
+      "team": "data",
+      "environment": "all",
+      "active_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-009",
+        "DEMO-2026-013",
+        "DEMO-2026-017"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s02"
+      ]
+    },
+    {
+      "team": "data",
+      "environment": "prod",
+      "active_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-009",
+        "DEMO-2026-017"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "unknown_exposure_scope_ids": []
+    },
+    {
+      "team": "data",
+      "environment": "staging",
+      "active_cve_ids": [
+        "DEMO-2026-001",
+        "DEMO-2026-013"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-001"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s02"
+      ]
+    },
+    {
+      "team": "alpha",
+      "environment": "all",
+      "active_cve_ids": [
+        "DEMO-2026-003",
+        "DEMO-2026-004",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-011",
+        "DEMO-2026-018"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-004",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-018"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-003"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s05",
+        "s09",
+        "s21"
+      ]
+    },
+    {
+      "team": "alpha",
+      "environment": "prod",
+      "active_cve_ids": [
+        "DEMO-2026-003",
+        "DEMO-2026-004",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-011",
+        "DEMO-2026-018"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-004",
+        "DEMO-2026-006",
+        "DEMO-2026-007",
+        "DEMO-2026-018"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-003"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s05",
+        "s09",
+        "s21"
+      ]
+    },
+    {
+      "team": "alpha",
+      "environment": "staging",
+      "active_cve_ids": [
+        "DEMO-2026-004"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-004"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": []
+    },
+    {
+      "team": "beta",
+      "environment": "all",
+      "active_cve_ids": [
+        "DEMO-2026-002",
+        "DEMO-2026-005",
+        "DEMO-2026-007",
+        "DEMO-2026-012",
+        "DEMO-2026-020"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-002",
+        "DEMO-2026-005",
+        "DEMO-2026-007",
+        "DEMO-2026-012",
+        "DEMO-2026-020"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-002"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s07",
+        "s10",
+        "s15"
+      ]
+    },
+    {
+      "team": "beta",
+      "environment": "prod",
+      "active_cve_ids": [
+        "DEMO-2026-002",
+        "DEMO-2026-005",
+        "DEMO-2026-012",
+        "DEMO-2026-020"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-002",
+        "DEMO-2026-005",
+        "DEMO-2026-012",
+        "DEMO-2026-020"
+      ],
+      "priority_cve_ids": [
+        "DEMO-2026-002"
+      ],
+      "unknown_exposure_scope_ids": [
+        "s07",
+        "s15"
+      ]
+    },
+    {
+      "team": "beta",
+      "environment": "staging",
+      "active_cve_ids": [
+        "DEMO-2026-007"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-007"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": [
+        "s10"
+      ]
+    },
+    {
+      "team": "platform",
+      "environment": "all",
+      "active_cve_ids": [
+        "DEMO-2026-008",
+        "DEMO-2026-010"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-010"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": [
+        "s13"
+      ]
+    },
+    {
+      "team": "platform",
+      "environment": "prod",
+      "active_cve_ids": [
+        "DEMO-2026-008",
+        "DEMO-2026-010"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-010"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": [
+        "s13"
+      ]
+    },
+    {
+      "team": "platform",
+      "environment": "staging",
+      "active_cve_ids": [],
+      "decision_cve_ids": [],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": []
+    },
+    {
+      "team": "unassigned",
+      "environment": "all",
+      "active_cve_ids": [
+        "DEMO-2026-014",
+        "DEMO-2026-019"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-014",
+        "DEMO-2026-019"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": [
+        "s17",
+        "s22"
+      ]
+    },
+    {
+      "team": "unassigned",
+      "environment": "prod",
+      "active_cve_ids": [
+        "DEMO-2026-014"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-014"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": [
+        "s17"
+      ]
+    },
+    {
+      "team": "unassigned",
+      "environment": "staging",
+      "active_cve_ids": [
+        "DEMO-2026-019"
+      ],
+      "decision_cve_ids": [
+        "DEMO-2026-019"
+      ],
+      "priority_cve_ids": [],
+      "unknown_exposure_scope_ids": [
+        "s22"
+      ]
+    }
+  ]
+}
