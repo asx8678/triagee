@@ -48,6 +48,25 @@ reverse proxy, provisioned accounts and the operational checks in
 [DEPLOYMENT.md](docs/DEPLOYMENT.md). Production session cookies require HTTPS;
 use a TLS tunnel/proxy rather than plain HTTP for authenticated production testing.
 
+## Skip sign-in for local development
+
+Development (`MIX_ENV=dev`) shows a small **Skip** button on `/login`. It signs in
+as `local-user@triage.test`, an ordinary **reviewer**, using an eight-hour revocable
+session. This user can save decisions and drafts and use reviewer actions, but
+cannot administer accounts. Skip does not itself change findings or create tickets.
+
+The reserved local account is created once with a random undisclosed password,
+then reused so its identity, drafts and history persist across local sign-ins.
+Local users of Skip share that account. Existing disabled, viewer or admin accounts
+at the reserved email are never re-enabled, promoted or silently adopted. An
+already signed-in user keeps their current account; sign out before switching.
+
+The action is a CSRF-protected POST, requires a direct loopback peer, and is rate
+limited. Set `config :triage, :local_login_skip, false` to disable it in development.
+Production builds permanently reject the action even if that flag is enabled at
+runtime. Never expose a development server as a production deployment; the VPS
+still requires provisioned accounts.
+
 ## Focused verification
 
 `test/triage/runtime_config_test.exs` is pure ExUnit. It evaluates runtime config in

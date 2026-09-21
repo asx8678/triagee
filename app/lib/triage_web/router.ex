@@ -24,6 +24,7 @@ defmodule TriageWeb.Router do
     pipe_through :browser
     get "/login", SessionController, :new
     post "/login", SessionController, :create
+    post "/login/skip", SessionController, :skip
     delete "/logout", SessionController, :delete
   end
 

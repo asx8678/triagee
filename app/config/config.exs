@@ -9,7 +9,9 @@ import Config
 
 config :triage,
   ecto_repos: [Triage.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  build_environment: config_env(),
+  local_login_skip: config_env() == :dev
 
 # Public vulnerability-intelligence cache/refresh policy.
 # Disabled by default; the manual mix task refuses to fetch without an

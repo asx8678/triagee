@@ -4,6 +4,59 @@ defmodule Triage.Accounts do
   alias Triage.Accounts.{LoginThrottle, Password, Principal, Session, User}
   alias Triage.Repo
   @session_seconds 28_800
+  @local_preview_build Application.compile_env(:triage, :build_environment, :prod) in [
+                         :dev,
+                         :test
+                       ]
+
+  @doc "Local development only. A production build cannot enable login skipping."
+  if @local_preview_build do
+    @local_user_email "local-user@triage.test"
+
+    def local_login_skip_enabled?,
+      do: Application.get_env(:triage, :local_login_skip, false) == true
+
+    @doc "Sign in as the reserved local reviewer with a normal revocable session. Never grants admin access."
+    def create_local_skip_session(peer) do
+      cond do
+        not local_login_skip_enabled?() ->
+          {:error, :disabled}
+
+        not LoginThrottle.allow?("local-skip", peer) ->
+          {:error, :throttled}
+
+        true ->
+          Repo.transaction(&local_user_session!/0)
+      end
+    end
+
+    defp local_user_session! do
+      if is_nil(Repo.get_by(User, email: @local_user_email)), do: insert_local_user!()
+
+      user = Repo.one!(from u in User, where: u.email == ^@local_user_email, lock: "FOR UPDATE")
+
+      unless user.enabled and user.role == "reviewer",
+        do: Repo.rollback(:local_user_unavailable)
+
+      case create_session(user) do
+        {:ok, token} -> token
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end
+
+    defp insert_local_user! do
+      password = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+      {:ok, secret} = Password.hash(password)
+
+      %User{}
+      |> User.changeset(%{email: @local_user_email, role: "reviewer"})
+      |> Ecto.Changeset.change(secret)
+      |> Repo.insert!(on_conflict: :nothing, conflict_target: [:email])
+    end
+  else
+    def local_login_skip_enabled?, do: false
+    def create_local_skip_session(_peer), do: {:error, :disabled}
+  end
 
   @doc "Trusted operator API; not exposed through HTTP."
   def create_user(attrs) when is_map(attrs) do

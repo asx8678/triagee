@@ -32,6 +32,24 @@ dialog{border:1px solid var(--line);border-radius:4px;padding:0;color:var(--ink)
 .tabs .density-toggle{margin-left:auto;font-weight:600}
 @media(max-width:640px){.callout{flex-wrap:wrap}.callout .page-actions{width:100%;justify-content:flex-start}.inventory-page>.panel>.tabs{flex-wrap:wrap}}
 
+/* Public sign-in shares the workspace theme, without authenticated navigation. */
+.auth-shell { min-height:100dvh; display:grid; grid-template-rows:auto 1fr auto; }
+.auth-header { display:flex; align-items:center; min-height:72px; padding:18px 24px; background:var(--navy); border-bottom:1px solid #30425a; }
+.auth-logo { display:block; width:240px; max-width:100%; height:auto; }
+.auth-main { display:grid; place-items:center; min-width:0; padding:clamp(24px,6vw,64px) 16px; }
+.auth-panel { width:100%; max-width:440px; padding:clamp(20px,5vw,32px); box-shadow:0 8px 24px #15243a0a; }
+.auth-intro { display:grid; gap:10px; margin-bottom:24px; }
+.auth-eyebrow { color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+:scope .auth-panel .fieldset { margin-bottom:18px; }
+:scope .auth-panel .fieldset .label { color:var(--ink); font-size:13px; }
+.auth-panel input:not([type=hidden]) { width:100%; min-height:44px; font-size:16px; }
+.auth-submit { width:100%; min-height:44px; margin-top:2px; }
+.auth-skip { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:16px; font-size:12px; }
+.auth-skip button { min-height:32px; padding:4px 10px; font-size:12px; }
+.auth-help { margin-top:22px; font-size:12px; line-height:1.6; }
+.auth-error { margin-bottom:20px; padding:12px; border:1px solid var(--red); border-radius:var(--radius); background:var(--red-soft); color:var(--red); overflow-wrap:anywhere; }
+.auth-footer { padding:16px; color:var(--muted); text-align:center; font-size:12px; }
+
 /* Native links, Phoenix form wrappers and safety corrections, not a replacement theme. */
 .manual-cves { margin:auto; }
 .news-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }

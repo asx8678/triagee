@@ -6,7 +6,9 @@ and explicitly request remediation. A ticket or risk acceptance is not a fix.
 
 ## Safety boundary
 
-**Provisioned accounts are required; there is no public registration or default password.**
+**Production and write access require provisioned accounts; there is no public registration or default password.**
+For local development, **Skip** signs in as `local-user@triage.test` with normal reviewer access (not a guest or admin).
+This shortcut is unavailable in production; see [Local runtime](LOCAL_RUNTIME.md#skip-sign-in-for-local-development).
 Viewer/reviewer/admin roles are enforced server-side and workspace audit identity
 comes from the authenticated session. Runtime binding still accepts only
 `127.0.0.1` or `::1`; keep PostgreSQL local too. See
