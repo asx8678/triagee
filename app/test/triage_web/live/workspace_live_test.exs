@@ -30,7 +30,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert has_element?(view, ".action-toast .confirmation-title", "Action completed")
     assert has_element?(view, ".fixed-heading .fixed-banner", "FIXED")
     assert has_element?(view, ".review-heading .status-fixed", "Fixed")
-    assert has_element?(view, ".decision-column .status-fixed", "Fixed")
+    assert has_element?(view, ".review-heading .status-fixed", "Fixed")
     view |> element("button[phx-click='dismiss-action-toast']") |> render_click()
     refute has_element?(view, ".action-toast")
     {:ok, reloaded, _} = live(c.conn, "/?page=review&mode=fixed&item=#{c.cve}")
@@ -141,7 +141,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     view |> form("#workspace-decision", decision: %{reason: ""}) |> render_submit()
     view |> element("#confirm-risk") |> render_click()
     assert Enum.all?(Decisions.history_for_cve(c.cve), &(&1.reason == ""))
-    assert has_element?(view, "#draft-state", "Decision committed locally")
+    assert has_element?(view, "#draft-state", "Decision saved")
   end
 
   test "whitelist selection restores blank date and preserves an explicit date while editing",
@@ -179,26 +179,29 @@ defmodule TriageWeb.WorkspaceLiveTest do
            )
   end
 
-  test "workspace content starts without redundant page headers", %{conn: conn} do
+  test "workspace has one accessible page title without redundant header rows", %{conn: conn} do
     for page <- ["overview", "inventory", "review", "timeline"] do
       {:ok, view, _html} = live(conn, "/?page=#{page}")
+      document = render(view) |> LazyHTML.from_document()
+      assert Enum.count(LazyHTML.query(document, "#main-content h1")) == 1
       refute has_element?(view, "#main-content .page-head")
       refute has_element?(view, "#main-content .page-header")
       refute has_element?(view, ".timeline-jump")
 
       case page do
         "overview" ->
-          refute has_element?(view, ".callout button[phx-click=settings]")
-          assert has_element?(view, ".callout a", "Start review")
+          refute has_element?(view, ".callout")
+          assert has_element?(view, "#start-review", "Start review")
+          assert has_element?(view, "#overview-data-note summary", "About these numbers")
 
         "inventory" ->
-          assert has_element?(view, ".tabs button[phx-click=density]")
+          assert has_element?(view, "#inventory-density[aria-pressed=false]", "Compact rows")
 
         "review" ->
           assert has_element?(view, ".review-tools a", "Decision history")
           assert has_element?(view, "#save-decision")
           refute has_element?(view, "#save-next")
-          assert has_element?(view, "#cancel-decision", "Cancel")
+          assert has_element?(view, "#cancel-decision", "Discard draft")
 
         "timeline" ->
           assert has_element?(view, "#timeline-form")
@@ -206,26 +209,21 @@ defmodule TriageWeb.WorkspaceLiveTest do
     end
   end
 
-  test "review queue shows only CVE IDs and retains selection and detail severity", c do
+  test "review queue gives package context and returns to the selected decision", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
-
-    assert view
-           |> element("#queue-#{c.cve}")
-           |> render()
-           |> LazyHTML.from_fragment()
-           |> LazyHTML.text()
-           |> String.trim() == c.cve
-
-    assert has_element?(view, "#queue-#{c.cve}.active .queue-id")
+    assert has_element?(view, "#queue-#{c.cve}.active .queue-id", c.cve)
+    assert has_element?(view, "#queue-#{c.cve} .queue-package", c.first.package_name)
+    assert has_element?(view, "#queue-#{c.cve} .critical", "CRITICAL")
     refute has_element?(view, "#queue-#{c.second.cve}.active")
-    refute has_element?(view, ".queue-item .badge")
-    refute has_element?(view, ".queue-heading", "Most severe first")
     assert has_element?(view, ".review-heading .critical", "CRITICAL")
+    view |> element("#review-queue-toggle") |> render_click()
+    assert has_element?(view, ".review-page.show-queue")
+    assert has_element?(view, "#review-queue-toggle[aria-expanded=true]", "Back to decision")
     view |> element("#queue-#{c.second.cve}") |> render_click()
     assert has_element?(view, "#queue-#{c.second.cve}[aria-current=true]")
     assert has_element?(view, ".review-heading h2", c.second.cve)
-    view |> element("button[phx-click=queue-toggle]") |> render_click()
-    assert has_element?(view, ".review-page.show-queue")
+    refute has_element?(view, ".review-page.show-queue")
+    assert has_element?(view, "#review-queue-toggle[aria-expanded=false]", "Show queue")
   end
 
   test "homepage and workspace alias expose only the new shell", %{conn: conn} do
@@ -382,7 +380,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     |> decision_form(fields())
     |> render_submit(%{"advance" => "false"})
 
-    assert has_element?(view, "#draft-state", "Decision committed locally")
+    assert has_element?(view, "#draft-state", "Decision saved")
 
     assert Workspace.metrics(Workspace.targets(%{"cve" => c.cve}))["needs"].targets == [
              {c.cve, c.staging.id}
@@ -506,7 +504,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     |> render_submit(%{"advance" => "false"})
 
     assert has_element?(view, ".review-heading h2", c.cve)
-    assert has_element?(view, "#draft-state", "Decision committed locally")
+    assert has_element?(view, "#draft-state", "Decision saved")
     assert has_element?(view, "#shell[data-dirty=false]")
     view |> element(".review-heading a", "Full evidence") |> render_click()
     view |> element("#close-inspector") |> render_click()

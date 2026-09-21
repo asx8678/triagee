@@ -67,7 +67,9 @@ defmodule TriageWeb.WorkspaceLive do
        params: params,
        timeline_params: if(valid, do: timeline_params, else: %{"filters" => "invalid"}),
        page: page,
-       page_title: String.capitalize(page),
+       page_title: if(page == "inventory", do: "Vulnerabilities", else: String.capitalize(page)),
+       queue_shown:
+         if(params["item"] != socket.assigns[:item], do: false, else: socket.assigns.queue_shown),
        invalid_params: not valid,
        confirmation: nil
      )
@@ -998,10 +1000,19 @@ defmodule TriageWeb.WorkspaceLive do
             </.link>
           </nav>
           <div class="topmeta">
-            <Layouts.account current_scope={@current_scope} /><button
-              id="workspace-settings"
-              phx-click="settings"
-            ><span class="settings-text">Data &amp; settings</span></button>
+            <details
+              id="workspace-account"
+              class="account-dropdown"
+              phx-click-away={Phoenix.LiveView.JS.remove_attribute("open", to: "#workspace-account")}
+              phx-window-keydown={
+                Phoenix.LiveView.JS.remove_attribute("open", to: "#workspace-account")
+              }
+              phx-key="Escape"
+            >
+              <summary>Account</summary>
+              <div class="account-popover"><Layouts.account current_scope={@current_scope} /></div>
+            </details>
+            <button id="workspace-settings" phx-click="settings"><span class="settings-text">Data &amp; help</span></button>
           </div>
         </header>
         <div :if={@page == "news"} class="scopebar">
@@ -1033,6 +1044,8 @@ defmodule TriageWeb.WorkspaceLive do
             do: "Recorded history",
             else: "Operational inventory"}</span></span>
           <.link
+            :if={@params["team"] not in [nil, ""] or @params["environment"] not in [nil, ""]}
+            id="reset-workspace-scope"
             class="link"
             patch={
               if @page == "timeline",
@@ -1052,6 +1065,9 @@ defmodule TriageWeb.WorkspaceLive do
             @queue_shown && "show-queue"
           ]}
         >
+          <h1 :if={@page in ~w(inventory review timeline)} id="workspace-page-title" class="sr-only">
+            {@page_title}
+          </h1>
           <p :if={@invalid_params} class="form-error" role="alert">
             Invalid filters. No records loaded.
           </p>
@@ -1133,6 +1149,7 @@ defmodule TriageWeb.WorkspaceLive do
             selected={@selected}
             mode={@mode}
             search_form={@search_form}
+            compact={@compact}
           />
           <.review
             :if={@page == "review"}
@@ -1151,11 +1168,11 @@ defmodule TriageWeb.WorkspaceLive do
             draft_error={@draft_error}
             pending_operation={@pending_operation}
           />
-          <TimelineLive.panel :if={@page == "timeline"} {assigns} />
+          <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
           <TriageWeb.SecurityNewsComponents.panel :if={@page == "news"} {assigns} />
         </main>
         <footer class="bottom-status">
-          <strong>Signed in · {@current_user.role}</strong><span>Latest recorded evidence · not verified live coverage</span><span class="right">Operational review workspace</span>
+          <span>Recorded evidence · coverage unverified</span><span class="right">Decisions apply to selected deployments only</span>
         </footer>
       </div>
       <.inspector

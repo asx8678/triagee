@@ -270,11 +270,26 @@ defmodule TriageWeb.TimelineLive do
   end
 
   @doc false
+  attr :workspace_scope, :map, default: nil
+
   def panel(assigns) do
     ~H"""
     <section id="workspace-timeline" class="restored-timeline">
       <.filter_bar id="timeline-form" form={@filter_form} change="filter">
         <.input
+          :if={@workspace_scope}
+          field={@filter_form[:owner]}
+          type="hidden"
+          value={@workspace_scope["team"] || ""}
+        />
+        <.input
+          :if={@workspace_scope}
+          field={@filter_form[:environment]}
+          type="hidden"
+          value={@workspace_scope["environment"] || ""}
+        />
+        <.input
+          :if={is_nil(@workspace_scope)}
           field={@filter_form[:owner]}
           type="select"
           label="Team"
@@ -283,6 +298,7 @@ defmodule TriageWeb.TimelineLive do
           }
         />
         <.input
+          :if={is_nil(@workspace_scope)}
           field={@filter_form[:environment]}
           type="select"
           label="Environment"
@@ -307,8 +323,20 @@ defmodule TriageWeb.TimelineLive do
           options={scale_options()}
         />
         <:actions>
-          <.link id="timeline-reset" patch={~p"/timeline"} class="button button-secondary">
-            Reset view
+          <.link
+            id="timeline-reset"
+            patch={
+              if @workspace_scope,
+                do:
+                  TimelineFilters.path(TimelineFilters.defaults(), %{
+                    owner: @workspace_scope["team"],
+                    environment: @workspace_scope["environment"]
+                  }),
+                else: ~p"/timeline"
+            }
+            class="button button-secondary"
+          >
+            {if @workspace_scope, do: "Reset window", else: "Reset view"}
           </.link>
         </:actions>
       </.filter_bar>
@@ -352,43 +380,41 @@ defmodule TriageWeb.TimelineLive do
       </div>
 
       <div :if={is_nil(@view_error) and not is_nil(@timeline)}>
-        <div id="tl-summary" class="metric-strip metric-strip-compact" role="status">
-          <div>
-            <dt>Window</dt>
-            <dd>{@timeline.window.label}</dd>
-          </div>
-          <div>
-            <dt>Recorded events</dt>
-            <dd>{@timeline.summary.events}</dd>
-          </div>
-          <div>
-            <dt>Days observed</dt>
-            <dd>{@timeline.summary.observed_days} of {@timeline.summary.days}</dd>
-          </div>
-          <div>
-            <dt>CVEs</dt>
-            <dd>{@timeline.summary.cves}</dd>
-          </div>
-          <div>
-            <dt>New</dt>
-            <dd>{@timeline.summary.new_cves}</dd>
-          </div>
-          <div>
-            <dt>No longer observed</dt>
-            <dd>{@timeline.summary.resolved}</dd>
-          </div>
-          <div>
-            <dt>Re-observed</dt>
-            <dd>{@timeline.summary.reopened}</dd>
-          </div>
-          <div>
-            <dt>Suppressed CVEs</dt>
-            <dd>{@timeline.summary.suppressed}</dd>
-          </div>
-          <div>
-            <dt>Assessments recorded</dt>
-            <dd>{@timeline.summary.judged}</dd>
-          </div>
+        <div id="tl-summary" role="status">
+          <dl class="timeline-totals">
+            <div>
+              <dt>CVEs</dt><dd>{@timeline.summary.cves}</dd>
+            </div>
+            <div>
+              <dt>Recorded events</dt><dd>{@timeline.summary.events}</dd>
+            </div>
+            <div>
+              <dt>Days observed</dt><dd>
+                {@timeline.summary.observed_days} of {@timeline.summary.days}
+              </dd>
+            </div>
+          </dl>
+          <p class="supporting">Window: {@timeline.window.label}</p>
+          <details class="tl-note timeline-breakdown">
+            <summary>Observation breakdown</summary>
+            <dl class="metric-strip">
+              <div>
+                <dt>New</dt><dd>{@timeline.summary.new_cves}</dd>
+              </div>
+              <div>
+                <dt>No longer observed</dt><dd>{@timeline.summary.resolved}</dd>
+              </div>
+              <div>
+                <dt>Re-observed</dt><dd>{@timeline.summary.reopened}</dd>
+              </div>
+              <div>
+                <dt>Suppressed CVEs</dt><dd>{@timeline.summary.suppressed}</dd>
+              </div>
+              <div>
+                <dt>Assessments recorded</dt><dd>{@timeline.summary.judged}</dd>
+              </div>
+            </dl>
+          </details>
         </div>
 
         <p :if={@timeline.summary.truncated?} id="tl-truncated" class="supporting">

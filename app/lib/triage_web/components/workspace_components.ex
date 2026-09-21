@@ -16,77 +16,80 @@ defmodule TriageWeb.WorkspaceComponents do
       )
 
     ~H"""
-    <section
-      class={["callout", @metrics["urgent"].value == 0 && "caution"]}
-      aria-label="Attention and evidence confidence"
-    >
-      <div class="symbol">!</div><div class="grow">
-        <h2>
-          {if @metrics["urgent"].value > 0,
-            do: "Immediate attention required",
-            else: "Review current evidence"}
-        </h2><p>
-          {@metrics["urgent"].value} immediate-priority CVEs in this scope. Priority is not a claim of compromise.
-        </p>
-      </div><div class="confidence">
-        <strong>Confidence: limited</strong><br /><span class="muted">{@metrics["unknown"].value} unknown-exposure scopes · scan coverage unverified</span>
-      </div><div class="row page-actions">
-        <.link
-          class="primary button-link"
-          patch={Routes.drill(@params, "needs")}
-        >Start review →</.link>
-      </div>
-    </section>
+    <header class="overview-heading">
+      <h1>Overview</h1>
+      <.link
+        :if={@metrics["needs"].value > 0}
+        id="start-review"
+        class="primary button-link"
+        patch={Routes.drill(@params, "needs")}
+      >Start review</.link>
+      <.link
+        :if={@metrics["needs"].value == 0}
+        class="button-link"
+        patch={Routes.drill(@params, "active")}
+      >Browse vulnerabilities</.link>
+    </header>
     <div class="metrics" aria-label="Current scoped totals">
       <.link
         :for={
           {mode, label, sub, class} <- [
-            {"active", "Active CVEs", "Affected scopes · latest recorded state", ""},
-            {"needs", "Need a decision", "Distinct CVEs · uncovered or expired scopes", ""},
-            {"urgent", "Immediate priority", "Critical review priority · local policy v1",
+            {"active", "Active CVEs", "Distinct vulnerabilities in this scope", ""},
+            {"needs", "Needs a decision", "Unreviewed or expired decisions", ""},
+            {"urgent", "Immediate priority", "Local review priority · not confirmed exploitation",
              "alert-top"},
-            {"unknown", "Exposure unknown", "Affected scopes · evidence needed", "warn-top"}
+            {"unknown", "Unknown exposure", "Deployment scopes, not CVEs", ""}
           ]
         }
         id={"metric-#{mode}"}
         class={["metric", class]}
         patch={Routes.drill(@params, mode)}
       >
-        <span class="metric-label">{label}<span aria-hidden="true">↗</span></span><span class="value">{@metrics[
-          mode
-        ].value}</span><span class="sub">{sub}</span>
+        <span class="metric-label">{label}<span aria-hidden="true">↗</span></span>
+        <span class="value">{@metrics[mode].value}</span><span class="sub">{sub}</span>
       </.link>
     </div>
+    <details id="overview-data-note" class="data-note">
+      <summary>About these numbers</summary>
+      <p>
+        Counts use the latest recorded evidence, not live monitoring. Scan coverage is unverified. Unknown exposure counts deployment scopes; the other totals count distinct CVEs. Priority follows local policy and is not a claim of compromise.
+      </p>
+    </details>
     <div class="dashboard-grid">
-      <section class="panel ownership-panel">
+      <section class="panel ownership-panel" aria-labelledby="ownership-heading">
         <div class="panel-head">
-          <h2>Ownership by team</h2><span class="tag">Active CVEs</span>
+          <h2 id="ownership-heading">By team</h2><span class="muted small">Active inventory</span>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Vulnerabilities by team">
           <table class="data-table">
-            <caption class="sr-only">Team counts are not additive</caption><thead>
+            <caption class="sr-only">Team counts are not additive</caption>
+            <thead>
               <tr>
                 <th>Team</th><th>Active</th><th>Immediate</th><th>Needs decision</th><th>
-                  Exposure unknown
+                  Unknown exposure
                 </th>
               </tr>
-            </thead><tbody>
+            </thead>
+            <tbody>
               <tr :for={team <- @teams}>
+                <td><span class="team-name">{team_name(team.name)}</span></td>
                 <td>
-                  <div class="row">
-                    <span class="team-icon">{String.slice(team_name(team.name), 0, 2)
-                    |> String.upcase()}</span><span class="team-name">{team_name(team.name)}</span>
-                  </div>
-                </td><td>
                   <.link patch={Routes.drill(@params, "active", %{"team" => team.name})}>{team.metrics[
                     "active"
                   ].value}</.link>
-                </td><td class="red">{team.metrics["urgent"].value}</td><td>
+                </td>
+                <td>
+                  <.link class="red" patch={Routes.drill(@params, "urgent", %{"team" => team.name})}>{team.metrics[
+                    "urgent"
+                  ].value}</.link>
+                </td>
+                <td>
                   <.link
                     id={"team-review-#{team.name}"}
                     patch={Routes.drill(@params, "needs", %{"team" => team.name})}
                   >{team.metrics["needs"].value}</.link>
-                </td><td class="amber">
+                </td>
+                <td>
                   <.link patch={Routes.drill(@params, "unknown", %{"team" => team.name})}>{team.metrics[
                     "unknown"
                   ].value} scopes</.link>
@@ -94,36 +97,43 @@ defmodule TriageWeb.WorkspaceComponents do
               </tr>
             </tbody>
           </table>
-        </div><div class="panel-foot">
-          A CVE can affect several teams; team totals are not additive.
         </div>
+        <p class="panel-foot">
+          A CVE can affect more than one team. Team totals cannot be added together.
+        </p>
       </section>
-    </div>
-    <div class="dashboard-secondary">
-      <section class="panel">
+      <section class="panel priority-findings" aria-labelledby="priority-heading">
         <div class="panel-head">
-          <h2>Priority findings</h2><.link patch={Routes.drill(@params, "urgent")}>Open priority view →</.link>
-        </div><div class="table-wrap">
+          <h2 id="priority-heading">Priority findings</h2><.link patch={
+            Routes.drill(@params, "urgent")
+          }>View all</.link>
+        </div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Priority findings">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Advisory</th><th>Package</th><th>Scopes</th><th>Severity</th>
+                <th>CVE / decision</th><th>Package</th><th>Severity</th>
               </tr>
-            </thead><tbody>
+            </thead>
+            <tbody>
               <tr :for={row <- @urgent}>
-                <td><.link patch={Routes.inspector_path(@params, row.cve)}>{row.cve}</.link></td><td>
-                  {row.packages}
-                </td><td>{length(row.scopes)}</td><td><.severity value={row.severity} /></td>
+                <td>
+                  <.link class="cve-link" patch={Routes.inspector_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{work_status(
+                    row.scopes
+                  )}</span>
+                </td>
+                <td>{row.packages}</td><td><.severity value={row.severity} /></td>
               </tr>
             </tbody>
           </table>
-        </div><p :if={@urgent == []} class="empty">
+        </div>
+        <p :if={@urgent == []} class="empty">
           No immediate-priority records in this scope. This is not evidence of safety.
         </p>
       </section>
     </div>
     <p :if={@metrics["active"].value == 0} class="empty">
-      No matching operational inventory. Public advisories are not deployment evidence. Check scope or import local evidence in Data &amp; settings.
+      No matching inventory. Try a different team or environment. Public advisories do not count as deployment evidence.
     </p>
     """
   end
@@ -135,34 +145,50 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :selected, :list, required: true
   attr :mode, :string, required: true
   attr :search_form, :any, required: true
+  attr :compact, :boolean, default: false
 
   def inventory(assigns) do
     ~H"""
     <section class="panel">
-      <div class="tabs">
-        <.link
-          :for={
-            {mode, label} <- [
-              {"active", "Active"},
-              {"accepted", "Whitelisted"},
-              {"history", "Observation history"},
-              {"all", "All"}
-            ]
-          }
-          patch={Routes.workspace_path(@params, %{"mode" => mode, "offset" => nil})}
-          class={[@mode == mode && "active"]}
-        >{label}</.link><span :if={@mode in ["unknown", "urgent"]} class="tag">{if @mode == "unknown",
-          do: "Unknown exposure scopes",
-          else: "Immediate priority scopes"}</span><button class="density-toggle" phx-click="density">Toggle row density</button><button
-          id="manual-cve-open"
-          phx-click="manual-open"
-        >Add CVE</button>
+      <div class="inventory-controls">
+        <nav class="tabs" aria-label="Vulnerability views">
+          <.link
+            :for={
+              {mode, label} <- [
+                {"active", "Active"},
+                {"accepted", "Whitelisted"},
+                {"history", "Observation history"},
+                {"all", "All"}
+              ]
+            }
+            patch={Routes.workspace_path(@params, %{"mode" => mode, "offset" => nil})}
+            class={[@mode == mode && "active"]}
+            aria-current={if @mode == mode, do: "page"}
+          >{label}</.link>
+        </nav>
+        <div class="inventory-actions">
+          <button
+            id="inventory-density"
+            class="quiet"
+            phx-click="density"
+            aria-pressed={to_string(@compact)}
+          >{if @compact,
+            do: "Comfortable rows",
+            else: "Compact rows"}</button>
+          <button id="manual-cve-open" class="quiet" phx-click="manual-open">Research a CVE</button>
+        </div>
       </div>
-      <.form for={@search_form} id="workspace-search" phx-change="search" class="toolbar">
+      <.form
+        for={@search_form}
+        id="workspace-search"
+        phx-change="search"
+        phx-submit="search"
+        class="toolbar"
+      >
         <.input
           field={@search_form[:q]}
           type="search"
-          placeholder="Search CVE, package or service…"
+          placeholder="Search CVE, package or service"
           aria-label="Search vulnerabilities"
           phx-debounce="200"
         />
@@ -178,27 +204,51 @@ defmodule TriageWeb.WorkspaceComponents do
           aria-label="Sort"
           options={[{"Priority first", "priority"}, {"Oldest first seen", "age"}]}
         />
+        <.link
+          :if={
+            @params["q"] not in [nil, ""] or @params["severity"] not in [nil, ""] or
+              @params["sort"] == "age" or @mode in ["unknown", "urgent"]
+          }
+          id="clear-inventory-filters"
+          class="link"
+          patch={
+            Routes.workspace_path(@params, %{
+              "q" => nil,
+              "severity" => nil,
+              "sort" => nil,
+              "offset" => nil,
+              "mode" => "active"
+            })
+          }
+        >Clear filters</.link>
       </.form>
-      <div :if={@selected != []} class="batchbar">
-        <strong>{length(@selected)} CVEs selected · maximum 25</strong><span class="spacer" /><button
-          id="review-selected"
-          phx-click="review-selected"
-        >Review selected</button><button phx-click="clear-selection">Clear</button>
+      <div :if={@selected != []} class="batchbar" role="status">
+        <strong>{length(@selected)} selected</strong><span class="muted">Up to 25 CVEs</span><span class="spacer" />
+        <button id="review-selected" phx-click="review-selected">Review selected</button><button
+          class="quiet"
+          phx-click="clear-selection"
+        >Clear selection</button>
       </div>
       <div class="filter-summary">
-        <strong>{@total} matching CVEs</strong><span>· exact matching scopes only</span><span class="spacer" /><span>Reference advisories excluded</span>
+        <strong id="inventory-result-count" role="status">{@total} matching CVEs</strong>
+        <span :if={@mode in ["unknown", "urgent"]}>{if @mode == "unknown",
+          do: "Unknown exposure",
+          else: "Immediate priority"}</span>
+        <span class="spacer" /><span>Local inventory only</span>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Vulnerability results">
         <table id="workspace-inventory" class="data-table">
           <caption class="sr-only">
-            Operational vulnerabilities. Selection does not submit a decision.
-          </caption><thead>
+            Operational vulnerabilities. Selection does not submit a decision. Reported fixes are not verified deployments.
+          </caption>
+          <thead>
             <tr>
-              <th>Select</th><th>Advisory / package</th><th>Severity</th><th>
-                Affected
-              </th><th>Exposure</th><th>Work status</th><th>Age</th><th>Fix info</th>
+              <th>Select</th><th>Advisory / package</th><th>Severity</th><th>Affected</th><th>
+                Exposure
+              </th><th>Work status</th><th>Age</th><th>Scanner fix</th>
             </tr>
-          </thead><tbody>
+          </thead>
+          <tbody>
             <tr
               :for={row <- @rows}
               id={"inventory-#{row.cve}"}
@@ -215,30 +265,43 @@ defmodule TriageWeb.WorkspaceComponents do
                   phx-click="select"
                   phx-value-cve={row.cve}
                 />
-              </td><td>
-                <.link class="cve-link" patch={Routes.inspector_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{row.packages}</span><span
+              </td>
+              <td>
+                <.link class="cve-link" patch={Routes.inspector_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{row.packages}</span>
+                <span
                   :if={Enum.any?(row.scopes, &Enum.any?(&1.findings, fn f -> f.suppressed end))}
                   class="subline"
                 >Scanner-suppressed · approval unknown</span>
-              </td><td><.severity value={row.severity} /></td><td>
-                {row.scopes |> Enum.map(& &1.placement.owner) |> Enum.uniq() |> Enum.join(", ")}<span class="subline">{length(
-                  row.scopes
-                )} scopes</span>
-              </td><td>
+              </td>
+              <td><.severity value={row.severity} /></td>
+              <td>
+                {row.scopes
+                |> Enum.map(&team_name(&1.placement.owner))
+                |> Enum.uniq()
+                |> Enum.join(", ")}<span class="subline">{length(row.scopes)} {if length(row.scopes) ==
+                                                                                    1,
+                                                                                  do: "scope",
+                                                                                  else: "scopes"}</span>
+              </td>
+              <td>
                 {row.scopes |> Enum.map(&exposure(&1.exposure)) |> Enum.uniq() |> Enum.join(", ")}
-              </td><td>{work_status(row.scopes)}</td><td>
-                {max(Date.diff(Date.utc_today(), DateTime.to_date(row.first_seen)), 0)}d
-              </td><td>
+              </td>
+              <td>{work_status(row.scopes)}</td>
+              <td>{max(Date.diff(Date.utc_today(), DateTime.to_date(row.first_seen)), 0)}d</td>
+              <td>
                 {if Enum.any?(
                       row.scopes,
                       &Enum.any?(&1.findings, fn f -> f.fix not in [nil, ""] end)
-                    ), do: "Reported · not verified deployed", else: "Not reported"}
+                    ), do: "Reported", else: "Not reported"}
               </td>
             </tr>
           </tbody>
-        </table><p :if={@rows == []} class="empty">
-          No matching vulnerabilities. This is not evidence of safety.
-        </p>
+        </table>
+        <div :if={@rows == []} id="inventory-empty" class="empty">
+          <h2>No matching vulnerabilities</h2><p>
+            Try clearing the search or changing the team and environment. An empty result does not confirm safety.
+          </p>
+        </div>
       </div>
       <.pagination params={@params} offset={@offset} total={@total} />
     </section>
@@ -264,7 +327,7 @@ defmodule TriageWeb.WorkspaceComponents do
     ~H"""
     <div class="review-topbar">
       <div class="review-tools">
-        <div class="tabs">
+        <nav class="tabs" aria-label="Review queues">
           <.link
             :for={
               {mode, label} <- [
@@ -276,10 +339,15 @@ defmodule TriageWeb.WorkspaceComponents do
             }
             patch={Routes.workspace_path(@params, %{"mode" => mode, "offset" => nil})}
             class={[@mode == mode && "active"]}
+            aria-current={if @mode == mode, do: "page"}
           >{label}</.link>
-        </div><button class="queue-toggle quiet" phx-click="queue-toggle">{if @queue_shown,
-          do: "Assessment",
-          else: "Queue"}</button><span
+        </nav><button
+          id="review-queue-toggle"
+          class="queue-toggle quiet"
+          phx-click="queue-toggle"
+          aria-expanded={to_string(@queue_shown)}
+          aria-controls="review-queue"
+        >{if @queue_shown, do: "Back to decision", else: "Show queue (#{@total})"}</button><span
           :if={@params["batch"]}
           class="tag"
         >Selected-only review</span><.link
@@ -290,7 +358,7 @@ defmodule TriageWeb.WorkspaceComponents do
       </div>
     </div>
     <div class="review-grid">
-      <section class="panel queue-panel" aria-label="Review queue">
+      <section id="review-queue" class="panel queue-panel" aria-label="Review queue">
         <div class="queue-heading"><strong>{@total} CVEs</strong></div><div class="queue-list">
           <.link
             :for={row <- @rows}
@@ -304,8 +372,8 @@ defmodule TriageWeb.WorkspaceComponents do
             aria-current={if @row && @row.cve == row.cve, do: "true"}
             patch={Routes.workspace_path(@params, %{"item" => row.cve})}
           ><div class="row">
-            <span class="queue-id grow">{row.cve}</span>
-          </div></.link>
+            <span class="queue-id grow">{row.cve}</span><.severity value={row.severity} />
+          </div><span class="queue-package" title={row.packages}>{row.packages}</span></.link>
           <p :if={@rows == []} class="empty">
             No decisions waiting here. Active exposure or evidence gaps may remain.
           </p>
@@ -346,34 +414,28 @@ defmodule TriageWeb.WorkspaceComponents do
           class="review-content"
         >
           <div class="evidence-column">
-            <div class="policy-strip">
-              <strong>Local policy v1</strong><span>Severity is unchanged by exposure or work decisions.</span>
-            </div>
             <div class="block-title">
-              <h3>What matters</h3><span>Scanner + scoped evidence</span>
+              <h3>Summary</h3>
             </div>
             <p class="summary-copy long-value">{description(@row)}</p>
-            <div class="fact-grid">
-              <dl class="fact">
-                <dt>Exploitation intelligence</dt><dd>Cached evidence only · see Evidence</dd>
-              </dl><dl class="fact">
-                <dt>Scanner-reported fix</dt><dd>Not verified deployed</dd>
-              </dl>
-            </div>
+            <dl class="reported-fix">
+              <dt>Scanner-reported fix</dt><dd>{reported_fixes(@row)}</dd>
+            </dl>
+            <p class="form-note">A reported fix is not proof it has been deployed.</p>
             <div class="block-title">
-              <h3>Affected scopes</h3><span>{length(@draft.targets)} selected</span>
+              <h3>Affected deployments</h3><span>{length(@draft.targets)} selected</span>
             </div>
             <p :if={@hidden_targets != []} class="form-error">
               {length(@hidden_targets)} selected targets are hidden by this scope. Restore the original scope; selection has not changed.
             </p>
             <.scope_table targets={@row.scopes} selected={@draft.targets} selectable={@can_review} />
             <p class="coverage-note">
-              One target is this CVE on an immutable placement, including every listed package occurrence. Production does not include staging.
+              Select the deployments this decision applies to. Production and staging are separate targets.
             </p>
             <details>
-              <summary>Why this priority?</summary><p :for={
-                reason <- if(@row.risk, do: @row.risk.reasons, else: [])
-              }>
+              <summary>Why this priority?</summary><p>
+                Priority sets review order. It does not change scanner severity or confirm exploitation.
+              </p><p :for={reason <- if(@row.risk, do: @row.risk.reasons, else: [])}>
                 {reason}
               </p>
             </details>
@@ -394,10 +456,16 @@ defmodule TriageWeb.WorkspaceComponents do
               Read-only viewer. A reviewer or administrator must make decisions.
             </p>
             <div class="decision-head">
-              <h3>Decision</h3><.saved_status scopes={@row.scopes} /><span class="tag">{length(
-                @draft.targets
-              )} scopes</span>
-            </div><p class="intro">Applies only to the selected scopes.</p>
+              <h3>Decision</h3><span class="muted small">{length(@draft.targets)} selected</span>
+            </div>
+            <p
+              :if={@can_review and @draft.targets == []}
+              id="decision-no-targets"
+              class="form-error"
+              role="status"
+            >
+              Select at least one deployment to continue.
+            </p>
             <p :if={@error} id="decision-error" role="alert" class="form-error">{@error}</p>
             <.input
               field={@form[:action]}
@@ -446,18 +514,18 @@ defmodule TriageWeb.WorkspaceComponents do
         </.form>
         <footer class="review-footer">
           <span id="draft-state" class="save-state">{if @draft.saved,
-            do: "Decision committed locally",
+            do: "Decision saved",
             else:
               if(@draft_error,
                 do: "Draft NOT saved · keep this tab open",
-                else: if(@draft.dirty, do: "Draft · saved to your account", else: "New assessment")
+                else: if(@draft.dirty, do: "Draft saved to your account", else: "No unsaved changes")
               )}</span><div class="row wrap">
             <button
               id="cancel-decision"
-              disabled={not @can_review or not is_nil(@pending_operation)}
+              disabled={not @can_review or not is_nil(@pending_operation) or not @draft.dirty}
               type="button"
               phx-click="cancel-decision"
-            >Cancel</button>
+            >Discard draft</button>
             <button
               id="save-decision"
               class="primary"
@@ -465,7 +533,8 @@ defmodule TriageWeb.WorkspaceComponents do
               form="workspace-decision"
               phx-disable-with="Working…"
               disabled={
-                not @can_review or not is_nil(@pending_operation) or @draft_error or @draft.stale or
+                not @can_review or @draft.targets == [] or not is_nil(@pending_operation) or
+                  @draft_error or @draft.stale or
                   @hidden_targets != [] or
                   @draft.fields["action"] not in ~w(fixed accepted_risk create_ticket)
               }
@@ -487,6 +556,17 @@ defmodule TriageWeb.WorkspaceComponents do
       </section>
     </div>
     """
+  end
+
+  defp reported_fixes(row) do
+    fixes =
+      row.scopes
+      |> Enum.flat_map(& &1.findings)
+      |> Enum.map(& &1.fix)
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.uniq()
+
+    if fixes == [], do: "Not reported", else: Enum.join(fixes, ", ")
   end
 
   attr :targets, :list, required: true
@@ -773,15 +853,35 @@ defmodule TriageWeb.WorkspaceComponents do
     >
       <div class="confirmation-layout">
         <header class="modal-head">
-          <h2 id="settings-title">Data &amp; settings</h2>
+          <h2 id="settings-title">Data &amp; help</h2>
         </header><div class="modal-body">
-          <p>Authenticated workspace · keep the service on loopback behind your HTTPS proxy.</p><p>
-            Operational inventory excludes public-reference records. Scan completeness and current production coverage are unverified.
-          </p><p>
-            Draft edits are saved to your account and survive reloads and server restarts. Original evidence and operation identity remain unchanged until you explicitly reload evidence. Other reviewers’ changes mark an edited draft stale.
-          </p><p>
-            Add CVE fetches a requested description from NVD. Opening News or choosing Refresh retrieves public CVEs and headlines. Research and news do not change affected inventory. Ticket creation requires Azure DevOps server configuration. Imports, replay and AI controls are not available in this workspace.
-          </p>
+          <dl class="data-help">
+            <div>
+              <dt>Inventory is recorded evidence</dt><dd>
+                Counts describe local deployments, not public advisories. Scan completeness and current production coverage are unverified.
+              </dd>
+            </div>
+            <div>
+              <dt>Your work is saved to your account</dt><dd>
+                Drafts survive reloads and server restarts. A draft is not a decision: use the action button to commit it. Discard draft only clears the current draft.
+              </dd>
+            </div>
+            <div>
+              <dt>Changed evidence needs another look</dt><dd>
+                If another reviewer changes the same CVE, your draft is preserved. Reload the evidence before saving.
+              </dd>
+            </div>
+            <div>
+              <dt>Research does not add affected deployments</dt><dd>
+                Research a CVE fetches its description from NVD. News shows public advisories and headlines. Neither changes your inventory.
+              </dd>
+            </div>
+            <div>
+              <dt>Azure DevOps is configured by an administrator</dt><dd>
+                Ticket creation requires server configuration and confirmation. Imports and connection settings are not editable here.
+              </dd>
+            </div>
+          </dl>
         </div><footer class="modal-foot"><button phx-click="close-settings">Close</button></footer>
       </div>
     </dialog>
@@ -795,7 +895,9 @@ defmodule TriageWeb.WorkspaceComponents do
   def pagination(assigns) do
     ~H"""
     <div class="panel-foot">
-      <span>{@total} CVEs · page {div(@offset, 50) + 1}</span><span class="row"><.link
+      <span>{if @total == 0 or @offset >= @total,
+        do: "0 of #{@total} CVEs",
+        else: "#{@offset + 1}–#{min(@offset + 50, @total)} of #{@total} CVEs"}</span><span class="row"><.link
         :if={@offset > 0}
         patch={Routes.workspace_path(@params, %{"offset" => max(@offset - 50, 0)})}
       >Previous</.link><.link
