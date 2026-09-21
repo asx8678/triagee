@@ -59,20 +59,24 @@ treating old PASS/FAIL counts as certification.
 - Reconcile complete legacy case/exception/decision history and Timeline Event
   log/Daily activity/coverage semantics, including IDs, scope and provenance.
   Timeline now exists in the workspace; that alone does not certify full parity.
-  Consolidated settings, saved views/exports, durable drafts across reload/
-  disconnect, and integration preview/partial/unknown states still need acceptance
-  against approved requirements. Session loss guards are not durable storage.
+  Consolidated settings and saved views/exports still need acceptance against
+  approved requirements. Drafts now persist per authenticated user with original
+  evidence fingerprints and operation IDs; verify browser disconnect/reload UX
+  against the full acceptance catalog. Durable Azure claims and explicit unknown
+  outcome reconciliation do not constitute live-service validation.
 - Complete physical-keyboard horizontal table scrolling, screen-reader, actual
   browser zoom/text-spacing and additional-browser testing. Earlier injected-key
   and wheel probes did not confirm horizontal scrolling. Resizing headless Chrome
   and sampled contrast checks are not WCAG certification. Legacy dirty-history
   navigation depends on a cancelable Navigation API in supported browsers.
-- Verify large-data behavior and query plans/timing. Workspace presentation is
-  paged but its projection hydrates matching data server-side. Move aggregation/
-  pagination into bounded queries/streams before production-scale use. Commit's
-  NOWAIT source-table locks can conflict with unrelated writes; preserve explicit
-  retry/reconciliation. Timeline aggregates, full case detail and source hashing
-  can still traverse substantial history despite bounded page results.
+- Verify large-data behavior and query plans/timing. Workspace filtering, counts
+  and CVE pagination now execute in PostgreSQL, followed by full evidence hydration
+  only for at most 50 page CVEs plus explicit focus/inspector CVEs. A single CVE
+  can still have many findings/placements, and SQL aggregates scan the scoped
+  estate. OFFSET is not a keyset cursor. Commit's short NOWAIT source-table locks
+  can still conflict with unrelated writes; no Azure network call holds them.
+  Timeline aggregates, full case detail and evidence hashing still need realistic
+  volume/load tests.
 - Rehearse migration reconciliation/rollback on a representative copy with legacy
   history AND new work rows. Empty-database migrations do not establish this.
   Do not silently migrate an operator's working data.
@@ -88,7 +92,10 @@ treating old PASS/FAIL counts as certification.
   are not a fresh validation in this cleanup. Dedicated injected UI DB-unavailable/
   upload-read-failure coverage was not established by the workflow report;
   lower-level failure tests are not equivalent UI coverage.
-- Shared deployment requires authentication/authorization and approval policy.
+- Provisioned accounts, authenticated audit identities and application-wide
+  viewer/reviewer/admin roles are now enforced. Team filters are not tenant
+  isolation. Review the role/approval policy and follow
+  [DEPLOYMENT](DEPLOYMENT.md) before shared access.
   Live Azure and administrator-owned AI-wrapper connectivity require deployment-
   owner validation; fake adapters do not establish it. Remote ticket creation and
   local commit are not a distributed transaction: reconcile unknown outcomes,

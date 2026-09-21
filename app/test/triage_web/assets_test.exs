@@ -24,6 +24,8 @@ defmodule TriageWeb.AssetsTest do
   @tailwind_output "priv/static/assets/css/tailwind.css"
   @application_stylesheet "priv/static/assets/css/app.css"
 
+  defp workspace_conn, do: log_in_user(build_conn(), account_fixture(:viewer))
+
   describe "asset generation" do
     test "mix assets.setup regenerates vendor files from the pinned deps" do
       Mix.Tasks.Assets.Setup.run([])
@@ -65,7 +67,7 @@ defmodule TriageWeb.AssetsTest do
   describe "root layout script wiring" do
     test "renders the CSRF meta tag used by the LiveSocket bootstrap" do
       csrf_tags =
-        build_conn()
+        workspace_conn()
         |> get("/")
         |> html_response(200)
         |> LazyHTML.from_fragment()
@@ -79,7 +81,7 @@ defmodule TriageWeb.AssetsTest do
 
     test "loads Phoenix client scripts and the bootstrap as same-origin scripts, in order" do
       srcs =
-        build_conn()
+        workspace_conn()
         |> get("/")
         |> html_response(200)
         |> LazyHTML.from_fragment()
@@ -134,7 +136,7 @@ defmodule TriageWeb.AssetsTest do
   describe "stylesheet wiring" do
     test "loads only Tailwind and the workspace theme at both entry points" do
       hrefs =
-        build_conn()
+        workspace_conn()
         |> get("/")
         |> html_response(200)
         |> LazyHTML.from_fragment()
@@ -148,7 +150,7 @@ defmodule TriageWeb.AssetsTest do
              ]
 
       workspace_hrefs =
-        build_conn()
+        workspace_conn()
         |> get("/workspace")
         |> html_response(200)
         |> LazyHTML.from_fragment()

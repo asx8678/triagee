@@ -1,7 +1,7 @@
 defmodule Triage.ReviewActionsTest do
   use Triage.DataCase, async: false
   import Triage.Fixtures
-  alias Triage.{Workspace, Decisions}
+  alias Triage.{Decisions, Workspace}
   alias Triage.Workspace.Commit
 
   setup do
@@ -74,7 +74,9 @@ defmodule Triage.ReviewActionsTest do
       assert conn.request_path == "/example/Security/_apis/wit/workitems/$Task"
       assert Plug.Conn.get_req_header(conn, "content-type") == ["application/json-patch+json"]
       {:ok, body, conn} = Plug.Conn.read_body(conn)
-      [title, description] = Jason.decode!(body)
+      [title, description, marker] = Jason.decode!(body)
+      assert marker["path"] == "/fields/System.Tags"
+      assert marker["value"] =~ "triage-operation-"
       assert title["value"] =~ c.cve
       assert description["value"] =~ "Package version"
       assert description["value"] =~ "<h2>Summary</h2>"
@@ -99,8 +101,8 @@ defmodule Triage.ReviewActionsTest do
   test "ticket rejection leaves scope actionable", c do
     configure()
     Req.Test.expect(__MODULE__, fn conn -> Plug.Conn.send_resp(conn, 403, "denied") end)
-    assert {:error, {:ticket, message}} = save(c, "create_ticket")
-    assert message =~ "403"
+    assert {:error, {:reconciliation_required, operation}} = save(c, "create_ticket")
+    assert Triage.Repo.get!(Triage.Workspace.TicketOperation, operation).state == "unknown"
     assert Decisions.history_for_cve(c.cve) == []
   end
 end

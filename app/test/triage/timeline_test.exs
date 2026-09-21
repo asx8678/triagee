@@ -35,12 +35,27 @@ defmodule Triage.TimelineTest do
     end
 
     test "rejects an out-of-range or non-integer window" do
-      for bad <- [0, 13, -1, "8", 8.0, true, :eight] do
+      for bad <- [0, 17, -1, "8", 8.0, true, :eight] do
         assert {:error, :invalid_window} = Timeline.list_timeline(weeks: bad)
       end
 
-      for good <- [1, 4, 8, 12] do
+      for good <- [1, 4, 8, 12, 13, 16] do
         assert {:ok, _view} = Timeline.list_timeline(weeks: good)
+      end
+    end
+
+    test "chart limits are normalized before building the chart" do
+      assert {:ok, default} = Timeline.list_timeline()
+      assert default.chart.lane_limit == 20
+
+      assert {:ok, expanded} = Timeline.list_timeline(chart: "20")
+      assert expanded.chart.lane_limit == 20
+
+      assert {:ok, all} = Timeline.list_timeline(chart: "all")
+      assert all.chart.lane_limit == all.chart.total
+
+      for bad <- ["12", "", 20, :all, %{}] do
+        assert {:error, :invalid_chart} = Timeline.list_timeline(chart: bad)
       end
     end
 

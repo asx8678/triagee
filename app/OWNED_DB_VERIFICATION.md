@@ -18,6 +18,8 @@ Then run modes separately as needed:
 
 ```sh
 ./scripts/verify_owned_db.sh target
+./scripts/verify_owned_db.sh suite     # full suite without automatic formatting
+./scripts/verify_owned_db.sh ci        # full suite plus strict static checks
 ./scripts/verify_owned_db.sh precommit
 ./scripts/verify_owned_db.sh concurrency
 # or all three phases on one disposable database
@@ -26,7 +28,7 @@ Then run modes separately as needed:
 
 The wrapper targets passwordless loopback PostgreSQL on the standard port 5432 by default. When that port already belongs to a pre-existing server that must not be touched, export `TRIAGE_OWNED_DB_PORT` (decimal, 1024..65535) to point at an owned cluster elsewhere. The value is validated **before any database effect**; an empty, non-decimal or out-of-range value is rejected with exit 65 and no effects. The wrapper passes the validated port to every `psql` connection and exports it for the test configuration; `config/test.exs` honors it only alongside the guard's generated `_ab_` partition with the same range validation and fails closed otherwise, and `scripts/verify_owned_db.exs` re-checks the configured port against the validated value. Dev/prod configuration never reads this variable.
 
-`target` covers runtime configuration plus focused import, navigation/scope, and replay tests. `precommit` runs the full alias once. `concurrency` alone sets the exact internal `TRIAGE_IMPORT_CONCURRENCY_DB` opt-in and runs the import concurrency test; do not report ordinary target/precommit evidence as concurrency evidence.
+`focused test/FILE.exs ...` runs explicit in-repository test files and rejects flags/traversal; `suite` runs all ExUnit tests without rewriting source; `ci` runs all non-mutating quality gates and the full suite. `target` covers runtime configuration plus focused import, navigation/scope, and replay tests. `precommit` runs the full alias once. `concurrency` alone sets the exact internal `TRIAGE_IMPORT_CONCURRENCY_DB` opt-in and runs the import concurrency test; do not report ordinary target/precommit evidence as concurrency evidence.
 
 ## Fail-closed guards
 

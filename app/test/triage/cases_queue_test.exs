@@ -188,7 +188,7 @@ defmodule Triage.CasesQueueTest do
         id,
         [:triage, :repo, :query],
         fn _event, _measurements, metadata, _config ->
-          send(parent, {:queue_sql, metadata[:query] || ""})
+          if self() == parent, do: send(parent, {:queue_sql, metadata[:query] || ""})
         end,
         nil
       )

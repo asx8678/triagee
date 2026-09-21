@@ -123,6 +123,22 @@ run_case dropfail env FAKE_DROP_FAIL=1 "$script" target
 grep -F 'cleanup failed (no FORCE or session termination attempted)' "$tmp/dropfail.out" >/dev/null || fail "cleanup failure diagnostic missing"
 ! grep -E 'FORCE|pg_terminate_backend|dropdb' "$tmp/dropfail.log" >/dev/null || fail "cleanup used force/termination"
 
+run_case focused "$script" focused test/triage/workspace_test.exs
+[ "$CASE_STATUS" -eq 0 ] || fail "focused status=$CASE_STATUS"
+grep -F 'mix test test/triage/workspace_test.exs' "$tmp/focused.log" >/dev/null || fail "focused paths missing"
+run_case traversal "$script" focused test/../../outside.exs
+[ "$CASE_STATUS" -eq 65 ] || fail "traversal status=$CASE_STATUS"
+no_effects "$tmp/traversal.log" || fail "traversal performed effects"
+run_case flags "$script" focused --include
+[ "$CASE_STATUS" -eq 64 ] || fail "flags status=$CASE_STATUS"
+no_effects "$tmp/flags.log" || fail "flags performed effects"
+run_case suite "$script" suite
+[ "$CASE_STATUS" -eq 0 ] || fail "suite status=$CASE_STATUS"
+grep -F 'mix test' "$tmp/suite.log" >/dev/null || fail "suite lacks full tests"
+! grep -F 'mix precommit' "$tmp/suite.log" >/dev/null || fail "suite rewrites formatting"
+run_case ci "$script" ci
+[ "$CASE_STATUS" -eq 0 ] || fail "ci status=$CASE_STATUS"
+grep -F 'mix ci' "$tmp/ci.log" >/dev/null || fail "ci lacks quality gates"
 run_case workspace "$script" workspace
 [ "$CASE_STATUS" -eq 0 ] || fail "workspace status=$CASE_STATUS"
 grep -F 'workspace_test.exs' "$tmp/workspace.log" >/dev/null || fail "workspace lacks domain tests"

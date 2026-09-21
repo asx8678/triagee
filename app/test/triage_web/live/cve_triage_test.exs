@@ -1,5 +1,5 @@
 defmodule TriageWeb.CveTriageTest do
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
   import Phoenix.LiveViewTest
   import Ecto.Query
   alias Triage.{Cases, Exceptions, Inventory, Repo}

@@ -1,7 +1,7 @@
 defmodule Triage.PresentationSeedsTest do
   use Triage.DataCase, async: false
-  alias Triage.{Repo, Seeds}
   alias Triage.Inventory.{Finding, FindingEvent}
+  alias Triage.{Repo, Seeds}
 
   test "presentation histories have varied timing and repeat without duplicates" do
     Triage.DataCase.reset_inventory!()

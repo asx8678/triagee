@@ -6,7 +6,7 @@ defmodule TriageWeb.FindingLive.PagingTest do
   state.
   """
 
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Phoenix.LiveViewTest
 

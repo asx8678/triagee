@@ -10,7 +10,7 @@ defmodule TriageWeb.CaseLiveTest do
   render_change, render_submit) — never raw-HTML matching.
   """
 
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   import Ecto.Query
   alias Triage.{Cases, Intel, Repo, Seeds}

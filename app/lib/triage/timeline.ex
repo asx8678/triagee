@@ -429,7 +429,6 @@ defmodule Triage.Timeline do
   # any other request keeps an integer bound for the truncation note.
   defp chart_limit(%{chart_limit: :all}, total), do: total
   defp chart_limit(%{chart_limit: limit}, _total) when is_integer(limit), do: limit
-  defp chart_limit(_req, _total), do: @chart_lane_limit
 
   defp chart_date(date, today) do
     %{
@@ -448,50 +447,53 @@ defmodule Triage.Timeline do
     events
     |> Enum.group_by(fn {_e, f, _i} -> f.cve end)
     |> Map.new(fn {cve, rows} ->
-      days =
-        rows
-        |> Enum.group_by(fn {e, _f, _i} -> DateTime.to_date(e.occurred_at) end)
-        |> Enum.sort_by(fn {date, _} -> date end, Date)
-        |> Enum.map_reduce({%{}, nil}, fn {date, day_rows}, {states, detected_on} ->
-          ordered =
-            Enum.sort_by(day_rows, fn {e, _, _} ->
-              {DateTime.to_unix(e.occurred_at, :microsecond), e.id}
-            end)
-
-          states =
-            Enum.reduce(ordered, states, fn {e, f, _}, acc -> Map.put(acc, f.id, e.event) end)
-
-          detected_on =
-            if Enum.any?(ordered, fn {e, _, _} -> e.event in ["appeared", "reopened"] end),
-              do: date,
-              else: detected_on
-
-          {{date,
-            %{
-              kinds:
-                day_rows
-                |> Enum.map(fn {e, _f, _i} -> e.event end)
-                |> Enum.uniq()
-                |> Enum.sort(),
-              last_event: ordered |> List.last() |> then(fn {e, _, _} -> e.event end),
-              open?: Enum.any?(states, fn {_, event} -> event != "resolved" end),
-              detected_on: detected_on,
-              count: length(day_rows),
-              suppressed?: Enum.any?(day_rows, fn {_e, f, _i} -> f.suppressed end),
-              fix_note:
-                ordered
-                |> Enum.find(fn {e, _, _} -> e.event == "resolved" end)
-                |> then(fn
-                  nil -> nil
-                  {e, _, _} -> e.note
-                end)
-            }}, {states, detected_on}}
-        end)
-        |> elem(0)
-        |> Map.new()
+      days = chart_days(rows)
 
       {cve, days}
     end)
+  end
+
+  defp chart_days(rows) do
+    rows
+    |> Enum.group_by(fn {e, _f, _i} -> DateTime.to_date(e.occurred_at) end)
+    |> Enum.sort_by(fn {date, _} -> date end, Date)
+    |> Enum.map_reduce({%{}, nil}, fn {date, day_rows}, {states, detected_on} ->
+      ordered =
+        Enum.sort_by(day_rows, fn {e, _, _} ->
+          {DateTime.to_unix(e.occurred_at, :microsecond), e.id}
+        end)
+
+      states =
+        Enum.reduce(ordered, states, fn {e, f, _}, acc -> Map.put(acc, f.id, e.event) end)
+
+      detected_on =
+        if Enum.any?(ordered, fn {e, _, _} -> e.event in ["appeared", "reopened"] end),
+          do: date,
+          else: detected_on
+
+      {{date,
+        %{
+          kinds:
+            day_rows
+            |> Enum.map(fn {e, _f, _i} -> e.event end)
+            |> Enum.uniq()
+            |> Enum.sort(),
+          last_event: ordered |> List.last() |> then(fn {e, _, _} -> e.event end),
+          open?: Enum.any?(states, fn {_, event} -> event != "resolved" end),
+          detected_on: detected_on,
+          count: length(day_rows),
+          suppressed?: Enum.any?(day_rows, fn {_e, f, _i} -> f.suppressed end),
+          fix_note:
+            ordered
+            |> Enum.find(fn {e, _, _} -> e.event == "resolved" end)
+            |> then(fn
+              nil -> nil
+              {e, _, _} -> e.note
+            end)
+        }}, {states, detected_on}}
+    end)
+    |> elem(0)
+    |> Map.new()
   end
 
   defp chart_track(lane, by_cve, req) do

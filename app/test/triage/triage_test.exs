@@ -228,7 +228,7 @@ defmodule Triage.TriageTest do
     row = row!("CVE-2026-5001", "whitelisted")
     assert row.state == :decision_recorded
     assert row.decision.id == decision.id
-    assert row.decision.label == "Accepted risk"
+    assert row.decision.label == "Whitelisted"
     assert row.decision.state == :active
     assert row.decision.actor == "test-operator"
 

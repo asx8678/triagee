@@ -6,8 +6,12 @@ and explicitly request remediation. A ticket or risk acceptance is not a fix.
 
 ## Safety boundary
 
-**Trusted local operators only: there is no authentication or authorization.**
-Runtime binding accepts only `127.0.0.1` or `::1`; keep PostgreSQL local too.
+**Provisioned accounts are required; there is no public registration or default password.**
+Viewer/reviewer/admin roles are enforced server-side and workspace audit identity
+comes from the authenticated session. Runtime binding still accepts only
+`127.0.0.1` or `::1`; keep PostgreSQL local too. See
+[deployment and recovery](docs/DEPLOYMENT.md) for TLS, account provisioning,
+release migrations and backup/restore. A local test pass is not VPS certification.
 Demo placements are simulated and public CVE reference data is not evidence that
 any real deployment is affected. No background collection or automatic approvals
 are enabled. AI advice and Azure ticket creation are opt-in and human-triggered.

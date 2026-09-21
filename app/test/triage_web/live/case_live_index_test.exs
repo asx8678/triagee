@@ -6,7 +6,7 @@ defmodule TriageWeb.CaseLiveIndexTest do
   hostile text escaping and unsupported events.
   """
 
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   import Ecto.Query
   alias Triage.{Cases, Intel, Inventory, Repo, Seeds}

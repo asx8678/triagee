@@ -9,7 +9,7 @@ defmodule TriageWeb.ReadOnlyRequestsTest do
   rather than merely unobserved. Writes are asserted by a whole-database row-count
   fingerprint taken before and after rendering the read routes.
   """
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Ecto.Query
   import Phoenix.LiveViewTest

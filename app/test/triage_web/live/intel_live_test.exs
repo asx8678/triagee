@@ -3,7 +3,7 @@ defmodule TriageWeb.IntelLiveTest do
   The Intel page is a read-only cache view: it must state the fetch policy and
   show a broken read as broken rather than as an empty cache.
   """
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Phoenix.LiveViewTest
 

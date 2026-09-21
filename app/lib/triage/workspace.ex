@@ -4,7 +4,25 @@ defmodule Triage.Workspace do
   alias Triage.{Decisions, Exposure, Intel, ReferenceData, Repo, Risk}
   alias Triage.Inventory.{Finding, Image, ImagePlacement}
 
-  @doc "Read-only scope projection. Never hydrates a filtered CVE back to all of its placements."
+  @doc """
+  Bounded database workspace read. Accepts the workspace URL's string-keyed
+  parameters and returns `page_rows` (at most 50), `total`, scalar `metrics`,
+  `teams`, `options`, and bounded `targets`/`matching` for the page and explicit
+  `item`/`inspect` CVEs. `row` is the full scoped focused CVE; the inspector keeps
+  the urgent/unknown drilldown's matching-target semantics. Review defaults to
+  the first matching CVE, independently of the page offset.
+
+  Metric entries contain only `%{value: count}`; use mode/scope queries for
+  drilldowns rather than materializing an estate-wide list of target IDs.
+  """
+  defdelegate page(params, now \\ DateTime.utc_now()), to: Triage.Workspace.Query
+
+  @doc """
+  Full read-only scope projection, retained for domain callers. Supports `team`,
+  `environment`, `cve`, `cves` (list), and `placement_ids` (list); empty lists
+  match nothing. Limits apply to complete targets, never individual findings.
+  Never hydrates a filtered CVE back to all of its placements.
+  """
   def targets(filters \\ %{}, now \\ DateTime.utc_now()) do
     query =
       from f in Finding,
@@ -110,6 +128,12 @@ defmodule Triage.Workspace do
 
       {"cve", value}, q when is_binary(value) and value != "" ->
         where(q, [f], f.cve == ^value)
+
+      {"cves", values}, q when is_list(values) ->
+        where(q, [f], f.cve in ^values)
+
+      {"placement_ids", values}, q when is_list(values) ->
+        where(q, [f, p], p.id in ^values)
 
       _, q ->
         q

@@ -3,7 +3,7 @@ defmodule TriageWeb.TriageLiveTest do
   End-to-end tests for the Triage page: lanes, per-scope work items, the exact
   filter complement, and the visible invalid-filter state.
   """
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Ecto.Query
   import Phoenix.LiveViewTest

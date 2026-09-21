@@ -1,10 +1,20 @@
 #!/bin/sh
 set -eu
 
-usage() { echo "usage: $0 {target|precommit|concurrency|workspace|workspace_browser|all}" >&2; exit 64; }
-[ "$#" -eq 1 ] || usage
+usage() { echo "usage: $0 {target|suite|ci|precommit|concurrency|workspace|workspace_browser|all} | focused test/FILE.exs ..." >&2; exit 64; }
+[ "$#" -ge 1 ] || usage
 mode=$1
-case "$mode" in target|precommit|concurrency|workspace|workspace_browser|all) ;; *) usage ;; esac
+shift
+case "$mode" in
+  focused)
+    [ "$#" -ge 1 ] || usage
+    for test_path in "$@"; do
+      case "$test_path" in *..*) echo 'unsafe test path' >&2; exit 65;; test/*.exs) ;; *) usage;; esac
+    done
+    ;;
+  target|suite|ci|precommit|concurrency|workspace|workspace_browser|all) [ "$#" -eq 0 ] || usage ;;
+  *) usage ;;
+esac
 
 # Refuse caller-selected execution controls before sanitizing the environment.
 case "${MIX_ENV-}" in ""|test) ;; *) echo "verify-owned-db: refuse non-test MIX_ENV" >&2; exit 65;; esac
@@ -68,7 +78,7 @@ run() {
 verify() { run "guard-$1" mise x -- mix run --no-start scripts/verify_owned_db.exs "$db" "$1"; }
 
 # Read complete task help in the pinned toolchain before any database effect.
-for task in run ecto.migrate test precommit; do
+for task in run ecto.migrate test precommit ci; do
   run "help-$task" mise x -- mix help "$task"
 done
 
@@ -87,6 +97,9 @@ run_target() {
   run targeted-tests mise x -- mix test test/triage/import_test.exs test/triage/import_flow_test.exs test/triage/inventory_scope_test.exs test/triage/replay_test.exs test/triage/replay_runs_test.exs test/triage/runtime_config_test.exs
 }
 run_precommit() { verify identity; run precommit mise x -- mix precommit; }
+run_suite() { run_migrations; run full-suite mise x -- mix test; }
+run_focused() { run_migrations; run focused-tests mise x -- mix test "$@"; }
+run_ci() { verify identity; run ci mise x -- mix ci; }
 run_concurrency() {
   run_migrations; verify empty
   export TRIAGE_IMPORT_CONCURRENCY_DB="$db"
@@ -104,5 +117,5 @@ run_workspace_browser() {
   run workspace-browser mise x -- mix run --no-start scripts/workspace_browser.exs "$db"
 }
 
-case "$mode" in workspace) run_workspace;; workspace_browser) run_workspace_browser;; target) run_target;; precommit) run_precommit;; concurrency) run_concurrency;; all) run_target; run_precommit; run_concurrency;; esac
+case "$mode" in focused) run_focused "$@";; suite) run_suite;; ci) run_ci;; workspace) run_workspace;; workspace_browser) run_workspace_browser;; target) run_target;; precommit) run_precommit;; concurrency) run_concurrency;; all) run_target; run_precommit; run_concurrency;; esac
 echo "verify-owned-db: mode=$mode completed"

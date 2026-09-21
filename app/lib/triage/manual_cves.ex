@@ -1,8 +1,8 @@
 defmodule Triage.ManualCves do
   @moduledoc "Manually requested NVD lookups and a persistent research list."
   import Ecto.Query
-  alias Triage.Repo
   alias Triage.Intel.{Advisory, Client, Sanitize}
+  alias Triage.Repo
 
   @source "manual:nvd"
 
@@ -21,24 +21,28 @@ defmodule Triage.ManualCves do
       transport =
         transport || Application.get_env(:triage, :manual_cve_transport) || %{req: &request/1}
 
-      case Client.fetch({:nvd, cve}, transport) do
-        {:ok, [%{summary: summary} = row]} when is_binary(summary) and summary != "" ->
-          {:ok, row}
-
-        {:ok, []} ->
-          {:error, "NVD has no published record for this CVE yet."}
-
-        {:ok, _} ->
-          {:error, "NVD has no English description for this CVE yet."}
-
-        {:error, {:http_status, 429}} ->
-          {:error, "NVD is rate limiting requests. Please try again shortly."}
-
-        {:error, _} ->
-          {:error, "Could not fetch this CVE from NVD. Please try again."}
-      end
+      fetch_record(cve, transport)
     else
       {:error, "Enter a CVE ID such as CVE-2024-3094."}
+    end
+  end
+
+  defp fetch_record(cve, transport) do
+    case Client.fetch({:nvd, cve}, transport) do
+      {:ok, [%{summary: summary} = row]} when is_binary(summary) and summary != "" ->
+        {:ok, row}
+
+      {:ok, []} ->
+        {:error, "NVD has no published record for this CVE yet."}
+
+      {:ok, _} ->
+        {:error, "NVD has no English description for this CVE yet."}
+
+      {:error, {:http_status, 429}} ->
+        {:error, "NVD is rate limiting requests. Please try again shortly."}
+
+      {:error, _} ->
+        {:error, "Could not fetch this CVE from NVD. Please try again."}
     end
   end
 

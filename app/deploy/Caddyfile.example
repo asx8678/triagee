@@ -1,0 +1,4 @@
+# Replace with a DNS name pointing to the VPS; Caddy obtains/renews TLS.
+triage.example.com {
+    reverse_proxy 127.0.0.1:4000
+}

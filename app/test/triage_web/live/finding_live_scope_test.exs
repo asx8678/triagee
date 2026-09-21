@@ -6,7 +6,7 @@ defmodule TriageWeb.FindingLive.ScopeTest do
   staging image_b data stays untouched.
   """
 
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   import Ecto.Query
   alias Triage.Inventory.{Finding, Image, ImagePlacement}

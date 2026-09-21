@@ -7,7 +7,7 @@ defmodule TriageWeb.TimelineReadabilityTest do
   presented as a local action, and a picture must never be the only carrier of
   meaning.
   """
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Triage.Fixtures
 
@@ -168,23 +168,24 @@ defmodule TriageWeb.TimelineReadabilityTest do
     assert svg |> Enum.at(0) |> LazyHTML.attribute("aria-hidden") == ["true"]
     assert svg |> Enum.at(0) |> LazyHTML.attribute("focusable") == ["false"]
 
-    text = LazyHTML.text(document)
+    text = document |> LazyHTML.text() |> String.replace(~r/\s+/, " ")
 
-    # Every shape the chart draws is named in the legend, so neither colour nor
-    # geometry is ever the only carrier of meaning.
+    # The current status chart replaced observation-only connectors. Preserve
+    # textual equivalents for every status/color and explicit evidence limits.
     for required <- [
-          "recorded on two adjacent days",
-          "recorded at both ends; nothing recorded in between",
-          "also recorded before this window starts",
-          "a single recorded day, so no line is drawn",
+          "Red dots record detection",
+          "black line behind them carries the open state",
+          "a red dot at the window edge",
+          "Black dots record a whitelist decision",
+          "grey line behind the black dot",
+          "Green dots record disappearance, not a verified fix",
           "hidden from screen readers"
         ] do
       assert text =~ required, "expected the chart legend to state #{inspect(required)}"
     end
 
-    assert text =~ "A line is not a claim that the CVE was present"
-
-    assert text =~ "and a missing line is not a claim that nothing existed."
+    assert text =~ "Lines show recorded status, not verified continuous exposure."
+    assert text =~ "Missing observations do not prove safety or continuous exposure."
   end
 
   test "the lane table labels its scope and its counts", %{conn: conn} do

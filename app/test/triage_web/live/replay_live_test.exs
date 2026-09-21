@@ -1,5 +1,5 @@
 defmodule TriageWeb.ReplayLiveTest do
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   alias Triage.Replay.Run
   alias Triage.Repo

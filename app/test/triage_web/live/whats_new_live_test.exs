@@ -6,7 +6,7 @@ defmodule TriageWeb.WhatsNewLiveTest do
   link scoping, and read-only purity of the rendered feed.
   """
 
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Ecto.Query
   import Phoenix.LiveViewTest

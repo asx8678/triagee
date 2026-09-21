@@ -13,6 +13,7 @@ defmodule TriageWeb.Layouts do
   def app(%{workspace: true} = assigns) do
     ~H"""
     <div class="approved-workspace">
+      <.flash_group flash={@flash} />
       {render_slot(@inner_block)}
     </div>
     """
@@ -70,7 +71,8 @@ defmodule TriageWeb.Layouts do
           aria-label="Environment and safety"
         >
           <div class="cluster environment-summary">
-            <strong>Local · No sign-in · {@runtime.binding}</strong>
+            <strong>Authenticated workspace · {@runtime.binding}</strong>
+            <.account current_scope={@current_scope} />
             <.link href={~p"/workspace"}>Approved workspace preview</.link>
           </div>
           <details id="safety-details">
@@ -78,8 +80,8 @@ defmodule TriageWeb.Layouts do
             <div class="stack">
               <p>Live collection is disabled. Production coverage is unknown.</p>
               <p>
-                The local-operator identity is unauthenticated: there is no authentication or
-                authorization. Keep this app on loopback. {@runtime.binding_detail}
+                Accounts are provisioned by an administrator. Server-verified roles govern changes;
+                sessions expire and can be revoked. {@runtime.binding_detail}
               </p>
               <p>
                 Team and environment filters only change what is displayed; filters are not
@@ -105,6 +107,19 @@ defmodule TriageWeb.Layouts do
           </div>
         </main>
       </div>
+    </div>
+    """
+  end
+
+  attr :current_scope, :map, default: nil
+
+  def account(assigns) do
+    ~H"""
+    <div :if={@current_scope} id="account-menu" class="row wrap">
+      <span id="verified-identity">{@current_scope.user.email} · {@current_scope.user.role}</span>
+      <.form for={to_form(%{})} id="logout-form" action={~p"/logout"} method="delete">
+        <button id="logout-button" type="submit">Sign out</button>
+      </.form>
     </div>
     """
   end

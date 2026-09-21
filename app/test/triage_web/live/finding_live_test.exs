@@ -1,5 +1,5 @@
 defmodule TriageWeb.FindingLiveTest do
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   import Ecto.Query
   alias Triage.Intel

@@ -1,5 +1,5 @@
 defmodule TriageWeb.OverviewReadabilityTest do
-  use TriageWeb.ConnCase
+  use TriageWeb.LegacyUICase
 
   test "homepage is the searchable vulnerability workspace, not dashboard previews", %{conn: conn} do
     {:ok, view, _} = live(conn, "/")

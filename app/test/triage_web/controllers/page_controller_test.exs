@@ -1,5 +1,5 @@
 defmodule TriageWeb.PageControllerTest do
-  use TriageWeb.ConnCase
+  use TriageWeb.LegacyUICase
 
   test "GET / is the vulnerabilities workspace", %{conn: conn} do
     document = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()

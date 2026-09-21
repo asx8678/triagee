@@ -1,5 +1,5 @@
 defmodule TriageWeb.CaseReadabilityTest do
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   import Ecto.Query
   alias Triage.{Cases, Repo, Seeds}

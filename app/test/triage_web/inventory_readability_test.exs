@@ -1,5 +1,5 @@
 defmodule TriageWeb.InventoryReadabilityTest do
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Ecto.Query
 

@@ -4,7 +4,7 @@ defmodule TriageWeb.FilterBarTest do
   change from page to page. These tests pin the frame, not each page's query: the
   controls, the reset action, and the summary keep one order everywhere.
   """
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Phoenix.LiveViewTest
 

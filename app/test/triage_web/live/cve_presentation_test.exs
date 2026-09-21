@@ -9,7 +9,7 @@ defmodule TriageWeb.CvePresentationTest do
   eyebrow and the title, with navigation, copy and KEV marker retained.
   """
 
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Phoenix.LiveViewTest
 

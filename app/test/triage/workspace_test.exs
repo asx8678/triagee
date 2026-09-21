@@ -107,7 +107,7 @@ defmodule Triage.WorkspaceTest do
     assert Enum.map(Workspace.select(targets, "needs"), & &1.id) == [c.staging.id]
     assert Workspace.select(targets, "progress") == []
     assert Repo.reload!(c.finding).resolved_at == nil
-    assert Decisions.state(decision, DateTime.add(DateTime.utc_now(), 86400 * 365)) == :active
+    assert Decisions.state(decision, DateTime.add(DateTime.utc_now(), 86_400 * 365)) == :active
   end
 
   test "operation retries return the same records, payload reuse is rejected", c do

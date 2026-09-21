@@ -122,7 +122,7 @@ defmodule TriageWeb.WorkspaceComponents do
         </p>
       </section>
     </div>
-    <p :if={@targets == []} class="empty">
+    <p :if={@metrics["active"].value == 0} class="empty">
       No matching operational inventory. Public advisories are not deployment evidence. Check scope or import local evidence in Data &amp; settings.
     </p>
     """
@@ -256,6 +256,9 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :error, :any, required: true
   attr :hidden_targets, :list, required: true
   attr :queue_shown, :boolean, default: false
+  attr :can_review, :boolean, default: false
+  attr :draft_error, :boolean, default: false
+  attr :pending_operation, :any, default: nil
 
   def review(assigns) do
     ~H"""
@@ -292,7 +295,12 @@ defmodule TriageWeb.WorkspaceComponents do
           <.link
             :for={row <- @rows}
             id={"queue-#{row.cve}"}
-            class={["queue-item", @row && @row.cve == row.cve && "active", fixed_scopes?(row.scopes) && "fixed-item", whitelist_state(row) == "Whitelisted" && "whitelisted-item"]}
+            class={[
+              "queue-item",
+              @row && @row.cve == row.cve && "active",
+              fixed_scopes?(row.scopes) && "fixed-item",
+              whitelist_state(row) == "Whitelisted" && "whitelisted-item"
+            ]}
             aria-current={if @row && @row.cve == row.cve, do: "true"}
             patch={Routes.workspace_path(@params, %{"item" => row.cve})}
           ><div class="row">
@@ -309,7 +317,11 @@ defmodule TriageWeb.WorkspaceComponents do
         class="panel review-workspace"
         aria-label="Current assessment"
       >
-        <header class={["review-heading", fixed_scopes?(@row.scopes) && "fixed-heading", whitelist_state(@row) == "Whitelisted" && "whitelisted-heading"]}>
+        <header class={[
+          "review-heading",
+          fixed_scopes?(@row.scopes) && "fixed-heading",
+          whitelist_state(@row) == "Whitelisted" && "whitelisted-heading"
+        ]}>
           <strong :if={fixed_scopes?(@row.scopes)} class="fixed-banner">FIXED</strong>
           <strong :if={whitelist_state(@row) == "Whitelisted"} class="whitelisted-banner">WHITELISTED</strong>
           <div class="between">
@@ -354,7 +366,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <p :if={@hidden_targets != []} class="form-error">
               {length(@hidden_targets)} selected targets are hidden by this scope. Restore the original scope; selection has not changed.
             </p>
-            <.scope_table targets={@row.scopes} selected={@draft.targets} selectable />
+            <.scope_table targets={@row.scopes} selected={@draft.targets} selectable={@can_review} />
             <p class="coverage-note">
               One target is this CVE on an immutable placement, including every listed package occurrence. Production does not include staging.
             </p>
@@ -378,6 +390,9 @@ defmodule TriageWeb.WorkspaceComponents do
             </details>
           </div>
           <div class="decision-column">
+            <p :if={not @can_review} id="viewer-read-only">
+              Read-only viewer. A reviewer or administrator must make decisions.
+            </p>
             <div class="decision-head">
               <h3>Decision</h3><.saved_status scopes={@row.scopes} /><span class="tag">{length(
                 @draft.targets
@@ -386,6 +401,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <p :if={@error} id="decision-error" role="alert" class="form-error">{@error}</p>
             <.input
               field={@form[:action]}
+              disabled={not @can_review}
               type="select"
               label="Next action"
               options={[
@@ -397,12 +413,14 @@ defmodule TriageWeb.WorkspaceComponents do
             <.input
               :if={@draft.fields["action"] == "accepted_risk"}
               field={@form[:due_on]}
+              disabled={not @can_review}
               type="date"
               label="Whitelist through (UTC)"
             />
             <.input
               :if={@draft.fields["action"] == "accepted_risk"}
               field={@form[:reason]}
+              disabled={not @can_review}
               type="textarea"
               label="Comment (optional)"
               maxlength="2000"
@@ -417,16 +435,26 @@ defmodule TriageWeb.WorkspaceComponents do
               Creates an Azure DevOps ticket with CVE and selected deployment evidence. Requires server configuration.
             </p>
             <div class="decision-actions">
-              <button :if={@error} type="button" phx-click="reconcile">Reload current evidence</button>
+              <button
+                :if={@can_review && (@error || @draft.stale)}
+                id="reload-evidence"
+                type="button"
+                phx-click="reconcile"
+              >Reload current evidence</button>
             </div>
           </div>
         </.form>
         <footer class="review-footer">
           <span id="draft-state" class="save-state">{if @draft.saved,
             do: "Decision committed locally",
-            else: "Draft · this live connection only"}</span><div class="row wrap">
+            else:
+              if(@draft_error,
+                do: "Draft NOT saved · keep this tab open",
+                else: if(@draft.dirty, do: "Draft · saved to your account", else: "New assessment")
+              )}</span><div class="row wrap">
             <button
               id="cancel-decision"
+              disabled={not @can_review or not is_nil(@pending_operation)}
               type="button"
               phx-click="cancel-decision"
             >Cancel</button>
@@ -437,7 +465,8 @@ defmodule TriageWeb.WorkspaceComponents do
               form="workspace-decision"
               phx-disable-with="Working…"
               disabled={
-                @hidden_targets != [] or
+                not @can_review or not is_nil(@pending_operation) or @draft_error or @draft.stale or
+                  @hidden_targets != [] or
                   @draft.fields["action"] not in ~w(fixed accepted_risk create_ticket)
               }
             >{case @draft.fields["action"] do
@@ -686,24 +715,47 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :row, :map, required: true
   attr :draft, :map, required: true
   attr :error, :any, default: nil
+
   def ticket_confirmation(assigns) do
     targets = Enum.filter(assigns.row.scopes, &(&1.id in assigns.draft.targets))
     payload = Triage.AzureDevOps.payload(assigns.row.cve, targets, assigns.draft.operation)
-    assigns = assign(assigns, :ticket_description, Enum.find(payload, &(&1.path == "/fields/System.Description")).value)
+
+    assigns =
+      assign(
+        assigns,
+        :ticket_description,
+        Enum.find(payload, &(&1.path == "/fields/System.Description")).value
+      )
+
     ~H"""
-    <dialog id="ticket-confirmation" class="confirm" phx-hook="WorkspaceDialog" data-close-event="cancel-risk" aria-labelledby="ticket-title">
+    <dialog
+      id="ticket-confirmation"
+      class="confirm"
+      phx-hook="WorkspaceDialog"
+      data-close-event="cancel-risk"
+      aria-labelledby="ticket-title"
+    >
       <div class="confirmation-layout">
-        <header class="modal-head"><h2 id="ticket-title">Preview Azure DevOps ticket</h2></header>
+        <header class="modal-head">
+          <h2 id="ticket-title">Preview Azure DevOps ticket</h2>
+        </header>
         <div class="modal-body">
           <p>This will create a ticket in: <strong>{Triage.AzureDevOps.backlog()}</strong></p>
           <h3>{@row.cve} needs to be fixed</h3>
           <p>Team: {Triage.AzureDevOps.team()} (routed through the team's area path)</p>
-          <div style="white-space: normal; overflow-wrap: anywhere; overflow: auto;">{Phoenix.HTML.raw(@ticket_description)}</div>
+          <div style="white-space: normal; overflow-wrap: anywhere; overflow: auto;">
+            {Phoenix.HTML.raw(@ticket_description)}
+          </div>
           <p :if={@error} role="alert">{@error}</p>
         </div>
         <footer class="modal-foot">
           <button phx-click="cancel-risk">Cancel</button>
-          <button id="confirm-ticket" class="primary" phx-click="confirm-ticket" phx-disable-with="Creating…">Create ticket</button>
+          <button
+            id="confirm-ticket"
+            class="primary"
+            phx-click="confirm-ticket"
+            phx-disable-with="Creating…"
+          >Create ticket</button>
         </footer>
       </div>
     </dialog>
@@ -723,10 +775,10 @@ defmodule TriageWeb.WorkspaceComponents do
         <header class="modal-head">
           <h2 id="settings-title">Data &amp; settings</h2>
         </header><div class="modal-body">
-          <p>Local workspace · No sign-in · keep the service on loopback.</p><p>
+          <p>Authenticated workspace · keep the service on loopback behind your HTTPS proxy.</p><p>
             Operational inventory excludes public-reference records. Scan completeness and current production coverage are unverified.
           </p><p>
-            Drafts survive navigation within this live connection, not reload or server restart. Local decisions are durable. Leaving this workspace may discard drafts.
+            Draft edits are saved to your account and survive reloads and server restarts. Original evidence and operation identity remain unchanged until you explicitly reload evidence. Other reviewers’ changes mark an edited draft stale.
           </p><p>
             Add CVE fetches a requested description from NVD. Opening News or choosing Refresh retrieves public CVEs and headlines. Research and news do not change affected inventory. Ticket creation requires Azure DevOps server configuration. Imports, replay and AI controls are not available in this workspace.
           </p>

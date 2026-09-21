@@ -1,5 +1,5 @@
 defmodule TriageWeb.TimelineLaneTimingTest do
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
   import Phoenix.LiveViewTest
   alias TriageWeb.TimelineLive.Lanes
   @first ~U[2026-01-01 00:00:00Z]

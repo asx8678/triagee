@@ -1,5 +1,5 @@
 defmodule TriageWeb.ToolsReadabilityTest do
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   alias Triage.Inventory.Image
   alias Triage.Replay.{Run, Runs}

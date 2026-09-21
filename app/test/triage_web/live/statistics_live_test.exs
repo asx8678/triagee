@@ -1,5 +1,5 @@
 defmodule TriageWeb.StatisticsLiveTest do
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
   import Phoenix.LiveViewTest
   alias Triage.Inventory.{Finding, Image}
   alias Triage.Repo
@@ -25,11 +25,11 @@ defmodule TriageWeb.StatisticsLiveTest do
     {:ok, timeline, _} = live(conn, ~p"/timeline")
     assert has_element?(timeline, "#tl-lanes-title", "time to fix")
 
-    assert has_element?(
-             timeline,
-             "#timeline-observation-timing[href='/statistics']",
-             "Summary statistics"
-           )
+    # Timeline is now shared with the workspace; it must not link users back
+    # into a retired statistics route. The retained statistics screen still
+    # links forward to the full timeline and its aggregate summary.
+    assert has_element?(timeline, "#tl-summary")
+    refute has_element?(timeline, "#timeline-observation-timing[href='/statistics']")
   end
 
   test "reload updates aggregates, preserving clearance and whitelist metrics", %{conn: conn} do

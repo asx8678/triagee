@@ -10,6 +10,7 @@ defmodule TriageWeb.Endpoint do
     encryption_salt: "triage-session-v1",
     max_age: 28_800,
     http_only: true,
+    secure: not code_reloading?,
     same_site: "Lax"
   ]
 

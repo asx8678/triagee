@@ -4,7 +4,7 @@ defmodule TriageWeb.FindingLive.InputTest do
   malformed filter events and finding-id bounds (findings.id is a bigint).
   """
 
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   import Ecto.Query
   alias Triage.Inventory.Finding

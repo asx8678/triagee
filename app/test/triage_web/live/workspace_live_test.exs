@@ -1,5 +1,6 @@
 defmodule TriageWeb.WorkspaceLiveTest do
   use TriageWeb.ConnCase, async: false
+  @moduletag authenticated: :reviewer
   import Phoenix.LiveViewTest
   import Triage.Fixtures
   alias Triage.{Decisions, Repo, Workspace}
@@ -103,12 +104,14 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert has_element?(view, "#ticket-confirmation", "#{c.cve} needs to be fixed")
     previous = System.get_env("ADO_PAT")
     System.delete_env("ADO_PAT")
+
     try do
       view |> element("#confirm-ticket") |> render_click()
       assert has_element?(view, "#ticket-confirmation [role=alert]", "not configured")
     after
       if previous, do: System.put_env("ADO_PAT", previous), else: System.delete_env("ADO_PAT")
     end
+
     assert Repo.aggregate(Decisions.Decision, :count) == 0
     view |> element("#ticket-confirmation button", "Cancel") |> render_click()
     refute has_element?(view, "#ticket-confirmation")
@@ -158,6 +161,14 @@ defmodule TriageWeb.WorkspaceLiveTest do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
     assert has_element?(view, "option[value=fixed]", "Mark as fixed")
     view |> decision_form(fields("fixed")) |> render_submit()
+    assert has_element?(view, ".action-toast", "marked as fixed"), render(view)
+
+    assert Decisions.history_for_cve(c.cve) |> Enum.map(& &1.placement_id) |> Enum.sort() ==
+             Enum.sort([c.prod.id, c.staging.id])
+
+    assert Workspace.page(%{"page" => "review", "mode" => "fixed", "item" => c.cve}).page_rows
+           |> Enum.map(& &1.cve) == [c.cve]
+
     {:ok, fixed, _} = live(c.conn, "/?page=review&mode=fixed&item=#{c.cve}")
     assert has_element?(fixed, "#queue-#{c.cve}")
     assert has_element?(fixed, ".review-tools a", "Fixed")

@@ -1,5 +1,5 @@
 defmodule TriageWeb.NavigationTest do
-  use TriageWeb.ConnCase, async: true
+  use TriageWeb.LegacyUICase, async: true
 
   @links [
     {"findings", "/"},

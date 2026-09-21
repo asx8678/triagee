@@ -6,7 +6,7 @@ defmodule TriageWeb.TimelineLiveTest do
   inventory, so a count assertion can only be satisfied by the rows the test
   itself created.
   """
-  use TriageWeb.ConnCase, async: false
+  use TriageWeb.LegacyUICase, async: false
 
   import Phoenix.LiveViewTest
   import Triage.Fixtures
@@ -280,7 +280,7 @@ defmodule TriageWeb.TimelineLiveTest do
       {:ok, view, html} = live(conn, ~p"/timeline")
       document = LazyHTML.from_document(html)
 
-      assert has_element?(view, "#workspace-nav-timeline[aria-current='page']")
+      assert has_element?(view, "#nav-timeline[aria-current='page']")
       assert has_element?(view, "#tl-summary")
       assert has_element?(view, "#tl-bands")
       assert has_element?(view, "#tl-lanes-table")

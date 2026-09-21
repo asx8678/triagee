@@ -1,5 +1,6 @@
 defmodule TriageWeb.SecurityNewsTest do
   use TriageWeb.ConnCase, async: false
+  @moduletag authenticated: :reviewer
   import Phoenix.LiveViewTest
   alias Triage.SecurityNews
 

@@ -1,7 +1,7 @@
 # Local runtime boundary
 
-Triage currently has no authentication or authorization boundary. The HTTP listener
-is therefore restricted to the local machine in every Mix/release environment.
+Triage requires provisioned accounts and server-side role authorization. The HTTP
+listener remains restricted to the local machine in every Mix/release environment.
 This restriction is enforced by `config/runtime.exs`, after environment-specific
 configuration is loaded.
 
@@ -43,8 +43,10 @@ TRIAGE_BIND=::1 PORT=4000 mix phx.server
 ```
 
 A value such as `TRIAGE_BIND=0.0.0.0`, `TRIAGE_BIND=localhost`, or an invalid
-`PORT` fails before the application starts. Shared/public service operation remains
-blocked until authentication and authorization are implemented and reviewed.
+`PORT` fails before the application starts. Shared deployment requires TLS, a local
+reverse proxy, provisioned accounts and the operational checks in
+[DEPLOYMENT.md](docs/DEPLOYMENT.md). Production session cookies require HTTPS;
+use a TLS tunnel/proxy rather than plain HTTP for authenticated production testing.
 
 ## Focused verification
 

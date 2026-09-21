@@ -1,7 +1,7 @@
 import Config
 
-# The application is unauthenticated. Its listener therefore has a deliberately
-# small runtime interface: only the two numeric loopback literals are accepted.
+# Keep the application behind a local TLS reverse proxy or an SSH tunnel.
+# Authentication does not weaken this boundary: only numeric loopback binds are accepted.
 bind = System.get_env("TRIAGE_BIND", "127.0.0.1")
 
 bind_ip =

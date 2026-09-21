@@ -36,6 +36,50 @@ defmodule TriageWeb.ConnCase do
 
   setup tags do
     Triage.DataCase.setup_sandbox(tags)
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    conn = Phoenix.ConnTest.build_conn()
+
+    case tags[:authenticated] do
+      role when role in [:viewer, :reviewer, :admin] ->
+        user = account_fixture(role)
+        {:ok, token} = Triage.Accounts.create_session(user)
+
+        {:ok,
+         conn: log_in_user(conn, token),
+         user: user,
+         user_token: token,
+         principal: Triage.Accounts.principal(token)}
+
+      nil ->
+        {:ok, conn: conn}
+
+      false ->
+        {:ok, conn: conn}
+
+      _ ->
+        raise "Use an explicit authenticated: :viewer, :reviewer, or :admin tag"
+    end
+  end
+
+  def account_fixture(role \\ :reviewer) do
+    {:ok, user} =
+      Triage.Accounts.create_user(%{
+        email: "user-#{System.unique_integer([:positive])}@example.test",
+        password: "test-only-password-long",
+        role: to_string(role)
+      })
+
+    user
+  end
+
+  def log_in_user(conn, %Triage.Accounts.User{} = user) do
+    {:ok, token} = Triage.Accounts.create_session(user)
+    log_in_user(conn, token)
+  end
+
+  def log_in_user(conn, token) when is_binary(token) do
+    Phoenix.ConnTest.init_test_session(conn, %{
+      "user_token" => token,
+      "live_socket_id" => Triage.Accounts.socket_id(token)
+    })
   end
 end

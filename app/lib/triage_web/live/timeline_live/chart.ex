@@ -487,31 +487,33 @@ defmodule TriageWeb.TimelineLive.Chart do
     xs
     |> Enum.sort_by(fn {date, _} -> date end)
     |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.flat_map(fn [{iso, from}, {_, to}] ->
-      date = Date.from_iso8601!(iso)
-      point = points |> Enum.filter(&(Date.compare(&1.date, date) != :gt)) |> List.last()
-
-      if point && point.open? do
-        covered = whitelisted_on?(track, date, point.detected_on)
-
-        kind = if covered, do: "whitelisted", else: "open"
-
-        [
-          %{
-            x1: from.x,
-            x2: to.x,
-            y: y,
-            dashed?: false,
-            kind: kind,
-            title:
-              "#{iso}: #{if covered, do: "Whitelisted", else: "Open / not fully whitelisted"}; recorded state, not continuous observation."
-          }
-        ]
-      else
-        []
-      end
-    end)
+    |> Enum.flat_map(&status_segment(&1, track, points, y))
     |> mark_run_arrows()
+  end
+
+  defp status_segment([{iso, from}, {_, to}], track, points, y) do
+    date = Date.from_iso8601!(iso)
+    point = points |> Enum.filter(&(Date.compare(&1.date, date) != :gt)) |> List.last()
+
+    if point && point.open? do
+      covered = whitelisted_on?(track, date, point.detected_on)
+
+      kind = if covered, do: "whitelisted", else: "open"
+
+      [
+        %{
+          x1: from.x,
+          x2: to.x,
+          y: y,
+          dashed?: false,
+          kind: kind,
+          title:
+            "#{iso}: #{if covered, do: "Whitelisted", else: "Open / not fully whitelisted"}; recorded state, not continuous observation."
+        }
+      ]
+    else
+      []
+    end
   end
 
   # An arrowhead closes each contiguous run — where the state changes and at

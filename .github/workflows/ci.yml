@@ -60,3 +60,11 @@ jobs:
       # silently fixed one. It runs the static analysis too: `credo --strict`
       # against .credo.exs and `dialyzer` against the same configuration.
       - run: mix ci
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: node --test test/workspace_hooks_test.cjs test/saved_queue_filters_test.cjs
+      - run: sh scripts/verify_owned_db_test.sh
+      - run: sh scripts/backup_restore_test.sh

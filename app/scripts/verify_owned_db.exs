@@ -64,10 +64,21 @@ case System.argv() do
         end
 
         if check == "empty" do
-          tables =
-            ~w(images image_placements findings finding_events review_cases review_evidence_snapshots review_reviews review_case_events replay_runs)
+          # Discover all migrated application tables, including auth, drafts and
+          # durable integrations; a fixed list silently misses future migrations.
+          %Postgrex.Result{rows: tables} =
+            Postgrex.query!(
+              pid,
+              """
+              SELECT quote_ident(schemaname) || '.' || quote_ident(tablename)
+              FROM pg_tables
+              WHERE schemaname = 'public' AND tablename <> 'schema_migrations'
+              ORDER BY tablename
+              """,
+              []
+            )
 
-          Enum.each(tables, fn table ->
+          Enum.each(tables, fn [table] ->
             %Postgrex.Result{rows: [[exists?]]} =
               Postgrex.query!(pid, "SELECT EXISTS (SELECT 1 FROM #{table})", [])
 

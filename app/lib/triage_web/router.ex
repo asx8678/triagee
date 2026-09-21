@@ -8,6 +8,7 @@ defmodule TriageWeb.Router do
     plug :put_root_layout, html: {TriageWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug TriageWeb.Auth, :fetch_current_user
   end
 
   pipeline :api do
@@ -15,10 +16,29 @@ defmodule TriageWeb.Router do
   end
 
   scope "/", TriageWeb do
-    pipe_through :browser
+    pipe_through :api
+    get "/health", HealthController, :show
+  end
 
-    live "/", WorkspaceLive
-    live "/workspace", WorkspaceLive
+  scope "/", TriageWeb do
+    pipe_through :browser
+    get "/login", SessionController, :new
+    post "/login", SessionController, :create
+    delete "/logout", SessionController, :delete
+  end
+
+  pipeline :authenticated do
+    plug TriageWeb.Auth, :require_authenticated_user
+  end
+
+  scope "/", TriageWeb do
+    pipe_through [:browser, :authenticated]
+
+    live_session :authenticated, on_mount: [{TriageWeb.Auth, :require_authenticated_user}] do
+      live "/", WorkspaceLive
+      live "/workspace", WorkspaceLive
+      live "/timeline", WorkspaceLive, :timeline
+    end
 
     get "/triage", WorkspaceRedirectController, :show
     get "/triage/history", WorkspaceRedirectController, :show
@@ -35,7 +55,6 @@ defmodule TriageWeb.Router do
     get "/cases/:id/exception", WorkspaceRedirectController, :show
 
     get "/whats-new", WorkspaceRedirectController, :show
-    live "/timeline", WorkspaceLive, :timeline
     get "/statistics", WorkspaceRedirectController, :show
     get "/replay", WorkspaceRedirectController, :show
     get "/replay/history", WorkspaceRedirectController, :show
