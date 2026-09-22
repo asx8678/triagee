@@ -1,5 +1,9 @@
 # Shared deployment and disaster recovery
 
+This chapter covers a VPS with systemd. For a self-contained cluster
+deployment (application, in-pod reverse proxy, and PostgreSQL inside
+Kubernetes), see [KUBERNETES](KUBERNETES.md).
+
 ## Status and prerequisites
 
 Local tests and a macOS release rehearsal are **not VPS certification**. Build the

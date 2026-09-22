@@ -9,6 +9,7 @@ configuration and quality checks.
 - [Local runtime and trust boundary](app/LOCAL_RUNTIME.md)
 - [Isolated database verification](app/OWNED_DB_VERIFICATION.md)
 - [Public CVE reference data](app/REAL_CVES.md)
+- [Standalone Kubernetes deployment](app/docs/KUBERNETES.md)
 - [Legacy collector reference](tmp/cve-collector/README.md) and
   [integration notes](tmp/cve-collector/INTEGRATION_NOTES.md)
 - [Original architecture input](architecture%283%29.md): historical product and
