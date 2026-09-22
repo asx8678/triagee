@@ -1,0 +1,44 @@
+{
+  "initial_rows": 5,
+  "search_rows": 1,
+  "exceptions_heading": "Exceptions with an expiry, not a blind spot.",
+  "action_dialog_visible": true,
+  "preview_disabled_before_action": true,
+  "layouts": [
+    {
+      "viewport_width": 320,
+      "document_width": 428,
+      "window_width": 320
+    },
+    {
+      "viewport_width": 390,
+      "document_width": 428,
+      "window_width": 390
+    },
+    {
+      "viewport_width": 768,
+      "document_width": 768,
+      "window_width": 768
+    },
+    {
+      "viewport_width": 1024,
+      "document_width": 1024,
+      "window_width": 1024
+    },
+    {
+      "viewport_width": 1440,
+      "document_width": 1440,
+      "window_width": 1440
+    },
+    {
+      "viewport_width": 1920,
+      "document_width": 1920,
+      "window_width": 1920
+    }
+  ],
+  "javascript_errors": [],
+  "remote_requests": [],
+  "browser_version": "144.0.7559.96",
+  "application_tested": false,
+  "note": "Static supplied prototype smoke test via set_content (file navigation blocked by environment policy). No accessibility certification, no persistence, no live service."
+}

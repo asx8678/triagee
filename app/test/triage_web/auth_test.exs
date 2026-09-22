@@ -77,6 +77,8 @@ defmodule TriageWeb.AuthTest do
   test "forged actor is ignored and audit uses the verified account", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
 
+    render_change(view, "target", %{"id" => to_string(c.placement.id)})
+
     render_hook(view, "save", %{
       "decision" => %{
         "action" => "fixed",
@@ -143,6 +145,8 @@ defmodule TriageWeb.AuthTest do
   test "inactive or deleted original targets mark a restored draft stale", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
 
+    render_change(view, "target", %{"id" => to_string(c.placement.id)})
+
     render_hook(view, "draft", %{
       "decision" => %{"action" => "accepted_risk", "reason" => "Keep original scope"}
     })
@@ -171,6 +175,7 @@ defmodule TriageWeb.AuthTest do
   @tag authenticated: :reviewer
   test "unknown ticket operations survive remount and forbid cancel or replacement", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+    render_change(view, "target", %{"id" => to_string(c.placement.id)})
     render_hook(view, "draft", %{"decision" => %{"action" => "create_ticket"}})
     {:ok, original} = Drafts.get(c.principal, c.cve)
 
@@ -207,6 +212,8 @@ defmodule TriageWeb.AuthTest do
        c do
     path = "/?page=review&item=#{c.cve}"
     {:ok, dirty, _} = live(c.conn, path)
+
+    render_change(dirty, "target", %{"id" => to_string(c.placement.id)})
 
     render_hook(dirty, "draft", %{
       "decision" => %{"action" => "accepted_risk", "reason" => "Preserve me"}

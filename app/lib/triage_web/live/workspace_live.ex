@@ -5,8 +5,9 @@ defmodule TriageWeb.WorkspaceLive do
   alias Triage.Workspace.{Commit, Drafts}
   alias TriageWeb.{TimelineFilters, TimelineLive}
   import TriageWeb.WorkspaceComponents
+  import TriageWeb.ExceptionsComponents
 
-  @pages ~w(overview inventory review timeline news)
+  @pages ~w(findings exceptions overview inventory review timeline news)
   @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview)
 
   def mount(_params, _session, socket) do
@@ -52,29 +53,47 @@ defmodule TriageWeb.WorkspaceLive do
     timeline_params =
       if Map.has_key?(params, "team"), do: Map.put(params, "owner", params["team"]), else: params
 
-    params = normalize_timeline_params(params, timeline?)
+    params =
+      params
+      |> normalize_timeline_params(timeline?)
+      |> normalize_valid_params()
+      |> normalize_timeline_params(timeline?)
+      |> normalize_inspect_deep_link()
 
-    valid = valid_params?(params)
-    params = if valid, do: Map.take(params, @keys -- ~w(weeks tview)), else: %{}
-    params = if timeline?, do: Map.put(params, "page", "timeline"), else: params
     socket = clear_changed_selection(socket, params)
-    page = if params["page"] in @pages, do: params["page"], else: "overview"
+    page = if params["page"] in @pages, do: params["page"], else: "findings"
     params = Map.put(params, "page", page) |> pin_review_item(socket)
 
     {:noreply,
      socket
      |> assign(
        params: params,
-       timeline_params: if(valid, do: timeline_params, else: %{"filters" => "invalid"}),
+       timeline_params:
+         if(valid_params?(params), do: timeline_params, else: %{"filters" => "invalid"}),
        page: page,
-       page_title: if(page == "inventory", do: "Vulnerabilities", else: String.capitalize(page)),
+       page_title: page_title(page),
        queue_shown:
          if(params["item"] != socket.assigns[:item], do: false, else: socket.assigns.queue_shown),
-       invalid_params: not valid,
+       invalid_params: not valid_params?(params),
        confirmation: nil
      )
      |> load()
      |> maybe_load_news()}
+  end
+
+  defp page_title(page) do
+    cond do
+      page in ~w(findings review) -> "Findings"
+      page == "exceptions" -> "Exceptions"
+      page == "inventory" -> "Vulnerabilities"
+      true -> String.capitalize(page)
+    end
+  end
+
+  defp normalize_valid_params(params) do
+    if valid_params?(params),
+      do: Map.take(params, @keys -- ~w(weeks tview)),
+      else: %{}
   end
 
   defp normalize_timeline_params(params, true) do
@@ -84,6 +103,14 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   defp normalize_timeline_params(params, false), do: params
+
+  # T03/A002: the retired read-only inspector dialog is gone; its deep links
+  # (inspect=CVE) converge on the same shared actionable detail.
+  defp normalize_inspect_deep_link(%{"inspect" => cve} = params),
+    do:
+      params |> Map.put("page", "review") |> Map.put("item", cve) |> Map.drop(["inspect", "tab"])
+
+  defp normalize_inspect_deep_link(params), do: params
 
   defp valid_params?(params) do
     Enum.all?(Map.take(params, @keys -- ~w(weeks tview)), fn {_k, v} ->
@@ -105,15 +132,40 @@ defmodule TriageWeb.WorkspaceLive do
         do: empty_page(params),
         else: Workspace.page(page_params(params))
 
+    history =
+      if page.row,
+        do:
+          Workspace.history(
+            page.row.cve,
+            Enum.filter(page.targets, &(&1.cve == page.row.cve)),
+            params
+          ),
+        else: []
+
+    exception_decisions =
+      if socket.assigns.page == "exceptions" do
+        now_dt = DateTime.utc_now()
+
+        import Ecto.Query
+
+        from(d in Triage.Decisions.Decision,
+          where:
+            d.decision in ["accepted_risk", "not_affected"] and
+              d.decided_at >= ^DateTime.add(now_dt, -365, :day) and d.decided_at <= ^now_dt,
+          order_by: [desc: d.decided_at, desc: d.id]
+        )
+        |> Triage.Repo.all()
+        |> Enum.map(&decisions_decorate(&1, now_dt))
+      else
+        []
+      end
+
     socket
     |> assign(Map.drop(page, [:matching]))
     |> assign(
       manual_cves: Triage.ManualCves.list(),
-      inspector_history:
-        if(page.inspector,
-          do: Workspace.history(page.inspector.cve, page.inspector_targets, params),
-          else: []
-        ),
+      row_history: history,
+      exception_decisions: exception_decisions,
       scope_form: scope_form(params),
       search_form: search_form(params)
     )
@@ -121,15 +173,46 @@ defmodule TriageWeb.WorkspaceLive do
     |> load_timeline()
   end
 
+  # Overview: priority preview must not miss urgent CVEs beyond the first page.
   defp page_params(%{"page" => "overview"} = params) do
-    # The overview priority preview must not miss urgent CVEs beyond the first
-    # active page. Metrics/team totals remain estate-wide scalar SQL results.
     params
     |> Map.take(~w(page team environment item inspect))
     |> Map.merge(%{"mode" => "urgent", "offset" => "0"})
   end
 
+  # T04: Findings is the primary workspace; it uses the same review projection
+  # with the attention default ("Needs attention" = the existing needs mode).
+  defp page_params(%{"page" => "findings"} = params) do
+    params
+    |> Map.take(~w(page team environment q severity sort offset item batch))
+    |> Map.merge(%{"mode" => params["mode"] || "needs", "page" => "review"})
+  end
+
+  defp page_params(%{"page" => "exceptions"} = params), do: params
+
   defp page_params(params), do: params
+
+  # Decisions.decorate/2 is private; this mirrors its projection for the
+  # read-only exceptions register (T06).
+  defp decisions_decorate(decision, now) do
+    %{
+      id: decision.id,
+      cve: decision.cve,
+      decision: decision.decision,
+      label: Triage.Decisions.label(decision.decision),
+      state: Triage.Decisions.state(decision, now),
+      reason: decision.reason,
+      actor: decision.actor,
+      decided_at: decision.decided_at,
+      expires_at: decision.expires_at,
+      placement_id: decision.placement_id,
+      supersedes_id: decision.supersedes_id,
+      work_owner: decision.work_owner,
+      due_on: decision.due_on,
+      metadata: decision.metadata,
+      operation_id: decision.operation_id
+    }
+  end
 
   defp empty_page(params) do
     %{
@@ -207,22 +290,18 @@ defmodule TriageWeb.WorkspaceLive do
     )
   end
 
-  defp prepare_draft(socket, row, matching) do
-    initial_targets = Enum.filter(matching, &(&1.cve == row.cve and &1.active?))
-
+  defp prepare_draft(socket, row, _matching) do
+    # A fresh draft is neutral (I05/D09): no preselected action, no prewritten
+    # conclusion and no automatically selected write targets. The reviewer
+    # chooses each explicitly; fingerprints are captured when a target is
+    # selected, and a saved draft still restores its original selection.
     draft =
       Map.get(socket.assigns.drafts, row.cve) ||
         stored_draft(socket.assigns.current_principal, row.cve) ||
         %{
-          fields: %{
-            "action" => "fixed",
-            "owner" => "",
-            "reason" =>
-              "Reviewed for this environment: this CVE does not currently affect our infrastructure. Reassess at the whitelist expiry date.",
-            "due_on" => Date.to_iso8601(Commit.default_due_on())
-          },
-          targets: Enum.map(initial_targets, & &1.id),
-          versions: Map.new(row.scopes, &{&1.id, &1.fingerprint}),
+          fields: %{"action" => "", "owner" => "", "reason" => "", "due_on" => ""},
+          targets: [],
+          versions: %{},
           operation: Ecto.UUID.generate(),
           revision: nil,
           saved: false,
@@ -380,7 +459,8 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   def handle_event("draft", %{"decision" => params}, socket) when is_map(params) do
-    fields = Map.merge(socket.assigns.draft.fields, Map.take(params, ~w(action reason due_on)))
+    fields =
+      Map.merge(socket.assigns.draft.fields, Map.take(params, ~w(action owner reason due_on)))
 
     fields =
       if fields["action"] == "accepted_risk" and
@@ -469,7 +549,11 @@ defmodule TriageWeb.WorkspaceLive do
         persist: false
       )
 
-    changeset = Commit.form(socket.assigns.draft.fields)
+    # The authenticated commit injects the real actor from the principal
+    # server-side (I03); the pre-validation mirrors that so work actions are
+    # judged on their required owner/date/justification merits alone.
+    changeset =
+      Commit.form(Map.put(socket.assigns.draft.fields, "actor", "authenticated"))
 
     cond do
       socket.assigns.draft_error ->
@@ -560,9 +644,6 @@ defmodule TriageWeb.WorkspaceLive do
 
   def handle_event("cancel-risk", _, socket), do: {:noreply, assign(socket, confirmation: nil)}
 
-  def handle_event("expand", _, socket),
-    do: {:noreply, assign(socket, expanded: not socket.assigns.expanded)}
-
   def handle_event("queue-toggle", _, socket),
     do: {:noreply, assign(socket, queue_shown: not socket.assigns.queue_shown)}
 
@@ -617,13 +698,6 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   def handle_event("close-settings", _, socket), do: {:noreply, assign(socket, settings: false)}
-
-  def handle_event("close-inspector", _, socket),
-    do:
-      {:noreply,
-       push_patch(socket,
-         to: workspace_path(socket.assigns.params, %{"inspect" => nil, "tab" => nil})
-       )}
 
   def handle_event("reconcile", _, %{assigns: %{row: row}} = socket) when not is_nil(row) do
     current =
@@ -941,6 +1015,9 @@ defmodule TriageWeb.WorkspaceLive do
         environment: params["environment"]
       })
 
+  def nav_path(params, "exceptions"),
+    do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => "exceptions"})
+
   def nav_path(params, page),
     do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => page})
 
@@ -953,9 +1030,6 @@ defmodule TriageWeb.WorkspaceLive do
           extra
         )
       )
-
-  def inspector_path(params, cve),
-    do: workspace_path(params, %{"inspect" => cve, "tab" => "summary"})
 
   def review_path(params, cve),
     do:
@@ -1031,19 +1105,18 @@ defmodule TriageWeb.WorkspaceLive do
             <.link
               :for={
                 {page, label} <- [
-                  {"overview", "Overview"},
-                  {"inventory", "Vulnerabilities"},
-                  {"review", "Review"},
-                  {"timeline", "Timeline"},
-                  {"news", "News"}
+                  {"findings", "Findings"},
+                  {"exceptions", "Exceptions"}
                 ]
               }
               id={"workspace-nav-#{page}"}
               patch={nav_path(@params, page)}
-              class={[@page == page && "active"]}
+              class={[
+                (page == "findings" and @page in ~w(findings review)) || (@page == page && "active")
+              ]}
               aria-current={if @page == page, do: "page"}
             >
-              {label}<span :if={page == "review"} class="nav-count">{@metrics["needs"].value}</span>
+              {label}<span :if={page == "findings"} class="nav-count">{@metrics["needs"].value}</span>
             </.link>
           </nav>
           <div class="topmeta">
@@ -1199,7 +1272,7 @@ defmodule TriageWeb.WorkspaceLive do
             compact={@compact}
           />
           <.review
-            :if={@page == "review"}
+            :if={@page in ~w(review findings)}
             rows={@page_rows}
             total={@total}
             offset={@offset}
@@ -1214,23 +1287,20 @@ defmodule TriageWeb.WorkspaceLive do
             can_review={@can_review}
             draft_error={@draft_error}
             pending_operation={@pending_operation}
+            history={@row_history}
           />
           <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
           <TriageWeb.SecurityNewsComponents.panel :if={@page == "news"} {assigns} />
+          <.exceptions_register
+            :if={@page == "exceptions"}
+            decisions={@exception_decisions}
+            params={@params}
+          />
         </main>
         <footer class="bottom-status">
           <span>Recorded evidence · coverage unverified</span><span class="right">Decisions apply to selected deployments only</span>
         </footer>
       </div>
-      <.inspector
-        :if={@params["inspect"]}
-        row={@inspector}
-        requested={@params["inspect"]}
-        targets={@inspector_targets}
-        history={@inspector_history}
-        params={@params}
-        expanded={@expanded}
-      />
       <.risk_confirmation
         :if={@can_review && @confirmation && @draft.fields["action"] == "accepted_risk"}
         row={@row}

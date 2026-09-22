@@ -49,20 +49,27 @@ defmodule TriageWeb.WorkspaceUXTest do
 
   test "no targets disables submission and explains how to continue", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.first.cve}")
-    assert has_element?(view, "#save-decision:not([disabled])")
-    assert has_element?(view, "#cancel-decision[disabled]")
-    view |> element("#scope-target-#{c.prod.id}") |> render_click()
-    view |> element("#scope-target-#{c.staging.id}") |> render_click()
-    assert has_element?(view, "#save-decision[disabled]")
+
+    # Fresh draft: no action and no write targets selected (I05).
+    assert has_element?(view, "#save-decision[disabled]", "Select an action")
     assert has_element?(view, "#decision-no-targets", "Select at least one deployment")
+    assert has_element?(view, "#cancel-decision[disabled]")
+
+    # Targets alone are not enough: the action must also be chosen explicitly.
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+    assert has_element?(view, "#save-decision[disabled]")
+    view |> form("#workspace-decision", decision: %{action: "fixed"}) |> render_change()
+    assert has_element?(view, "#save-decision:not([disabled])")
     assert has_element?(view, "#cancel-decision:not([disabled])")
+
+    # Deselecting every target disables submission again.
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+    assert has_element?(view, "#decision-no-targets", "Select at least one deployment")
+    assert has_element?(view, "#save-decision[disabled]")
     view |> element("#cancel-decision") |> render_click()
     assert has_element?(view, "#decision-no-targets")
     assert has_element?(view, "#save-decision[disabled]")
     assert has_element?(view, "#cancel-decision[disabled]")
-    view |> element("#scope-target-#{c.prod.id}") |> render_click()
-    refute has_element?(view, "#decision-no-targets")
-    assert has_element?(view, "#save-decision:not([disabled])")
     assert Repo.aggregate(Decisions.Decision, :count) == 0
   end
 

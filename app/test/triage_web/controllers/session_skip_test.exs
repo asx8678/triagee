@@ -32,7 +32,7 @@ defmodule TriageWeb.SessionSkipTest do
   test "Skip grants ordinary reviewer actions, never supplied admin identity", %{conn: conn} do
     admin = account_fixture(:admin)
     image = image!("skip-reviewer")
-    placement!(image, "local-team", "prod")
+    placement = placement!(image, "local-team", "prod")
     finding = finding!(image, "CVE-2099-9191")
     conn = post(conn, ~p"/login/skip", %{email: admin.email, role: "admin", user_id: admin.id})
     assert redirected_to(conn) == "/"
@@ -46,9 +46,11 @@ defmodule TriageWeb.SessionSkipTest do
     assert get_session(conn, :live_socket_id) == Accounts.socket_id(token)
 
     {:ok, view, _} = live(recycle(conn), "/?page=review&item=#{finding.cve}")
-    assert has_element?(view, "#workspace-nav-overview")
+    assert has_element?(view, "#workspace-nav-findings")
     refute has_element?(view, "#viewer-read-only")
-    assert has_element?(view, "#save-decision:not([disabled])")
+    # A fresh draft is neutral: the reviewer chooses action and targets (I05).
+    assert has_element?(view, "#save-decision[disabled]", "Select an action")
+    render_change(view, "target", %{"id" => to_string(placement.id)})
     render_hook(view, "save", %{"decision" => %{"action" => "fixed", "actor" => admin.email}})
     [decision] = Decisions.history_for_cve(finding.cve)
     assert decision.actor == email

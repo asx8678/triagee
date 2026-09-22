@@ -97,7 +97,10 @@ defmodule Triage.WorkspaceQueryTest do
     rows = Workspace.page(%{"team" => "beta"}, @now).page_rows
     assert hd(rows).severity == "CRITICAL"
     assert Enum.find(rows, &(&1.cve == "CVE-2034-0002")).risk.priority == "high"
-    assert List.last(rows).severity in [nil, " high "]
+
+    # T05: attention-led ordering. Uncovered targets come first (severity-led
+    # within the band); covered work/acceptance records come last.
+    assert List.last(rows).severity in ["MEDIUM", nil, " high "]
   end
 
   test "database pagination bounds CVEs but retains every package and explicit off-page focus",
@@ -389,7 +392,7 @@ defmodule Triage.WorkspaceQueryTest do
           (params["severity"] in [nil, ""] or
              Enum.any?(t.findings, &(&1.severity == params["severity"])))
       end)
-      |> Workspace.rows()
+      |> Workspace.rows(:attention)
       |> Enum.filter(&(batch == [] or &1.cve in batch))
 
     rows =

@@ -43,6 +43,7 @@ defmodule TriageWeb.WorkspaceConfirmationTest do
     )
 
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+    render_change(view, "target", %{"id" => to_string(c.placement.id)})
     render_change(view, "draft", %{"decision" => %{"action" => "create_ticket"}})
 
     # Omitting the action must not commit the retained ticket action.
@@ -60,6 +61,7 @@ defmodule TriageWeb.WorkspaceConfirmationTest do
 
   test "a partial save cannot commit a retained accepted_risk draft without confirmation", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+    render_change(view, "target", %{"id" => to_string(c.placement.id)})
     render_change(view, "draft", %{"decision" => %{"action" => "accepted_risk"}})
 
     render_submit(view, "save", %{"decision" => %{"reason" => "Already reviewed"}})

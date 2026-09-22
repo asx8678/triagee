@@ -177,6 +177,8 @@ defmodule Triage.Workspace do
   defp matches?(_target, "all"), do: true
   defp matches?(target, "history"), do: not target.active?
   defp matches?(target, "needs"), do: target.needs_decision?
+  defp matches?(target, "attention"), do: Triage.Attention.needs_attention?(target)
+  defp matches?(target, "progress"), do: Triage.Attention.in_progress?(target)
   defp matches?(target, "urgent"), do: target.active? and target.risk.priority == "critical"
   defp matches?(target, "unknown"), do: target.active? and target.exposure == "unknown"
 
@@ -208,6 +210,23 @@ defmodule Triage.Workspace do
       }
     end)
     |> Enum.sort_by(&{severity_sort(&1.severity), priority_rank(&1.risk), &1.cve})
+  end
+
+  # T05: attention-led ordering. The SQL computes the same band per target;
+  # a CVE row takes its most urgent contributing target's band (min).
+  def rows(targets, :attention) do
+    targets
+    |> rows()
+    |> Enum.sort_by(&attention_sort(&1))
+  end
+
+  defp attention_sort(row) do
+    bands =
+      row.scopes
+      |> Enum.map(&Triage.Attention.band(&1))
+      |> Enum.min(fn -> 4 end)
+
+    {bands, severity_sort(row.severity), priority_rank(row.risk), row.cve}
   end
 
   # Severity leads the queue: a critical advisory is never outranked by a high

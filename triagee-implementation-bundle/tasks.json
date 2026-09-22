@@ -1,0 +1,336 @@
+{
+  "schema_version": "1.0",
+  "default_scope": [
+    "M0",
+    "M1",
+    "M2",
+    "M3"
+  ],
+  "excluded_by_default": [
+    "T90"
+  ],
+  "baseline_commit": "33bc06f2dc46932a69b1e07ea35ffd87b223756a",
+  "tasks": [
+    {
+      "id": "T00",
+      "milestone": "M0",
+      "title": "Audit current repository and reconcile previous requirements",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [],
+      "read": [
+        "references/REPOSITORY_REVIEW.md",
+        "DECISIONS_AND_PRECEDENCE.md"
+      ],
+      "acceptance_ids": [
+        "A051",
+        "A054"
+      ],
+      "deliverable": "Audit/source map and retained acceptance mapping.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T01",
+      "milestone": "M0",
+      "title": "Characterize existing safety and build owned fixture adapter",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T00"
+      ],
+      "read": [
+        "spec/03_DOMAIN_AND_SAFETY.md",
+        "qa/semantic-fixtures.json"
+      ],
+      "acceptance_ids": [
+        "A011",
+        "A012",
+        "A013",
+        "A014",
+        "A015",
+        "A025",
+        "A033",
+        "A034",
+        "A035",
+        "A036",
+        "A037",
+        "A051"
+      ],
+      "deliverable": "Characterization tests, owned baseline logs and schema/fixture mappings.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T02",
+      "milestone": "M1",
+      "title": "Remove unsafe defaults and surface actual next-step data",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T01"
+      ],
+      "read": [
+        "spec/01_PRODUCT_SCOPE.md",
+        "spec/02_UX_AND_DESIGN.md"
+      ],
+      "acceptance_ids": [
+        "A003",
+        "A008",
+        "A011",
+        "A013",
+        "A056"
+      ],
+      "deliverable": "Neutral action form, safe work paths and real package/image/ticket data.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T03",
+      "milestone": "M1",
+      "title": "Unify inventory review and inspector in real LiveView",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T02"
+      ],
+      "read": [
+        "spec/02_UX_AND_DESIGN.md",
+        "spec/03_DOMAIN_AND_SAFETY.md"
+      ],
+      "acceptance_ids": [
+        "A002",
+        "A009",
+        "A010",
+        "A012",
+        "A015",
+        "A016",
+        "A017",
+        "A019",
+        "A033",
+        "A034",
+        "A035",
+        "A036",
+        "A037"
+      ],
+      "deliverable": "Shared actionable detail, preserved draft/selection/operation lifecycle.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T04",
+      "milestone": "M1",
+      "title": "Cut over navigation and preserve routes filters and history",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T03"
+      ],
+      "read": [
+        "spec/01_PRODUCT_SCOPE.md",
+        "spec/07_MIGRATION_AND_ROLLOUT.md"
+      ],
+      "acceptance_ids": [
+        "A001",
+        "A004",
+        "A016",
+        "A018"
+      ],
+      "deliverable": "Findings default, two workspaces, scoped aliases and read-only timeline compatibility.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T05",
+      "milestone": "M1",
+      "title": "Implement contextual queue order and exact scoped counts",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T04"
+      ],
+      "read": [
+        "spec/03_DOMAIN_AND_SAFETY.md"
+      ],
+      "acceptance_ids": [
+        "A005",
+        "A006",
+        "A007",
+        "A014"
+      ],
+      "deliverable": "Versioned deterministic ranking and SQL/domain/view parity.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T06",
+      "milestone": "M1",
+      "title": "Add compact legacy-aware Exceptions register",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T05"
+      ],
+      "read": [
+        "spec/01_PRODUCT_SCOPE.md"
+      ],
+      "acceptance_ids": [
+        "A057"
+      ],
+      "deliverable": "Read-only register with exact source identity and shared detail.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T07",
+      "milestone": "M2",
+      "title": "Implement typed evidence-backed exception semantics",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T06"
+      ],
+      "read": [
+        "spec/03_DOMAIN_AND_SAFETY.md",
+        "spec/07_MIGRATION_AND_ROLLOUT.md"
+      ],
+      "acceptance_ids": [
+        "A020",
+        "A021",
+        "A022",
+        "A023",
+        "A024",
+        "A025",
+        "A026",
+        "A057",
+        "A058"
+      ],
+      "deliverable": "Real typed actions, required justification/validity, compatible legacy readers.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T08",
+      "milestone": "M2",
+      "title": "Implement reported versus verified remediation workflow",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T07"
+      ],
+      "read": [
+        "spec/03_DOMAIN_AND_SAFETY.md"
+      ],
+      "acceptance_ids": [
+        "A030",
+        "A031",
+        "A058"
+      ],
+      "deliverable": "Evidence-supported verification and honest legacy fixed interpretation.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T09",
+      "milestone": "M2",
+      "title": "Complete review due requeue invalidation and history",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T08"
+      ],
+      "read": [
+        "spec/01_PRODUCT_SCOPE.md",
+        "spec/03_DOMAIN_AND_SAFETY.md"
+      ],
+      "acceptance_ids": [
+        "A023",
+        "A027",
+        "A028",
+        "A029",
+        "A032",
+        "A057"
+      ],
+      "deliverable": "Working register actions, scoped materiality, repeated-observation deduplication.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T10",
+      "milestone": "M3",
+      "title": "Integrate optional evidence-bound AI drafts",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T09"
+      ],
+      "read": [
+        "spec/05_AI_ASSISTANCE.md",
+        "contracts/ai-recommendation.schema.json"
+      ],
+      "acceptance_ids": [
+        "A041",
+        "A042",
+        "A043",
+        "A044",
+        "A045",
+        "A046"
+      ],
+      "deliverable": "Versioned adapter, semantic validation, explicit UI and mock tests.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T11",
+      "milestone": "M3",
+      "title": "Add shared read-only reporting and exact drilldowns",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T09"
+      ],
+      "read": [
+        "spec/06_GRAFANA_CONTRACT.md",
+        "contracts/reporting-target.schema.json"
+      ],
+      "acceptance_ids": [
+        "A047",
+        "A048",
+        "A049"
+      ],
+      "deliverable": "Verified projection mappings and truthful configured/unconfigured reporting link.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T12",
+      "milestone": "M3",
+      "title": "Run integrated review release gates and cleanup",
+      "in_scope": true,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T10",
+        "T11"
+      ],
+      "read": [
+        "qa/ACCEPTANCE.md",
+        "spec/07_MIGRATION_AND_ROLLOUT.md"
+      ],
+      "acceptance_ids": [
+        "A038",
+        "A039",
+        "A040",
+        "A050",
+        "A052",
+        "A053",
+        "A055"
+      ],
+      "deliverable": "Actual app QA, representative migration/rollback and evidence-based final report.",
+      "done_requires": "Implemented behavior with current evidence; list precise blockers rather than placeholders or historical PASS claims."
+    },
+    {
+      "id": "T90",
+      "milestone": "LATER",
+      "title": "Design grouping for genuinely shared remediation",
+      "in_scope": false,
+      "status": "NOT_STARTED",
+      "depends_on": [
+        "T12"
+      ],
+      "read": [
+        "spec/01_PRODUCT_SCOPE.md"
+      ],
+      "acceptance_ids": [],
+      "deliverable": "Separate later proposal; not executed by default.",
+      "done_requires": "Separately authorized future work."
+    }
+  ]
+}

@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:triagee:handoff:reporting-target:1.0",
+  "title": "Proposed reporting target at a captured snapshot",
+  "description": "Read-model proposal, not an existing endpoint or SQL schema. Fields are authorized snapshot projections; no write capability.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "snapshot_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "cve": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "placement_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "image_repository": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "team": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "environment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "observation_state": {
+      "enum": [
+        "recorded_present",
+        "no_longer_observed",
+        "unknown"
+      ]
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "unassessed",
+            "risk_accepted",
+            "not_affected",
+            "legacy_unknown"
+          ]
+        },
+        "status": {
+          "enum": [
+            "none",
+            "pending",
+            "valid",
+            "review_due",
+            "expired",
+            "invalidated",
+            "revoked",
+            "replaced"
+          ]
+        },
+        "source_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "source_record_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "valid_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "expiry_boundary": {
+          "enum": [
+            "exclusive",
+            "inclusive",
+            null
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "status",
+        "source_kind",
+        "source_record_id",
+        "valid_until",
+        "expiry_boundary"
+      ]
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "enum": [
+            "none",
+            "investigating",
+            "remediation_requested",
+            "ticketed",
+            "awaiting_verification"
+          ]
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "due_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "ticket_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "ticket_operation_state": {
+          "enum": [
+            "none",
+            "pending",
+            "unknown",
+            "remote_created",
+            "completed"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "owner",
+        "due_at",
+        "ticket_url",
+        "ticket_operation_state"
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "not_verified",
+            "verified_remediated",
+            "verified_mitigated"
+          ]
+        },
+        "verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "minItems": 0,
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "status",
+        "verified_at",
+        "evidence_ids"
+      ]
+    },
+    "needs_attention": {
+      "type": "boolean"
+    },
+    "attention_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "minItems": 0,
+      "maxItems": 32
+    },
+    "context_rank": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "finding_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "installed_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "reported_fixed_versions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "fix_evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "minItems": 0,
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "finding_id",
+          "name",
+          "installed_version",
+          "reported_fixed_versions",
+          "fix_evidence_ids"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 2000
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "last_observed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "coverage": {
+          "enum": [
+            "complete_for_declared_scope",
+            "partial",
+            "unknown",
+            "unavailable"
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "minItems": 0,
+          "maxItems": 32
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "minItems": 0,
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "last_observed_at",
+        "coverage",
+        "limitations",
+        "source_ids"
+      ]
+    },
+    "detail_path": {
+      "type": "string",
+      "pattern": "^/",
+      "maxLength": 4096
+    }
+  },
+  "required": [
+    "schema_version",
+    "snapshot_at",
+    "policy_version",
+    "cve",
+    "placement_id",
+    "image_digest",
+    "image_repository",
+    "team",
+    "environment",
+    "observation_state",
+    "assessment",
+    "workflow",
+    "verification",
+    "needs_attention",
+    "attention_reasons",
+    "context_rank",
+    "packages",
+    "provenance",
+    "detail_path"
+  ]
+}

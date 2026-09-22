@@ -4,6 +4,14 @@ defmodule TriageWeb.WorkspaceComponents do
   alias Triage.{Decisions, Workspace}
   alias TriageWeb.WorkspaceLive, as: Routes
 
+  # Work actions (Decisions.work_actions/0) record a request with an owner,
+  # a follow-up date and a required justification; they never change or
+  # suppress findings.
+  defp work_details_missing?(fields),
+    do:
+      fields["owner"] in ["", nil] or fields["due_on"] in ["", nil] or
+        fields["reason"] in ["", nil]
+
   attr :metrics, :map, required: true
   attr :teams, :list, required: true
   attr :targets, :list, required: true
@@ -118,7 +126,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <tbody>
               <tr :for={row <- @urgent}>
                 <td>
-                  <.link class="cve-link" patch={Routes.inspector_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{work_status(
+                  <.link class="cve-link" patch={Routes.review_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{work_status(
                     row.scopes
                   )}</span>
                 </td>
@@ -243,9 +251,9 @@ defmodule TriageWeb.WorkspaceComponents do
           </caption>
           <thead>
             <tr>
-              <th>Select</th><th>Advisory / package</th><th>Severity</th><th>Affected</th><th>
-                Exposure
-              </th><th>Work status</th><th>Age</th><th>Scanner fix</th>
+              <th>Select</th><th>Advisory / package</th><th>Affected</th><th>Why now</th><th>
+                Next action
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -267,32 +275,35 @@ defmodule TriageWeb.WorkspaceComponents do
                 />
               </td>
               <td>
-                <.link class="cve-link" patch={Routes.inspector_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{row.packages}</span>
+                <.link class="cve-link" patch={Routes.review_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{row.packages}</span>
+                <div class="row"><.severity value={row.severity} /></div>
                 <span
                   :if={Enum.any?(row.scopes, &Enum.any?(&1.findings, fn f -> f.suppressed end))}
                   class="subline"
                 >Scanner-suppressed · approval unknown</span>
               </td>
-              <td><.severity value={row.severity} /></td>
               <td>
                 {row.scopes
                 |> Enum.map(&team_name(&1.placement.owner))
                 |> Enum.uniq()
-                |> Enum.join(", ")}<span class="subline">{length(row.scopes)} {if length(row.scopes) ==
-                                                                                    1,
-                                                                                  do: "scope",
-                                                                                  else: "scopes"}</span>
+                |> Enum.join(", ")}<span class="subline">{row.scopes
+                |> Enum.map(& &1.placement.environment)
+                |> Enum.uniq()
+                |> Enum.join(", ")} · {length(row.scopes)} {if length(row.scopes) ==
+                                                                 1,
+                                                               do: "scope",
+                                                               else: "scopes"}</span>
               </td>
+              <td class="why-now">{why_now(row)}</td>
               <td>
-                {row.scopes |> Enum.map(&exposure(&1.exposure)) |> Enum.uniq() |> Enum.join(", ")}
-              </td>
-              <td>{work_status(row.scopes)}</td>
-              <td>{max(Date.diff(Date.utc_today(), DateTime.to_date(row.first_seen)), 0)}d</td>
-              <td>
-                {if Enum.any?(
-                      row.scopes,
-                      &Enum.any?(&1.findings, fn f -> f.fix not in [nil, ""] end)
-                    ), do: "Reported", else: "Not reported"}
+                {next_action(row)}<span class="subline">Scanner fix: {fix_summary(row)}</span>
+                <a
+                  :if={ticket_url(row)}
+                  class="subline"
+                  href={ticket_url(row)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >Azure DevOps ticket</a>
               </td>
             </tr>
           </tbody>
@@ -322,6 +333,7 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :can_review, :boolean, default: false
   attr :draft_error, :boolean, default: false
   attr :pending_operation, :any, default: nil
+  attr :history, :list, default: []
 
   def review(assigns) do
     ~H"""
@@ -350,11 +362,7 @@ defmodule TriageWeb.WorkspaceComponents do
         >{if @queue_shown, do: "Back to decision", else: "Show queue (#{@total})"}</button><span
           :if={@params["batch"]}
           class="tag"
-        >Selected-only review</span><.link
-          :if={@row}
-          class="link history-link"
-          patch={Routes.workspace_path(@params, %{"inspect" => @row.cve, "tab" => "history"})}
-        >Decision history</.link>
+        >Selected-only review</span><span class="spacer" />
       </div>
     </div>
     <div class="review-grid">
@@ -400,9 +408,7 @@ defmodule TriageWeb.WorkspaceComponents do
                 {@row.packages} · {length(@row.scopes)} scopes in view · coverage unverified
               </p>
             </div><div>
-              <.saved_status scopes={@row.scopes} /><.link patch={
-                Routes.inspector_path(@params, @row.cve)
-              }>Full evidence ↗</.link>
+              <.saved_status scopes={@row.scopes} />
             </div>
           </div>
         </header>
@@ -450,6 +456,13 @@ defmodule TriageWeb.WorkspaceComponents do
                 </p>
               </div>
             </details>
+            <details id="decision-history-section">
+              <summary>Decision history</summary>
+              <p class="form-note">
+                Append-only. Legacy global decisions keep their original labels; scanner suppression is not a human decision.
+              </p>
+              <.history_entries history={@history} />
+            </details>
           </div>
           <div class="decision-column">
             <p :if={not @can_review} id="viewer-read-only">
@@ -458,6 +471,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <div class="decision-head">
               <h3>Decision</h3><span class="muted small">{length(@draft.targets)} selected</span>
             </div>
+            <p class="form-note" id="why-now">Why now: {why_now(@row)}</p>
             <p
               :if={@can_review and @draft.targets == []}
               id="decision-no-targets"
@@ -473,9 +487,13 @@ defmodule TriageWeb.WorkspaceComponents do
               type="select"
               label="Next action"
               options={[
+                {"Choose an action…", ""},
                 {"Mark as fixed", "fixed"},
                 {"Whitelist temporarily", "accepted_risk"},
-                {"Create Azure DevOps ticket", "create_ticket"}
+                {"Create Azure DevOps ticket", "create_ticket"},
+                {"Request investigation", "investigate"},
+                {"Request remediation", "request_remediation"},
+                {"Request verification", "request_verification"}
               ]}
             />
             <.input
@@ -501,6 +519,31 @@ defmodule TriageWeb.WorkspaceComponents do
             </p>
             <p :if={@draft.fields["action"] == "create_ticket"} class="form-note">
               Creates an Azure DevOps ticket with CVE and selected deployment evidence. Requires server configuration.
+            </p>
+            <.input
+              :if={@draft.fields["action"] in Decisions.work_actions()}
+              field={@form[:owner]}
+              disabled={not @can_review}
+              type="text"
+              label="Responsible owner"
+            />
+            <.input
+              :if={@draft.fields["action"] in Decisions.work_actions()}
+              field={@form[:due_on]}
+              disabled={not @can_review}
+              type="date"
+              label="Follow-up by (UTC)"
+            />
+            <.input
+              :if={@draft.fields["action"] in Decisions.work_actions()}
+              field={@form[:reason]}
+              disabled={not @can_review}
+              type="textarea"
+              label="Justification (required)"
+              maxlength="2000"
+            />
+            <p :if={@draft.fields["action"] in Decisions.work_actions()} class="form-note">
+              Records a work request for the selected scopes with an owner, a follow-up date and a justification. It does not change or suppress the findings.
             </p>
             <div class="decision-actions">
               <button
@@ -536,12 +579,18 @@ defmodule TriageWeb.WorkspaceComponents do
                 not @can_review or @draft.targets == [] or not is_nil(@pending_operation) or
                   @draft_error or @draft.stale or
                   @hidden_targets != [] or
-                  @draft.fields["action"] not in ~w(fixed accepted_risk create_ticket)
+                  @draft.fields["action"] not in (~w(fixed accepted_risk create_ticket) ++
+                                                    Decisions.work_actions()) or
+                  (@draft.fields["action"] in Decisions.work_actions() and
+                     work_details_missing?(@draft.fields))
               }
             >{case @draft.fields["action"] do
               "fixed" -> "Mark as fixed"
               "accepted_risk" -> "Whitelist now"
               "create_ticket" -> "Create Azure DevOps ticket"
+              "investigate" -> "Request investigation"
+              "request_remediation" -> "Request remediation"
+              "request_verification" -> "Request verification"
               _ -> "Select an action"
             end}</button>
           </div>
@@ -605,154 +654,6 @@ defmodule TriageWeb.WorkspaceComponents do
         </tbody>
       </table>
     </div>
-    """
-  end
-
-  attr :row, :any, required: true
-  attr :requested, :string, required: true
-  attr :targets, :list, required: true
-  attr :history, :list, required: true
-  attr :params, :map, required: true
-  attr :expanded, :boolean, required: true
-
-  def inspector(assigns) do
-    ~H"""
-    <dialog
-      id="workspace-inspector"
-      class={["inspector", @expanded && "expanded"]}
-      phx-hook="WorkspaceDialog"
-      data-close-event="close-inspector"
-      aria-labelledby="inspector-title"
-    >
-      <div class="inspector-layout">
-        <header class="inspector-head">
-          <div class="between">
-            <span class="scope-label">Advisory inspector · scoped evidence</span><div class="row">
-              <button
-                id="expand-inspector"
-                phx-click="expand"
-                aria-label="Expand or restore inspector"
-              >{if @expanded, do: "Restore", else: "Expand"}</button><button
-                id="close-inspector"
-                phx-click="close-inspector"
-                aria-label="Close inspector"
-              >Close</button>
-            </div>
-          </div><h2 id="inspector-title">{@requested}</h2><div :if={@row} class="row">
-            <.severity value={@row.severity} /><p>
-              {@row.packages} · {length(@targets)} visible scopes
-            </p>
-          </div>
-        </header>
-        <nav class="tabs" aria-label="Inspector sections">
-          <.link
-            :for={
-              {tab, label} <- [
-                {"summary", "Summary"},
-                {"assets", "Affected assets"},
-                {"history", "History"},
-                {"evidence", "Evidence"}
-              ]
-            }
-            id={"inspector-tab-#{tab}"}
-            class={[(@params["tab"] || "summary") == tab && "active"]}
-            patch={Routes.workspace_path(@params, %{"tab" => tab})}
-          >{label}</.link>
-        </nav>
-        <div class="inspector-body">
-          <p :if={is_nil(@row)} class="empty">
-            No matching scopes for this advisory. No out-of-scope evidence has been substituted.
-          </p>
-          <%= if @row do %>
-            <%= case @params["tab"] || "summary" do %>
-              <% "assets" -> %>
-                <.scope_table targets={@targets} /><div :for={target <- @targets} class="section">
-                  <h3>Placement {target.id}</h3><p class="long-value">{target.image.digest}</p><p :for={
-                    f <- target.findings
-                  }>
-                    {f.package_name} {f.package_version} · finding {f.id}
-                  </p>
-                </div>
-              <% "history" -> %>
-                <div class="section">
-                  <h3>Scoped decision history</h3><p>
-                    Global legacy decisions are labeled explicitly. Scanner suppression is not a human decision.
-                  </p>
-                </div><article
-                  :for={d <- @history}
-                  id={"decision-history-#{d.id}"}
-                  class="history-entry"
-                >
-                  <time>{time(d.decided_at)}</time><div>
-                    <strong>{d.label} · {d.state}</strong><p>{history_scope(d)}</p><p>
-                      {d.reason}
-                      <a
-                        :if={d.metadata["ticket_url"]}
-                        href={d.metadata["ticket_url"]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >Azure DevOps ticket</a>
-                    </p><p :if={d.expires_at}>
-                      Expires {time(d.expires_at)} · {if d.metadata["expiry_boundary"] == "exclusive",
-                        do: "exclusive boundary",
-                        else: "legacy inclusive boundary"}
-                    </p>
-                  </div>
-                </article><p :if={@history == []}>No recorded decisions for these scopes.</p><div class="section">
-                  <h3>Observation evidence</h3><p :for={scope <- @targets}>
-                    Placement {scope.id}: first recorded {time(scope.first_seen)}; last recorded {time(
-                      scope.last_seen
-                    )}. {if scope.active?,
-                      do: "Still recorded affected.",
-                      else: "No longer observed, not verified remediated."}
-                  </p>
-                </div>
-              <% "evidence" -> %>
-                <div class="section">
-                  <h3>Evidence &amp; provenance</h3><p>
-                    Local inventory records, not a verified current scan. Coverage completeness and production freshness are unknown. No intelligence fetch occurs when opening this view.
-                  </p><p>
-                    Priority: Triage.Risk policy v1; positive exploitation input comes from the cached KEV source. Missing cache is not a negative result.
-                  </p><div :for={scope <- @targets}>
-                    <h3>Placement {scope.id}</h3><p>
-                      Observed {time(scope.last_seen)} · exposure {exposure(scope.exposure)}
-                    </p><p class="long-value">Immutable image: {scope.image.digest}</p><p :for={
-                      f <- scope.findings
-                    }>
-                      Finding {f.id}: {f.package_name} {f.package_version}; scanner fix {f.fix ||
-                        "not reported"}; suppression {if f.suppressed,
-                        do: "present, approval and date unknown",
-                        else: "not recorded"}.
-                    </p>
-                  </div>
-                </div>
-              <% _ -> %>
-                <div class="section">
-                  <h3>At a glance</h3><p class="long-value">{description(@row)}</p>
-                </div><div class="facts">
-                  <dl class="fact">
-                    <dt>Work status</dt><dd>{work_status(@targets)}</dd>
-                  </dl><dl class="fact">
-                    <dt>Affected scopes in view</dt><dd>{length(@targets)}</dd>
-                  </dl><dl class="fact">
-                    <dt>Coverage</dt><dd>Unverified</dd>
-                  </dl>
-                </div><.scope_table targets={@targets} /><div class="note">
-                  Whitelisting and scanner suppression do not remove active exposure. A reported fix is not verified remediation.
-                </div>
-            <% end %>
-          <% end %>
-        </div>
-        <footer class="inspector-foot">
-          <span class="grow small muted">Only current shared-scope targets shown.</span><button phx-click="close-inspector">Close</button><.link
-            :if={@row && Enum.any?(@targets, & &1.active?)}
-            id="inspector-review"
-            class="primary button-link"
-            patch={Routes.review_path(@params, @row.cve)}
-          >Review this CVE →</.link>
-        </footer>
-      </div>
-    </dialog>
     """
   end
 
@@ -1040,5 +941,80 @@ defmodule TriageWeb.WorkspaceComponents do
     target = d.metadata["target"] || %{}
 
     "Placement #{d.placement_id} · #{target["team"] || "historical team unknown"} · #{target["environment"] || "historical environment unknown"}"
+  end
+
+  # T03: source-backed "Why now" from the deterministic risk policy. The
+  # strongest classified target's reason leads; no opaque score is invented.
+  defp why_now(row) do
+    cond do
+      row.risk && row.risk.reasons != [] -> hd(row.risk.reasons)
+      Enum.any?(row.scopes, &(!&1.active?)) -> "No longer observed in local inventory"
+      true -> "No recorded attention reason; coverage is unverified"
+    end
+  end
+
+  # T03: concrete next step derived from recorded work, never a safety claim.
+  defp next_action(row) do
+    cond do
+      ticket_url(row) ->
+        "Ticket created · track existing work"
+
+      fixed_scopes?(row.scopes) ->
+        "Reported fixed · verify deployment"
+
+      whitelist_state(row) in ["Whitelisted", "Partially whitelisted"] ->
+        "Risk accepted · review at expiry"
+
+      Enum.any?(row.scopes, &(&1.covered? and &1.decision.decision in Decisions.work_actions())) ->
+        "Work in progress · follow up with the owner"
+
+      Enum.any?(row.scopes, &(!&1.active?)) ->
+        "Historical record · no current action"
+
+      true ->
+        "Choose an action for exact scopes"
+    end
+  end
+
+  defp fix_summary(row) do
+    fixes =
+      row.scopes
+      |> Enum.flat_map(& &1.findings)
+      |> Enum.map(& &1.fix)
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.uniq()
+
+    if fixes == [], do: "not reported", else: Enum.join(fixes, ", ")
+  end
+
+  defp ticket_url(row),
+    do: Enum.find_value(row.scopes, &(&1.decision && &1.decision.metadata["ticket_url"]))
+
+  attr :history, :list, required: true
+
+  @doc """
+  T03: the shared detail's append-only decision history, reused from the
+  retired inspector. Exact scope, reason and ticket links stay explicit.
+  """
+  def history_entries(assigns) do
+    ~H"""
+    <article :for={d <- @history} id={"decision-history-#{d.id}"} class="history-entry">
+      <time>{time(d.decided_at)}</time><div>
+        <strong>{d.label} · {d.state}</strong><p>{history_scope(d)}</p><p>
+          {d.reason}
+          <a
+            :if={d.metadata["ticket_url"]}
+            href={d.metadata["ticket_url"]}
+            target="_blank"
+            rel="noopener noreferrer"
+          >Azure DevOps ticket</a>
+        </p><p :if={d.expires_at}>
+          Expires {time(d.expires_at)} · {if d.metadata["expiry_boundary"] == "exclusive",
+            do: "exclusive boundary",
+            else: "legacy inclusive boundary"}
+        </p>
+      </div>
+    </article><p :if={@history == []}>No recorded decisions for these scopes.</p>
+    """
   end
 end

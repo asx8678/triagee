@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:triagee:handoff:ai-recommendation:1.0",
+  "title": "Proposed evidence-bound AI recommendation — not an approval",
+  "description": "Handoff proposal. Structural validation is necessary but not sufficient; server-side scope, provenance, reference, and factual validation are required.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "cve": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "recommended_action": {
+      "enum": [
+        "investigate",
+        "remediate",
+        "propose_not_affected",
+        "propose_risk_acceptance",
+        "request_verification"
+      ]
+    },
+    "applicability": {
+      "enum": [
+        "unknown",
+        "possibly_affected",
+        "affected",
+        "not_affected_candidate"
+      ]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "assessed_scope": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "placement_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "finding_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minItems": 1,
+            "maxItems": 2000,
+            "uniqueItems": true
+          },
+          "evidence_hash": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "placement_id",
+          "finding_ids",
+          "evidence_hash"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 200
+    },
+    "supporting_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "supports": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "evidence_id",
+          "supports"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 64
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      },
+      "minItems": 0,
+      "maxItems": 32
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      },
+      "minItems": 0,
+      "maxItems": 32
+    },
+    "package_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "finding_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "enum": [
+              "upgrade",
+              "investigate",
+              "mitigate",
+              "verify"
+            ]
+          },
+          "reported_fixed_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "finding_id",
+          "action",
+          "reported_fixed_version",
+          "evidence_ids",
+          "note"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 200
+    },
+    "review_conditions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "human_review_required": {
+      "const": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "cve",
+    "recommended_action",
+    "applicability",
+    "rationale",
+    "assessed_scope",
+    "supporting_evidence",
+    "missing_evidence",
+    "contradictions",
+    "package_actions",
+    "review_conditions",
+    "human_review_required"
+  ]
+}

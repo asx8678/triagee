@@ -117,7 +117,7 @@ defmodule Triage.Workspace.Query do
     order =
       if sort == "age",
         do: "first_seen, cve COLLATE \"C\"",
-        else: "severity DESC, priority DESC NULLS LAST, cve COLLATE \"C\""
+        else: "attention ASC, severity DESC, priority DESC NULLS LAST, cve COLLATE \"C\""
 
     """
     WITH target_facts AS (
@@ -169,8 +169,24 @@ defmodule Triage.Workspace.Query do
           AND d.decided_at <= $3::timestamp
         ORDER BY d.decided_at DESC, d.id DESC LIMIT 1
       ) d ON true
+    ), scored AS (
+      SELECT t.*,
+        CASE
+          WHEN NOT t.active THEN 4
+          WHEN NOT t.covered THEN 0
+          WHEN d.expires_at IS NOT NULL AND d.expires_at <= ($3::timestamp + interval '7 days') THEN 1
+          WHEN t.covered AND d.decision IN ('investigate', 'request_remediation', 'request_verification', 'create_ticket') THEN 2
+          ELSE 3
+        END AS attention
+      FROM targets t
+      LEFT JOIN LATERAL (
+        SELECT d.* FROM advisory_decisions d
+        WHERE d.cve = t.cve AND (d.placement_id IS NULL OR d.placement_id = t.id)
+          AND d.decided_at <= $3::timestamp
+        ORDER BY d.decided_at DESC, d.id DESC LIMIT 1
+      ) d ON true
     ), matching AS (
-      SELECT * FROM targets WHERE text_match AND severity_match AND
+      SELECT * FROM scored WHERE text_match AND severity_match AND
         CASE $4::text
           WHEN 'all' THEN true
           WHEN 'history' THEN NOT active
@@ -183,7 +199,8 @@ defmodule Triage.Workspace.Query do
           ELSE active
         END
     ), rows AS (
-      SELECT cve, max(severity) AS severity, max(priority) AS priority, min(first_seen) AS first_seen
+      SELECT cve, max(severity) AS severity, max(priority) AS priority, min(first_seen) AS first_seen,
+        min(attention) AS attention
       FROM matching WHERE cardinality($7::text[]) = 0 OR cve = ANY($7::text[])
       GROUP BY cve
     ), page AS (

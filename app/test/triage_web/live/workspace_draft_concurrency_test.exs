@@ -7,9 +7,9 @@ defmodule TriageWeb.WorkspaceDraftConcurrencyTest do
   setup c do
     Triage.DataCase.reset_inventory!()
     image = image!("draft-cas")
-    placement!(image, "team-cas", "prod")
+    placement = placement!(image, "team-cas", "prod")
     finding = finding!(image, "CVE-2099-7770")
-    Map.merge(c, %{cve: finding.cve})
+    Map.merge(c, %{cve: finding.cve, placement: placement})
   end
 
   test "a stale tab is told to reload instead of overwriting a saved draft", c do
@@ -58,6 +58,7 @@ defmodule TriageWeb.WorkspaceDraftConcurrencyTest do
     {:ok, b, _} = live(c.conn, "/?page=review&item=#{c.cve}")
     render_change(b, "draft", %{"decision" => %{"reason" => "Newer tab B"}})
 
+    render_change(a, "target", %{"id" => to_string(c.placement.id)})
     render_submit(a, "save", %{"decision" => %{"action" => "fixed"}})
 
     assert [%{decision: "fixed"}] = Triage.Decisions.history_for_cve(c.cve)

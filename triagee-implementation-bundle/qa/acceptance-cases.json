@@ -1,0 +1,1091 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Acceptance requirements, not executed tests",
+  "cases": [
+    {
+      "id": "A001",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Findings is the landing workspace",
+      "given": "A normal authenticated session with operational data.",
+      "when": "Open / and /workspace.",
+      "then": "Findings / Needs attention is shown. Only Findings and Exceptions are primary workspaces; Grafana is a truthful utility link.",
+      "verification_layers": [
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T04"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A002",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "One actionable CVE detail",
+      "given": "A CVE can be reached from inventory, review, inspector, and an exception.",
+      "when": "Open it through each supported route.",
+      "then": "The same shared detail supports evidence, action, and history without a second Review destination.",
+      "verification_layers": [
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A003",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Useful four-column hierarchy",
+      "given": "Real image/package/version and nullable service mapping.",
+      "when": "Render findings.",
+      "then": "CVE/package, affected identity/environment, reason, and specific next action are visible; no invented service or fix.",
+      "verification_layers": [
+        "component",
+        "browser"
+      ],
+      "task_ids": [
+        "T02"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A004",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Search and scoped clearing",
+      "given": "Team/environment selected, long list and search text.",
+      "when": "Submit Enter, clear text, move page.",
+      "then": "Search works; clearing keeps deployment scope; pagination and result count use the same predicate.",
+      "verification_layers": [
+        "query",
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T04"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A005",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Mixed-scope CVE is not globally closed",
+      "given": "Same CVE has uncovered production and accepted staging.",
+      "when": "Filter each environment and open full scoped context.",
+      "then": "Production remains attention; staging assessment does not cover siblings; the full row is labeled mixed where appropriate.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T05"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A006",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Counts match exact contributing records",
+      "given": "Cross-team CVEs and overlapping attention/progress targets.",
+      "when": "Read counts and follow each drilldown.",
+      "then": "Distinct CVE and target units are explicit; exact contributing IDs/scopes match; team/view counts are not summed incorrectly.",
+      "verification_layers": [
+        "query",
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T05"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A007",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Scope-local contextual ordering and pagination",
+      "given": "High exploited/public production, unexposed critical, filtered-out urgent sibling, and more than 50 CVEs.",
+      "when": "Compare SQL and domain order across pages and scopes.",
+      "then": "Specified contextual policy wins over severity-only order; stable ties; no filtered-out urgency, omissions or duplicates in a stable snapshot.",
+      "verification_layers": [
+        "query",
+        "domain"
+      ],
+      "task_ids": [
+        "T05"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A008",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Fresh draft is neutral",
+      "given": "No saved draft for a selected CVE.",
+      "when": "Open detail and start an action.",
+      "then": "No action, write targets, or non-applicability conclusion is preselected; zero-target commit is disabled.",
+      "verification_layers": [
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T02"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A009",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Saved draft retains original binding",
+      "given": "Authenticated user has an explicit two-target draft.",
+      "when": "Navigate/reload/reconnect and restore it.",
+      "then": "Only original target IDs, captured fingerprints, fields and operation ID return; another user cannot adopt it.",
+      "verification_layers": [
+        "domain",
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A010",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Filter changes do not widen or hide a write",
+      "given": "Draft contains targets outside a newly selected filter.",
+      "when": "Change filters and attempt preview/commit.",
+      "then": "Draft is preserved or explicitly discarded; full selected scope is visible and confirmed; no silent target addition/removal or misleading preview.",
+      "verification_layers": [
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A011",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Zero/invalid targets rejected at server",
+      "given": "Forged event/domain call with empty, invalid or duplicate-conflicting selection.",
+      "when": "Invoke commit without the UI guard.",
+      "then": "No decision or remote write; bounded validation error. Normal duplicate IDs may normalize only without expanding intended scope.",
+      "verification_layers": [
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T02"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A012",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Forged target and evidence bindings fail",
+      "given": "Another CVE/placement ID or browser-proposed evidence hash.",
+      "when": "Submit a tampered action.",
+      "then": "Server validates the authorized captured scope and evidence; rejects mismatched IDs/hashes and global fallback.",
+      "verification_layers": [
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A013",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Authentication cannot be replaced by actor text",
+      "given": "Viewer, reviewer, admin, forged actor, revoked role mid-session.",
+      "when": "Attempt web mutation and ticket recovery.",
+      "then": "Actual principal is reauthorized; viewer/revoked user cannot write; forged actor cannot alter audit identity; dev shortcut does not appear in production.",
+      "verification_layers": [
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T02"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A014",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Complete target evidence survives package filtering",
+      "given": "A selected target has multiple packages and only one matches search.",
+      "when": "Inspect and commit an allowed action.",
+      "then": "Complete relevant package occurrence membership remains evidence-bound; visible filtering does not truncate decision evidence.",
+      "verification_layers": [
+        "query",
+        "domain"
+      ],
+      "task_ids": [
+        "T01",
+        "T05"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A015",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Changed evidence rejects stale write",
+      "given": "Draft preview followed by changed artifact/package/exposure.",
+      "when": "Confirm old preview.",
+      "then": "Conflict or explicit refreshed review; no old approval applied to new evidence and no silent target expansion.",
+      "verification_layers": [
+        "domain",
+        "concurrency",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A016",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "CVE switching and browser Back preserve work",
+      "given": "Uncommitted changes and an independently deep-linked CVE.",
+      "when": "Switch item, use Back and a legacy review URL.",
+      "then": "Draft guard, original operation, list position and filters survive or discard is explicit; detail loads beyond current page.",
+      "verification_layers": [
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T03",
+        "T04"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A017",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Disconnected result is truthful",
+      "given": "Saved draft or pending operation and LiveSocket disconnect.",
+      "when": "Reconnect before/during an action.",
+      "then": "No false success or duplicate write; persistent state resumes with accurate pending/conflict/result context.",
+      "verification_layers": [
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A018",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Legacy routes preserve meaning",
+      "given": "Old overview/inventory/review/inspector/accepted/fixed/timeline links with filters/windows.",
+      "when": "Follow each mapped alias.",
+      "then": "Equivalent new context or documented read-only compatibility; no lost timeline window/history/draft and no reactivated retired unsafe screen.",
+      "verification_layers": [
+        "router",
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T04"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A019",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Empty and unavailable data are different",
+      "given": "No import, filtered-empty result, failed source, unknown exposure/owner.",
+      "when": "Render each state.",
+      "then": "Accurate error/empty guidance and source limits; no all-clear or fabricated complete coverage, ownership or exposure.",
+      "verification_layers": [
+        "query",
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A020",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Exception prerequisites enforced server-side",
+      "given": "Empty rationale, missing evidence, no validity date, past date or zero scope.",
+      "when": "Submit accepted-risk/not-affected requests directly.",
+      "then": "Required fields and future effective boundary validated; no exception is recorded through bypassed client validation.",
+      "verification_layers": [
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T07"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A021",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Not affected is not accepted risk",
+      "given": "Two otherwise identical supported draft requests with different assessment types.",
+      "when": "Commit each in isolated scopes.",
+      "then": "Distinct typed outcomes and evidence semantics are stored, read and reported; not_affected never writes accepted_risk as an approximation.",
+      "verification_layers": [
+        "domain",
+        "query"
+      ],
+      "task_ids": [
+        "T07"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A022",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Unknown context cannot justify not affected",
+      "given": "Only scanner package match and missing exposure/configuration.",
+      "when": "Attempt not-affected assessment.",
+      "then": "Unsupported conclusion cannot become valid coverage; identify missing justification and retain investigation.",
+      "verification_layers": [
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T07"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A023",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Exact new UTC expiry boundary",
+      "given": "New exception valid through selected date with exclusive next-midnight metadata.",
+      "when": "Read immediately before, at and after boundary with frozen clock.",
+      "then": "Valid before; expired exactly at boundary; SQL/domain/UI agree; review-due does not imply already expired.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T07",
+        "T09"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A024",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Legacy inclusive semantics remain readable",
+      "given": "Legacy inclusive and new exclusive records at same stored timestamp.",
+      "when": "Read each around the boundary.",
+      "then": "Each follows its preserved metadata; no speculative timestamp normalization; historical labels remain visible.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "migration"
+      ],
+      "task_ids": [
+        "T07"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A025",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Expired newer decision does not revive older acceptance",
+      "given": "Older global acceptance, newer scoped replacement, pending future decision.",
+      "when": "Advance time past newer expiry.",
+      "then": "Older acceptance stays superseded; future decision covers nothing before effective time; siblings retain their legitimate own chronology.",
+      "verification_layers": [
+        "domain",
+        "query"
+      ],
+      "task_ids": [
+        "T01",
+        "T07"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A026",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Exact-scope exception never leaks",
+      "given": "Production/staging and multiple package/artifact targets for same CVE.",
+      "when": "Record an exception for an explicit subset.",
+      "then": "Only that subset receives supported coverage; new/sibling placements remain unaffected and visible.",
+      "verification_layers": [
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T07"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A027",
+      "milestone": "M2",
+      "priority": "P1",
+      "title": "Review due and invalidation re-enter attention",
+      "given": "Valid exception crossing the seven-day review window, expiry or explicit material invalidation.",
+      "when": "Refresh using frozen time/new material evidence.",
+      "then": "Correct target becomes attention; record remains in register/history with actual reason; no silent renewal.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T09"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A028",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Material change is scoped and evidence-bound",
+      "given": "Independent sibling plus changed artifact/configuration/relevant intelligence on one target.",
+      "when": "Recompute assessment validity and queue.",
+      "then": "Affected conclusions require reassessment under defined materiality; unrelated scope is not silently broadened or erased; prior evidence preserved.",
+      "verification_layers": [
+        "domain",
+        "query"
+      ],
+      "task_ids": [
+        "T09"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A029",
+      "milestone": "M2",
+      "priority": "P1",
+      "title": "Identical observations do not create duplicate work",
+      "given": "Repeated scans with same material evidence and a current work/assessment record.",
+      "when": "Ingest or project identical observations repeatedly in owned fixture.",
+      "then": "No repeated human task/ticket/AI request; history may collapse observations without deleting source records.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T09"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A030",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Reported remediation versus verified outcome",
+      "given": "Legacy fixed, new reported change, insufficient then sufficient verification evidence.",
+      "when": "Read legacy record, report remediation, and attempt verification.",
+      "then": "Legacy/new report remains unverified until qualifying evidence exists; successful verification records exact scope, artifact and evidence provenance.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T08"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A031",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Scanner absence/suppression and ticket closure are not verification",
+      "given": "Finding disappears, scanner suppresses it, or ticket closes without post-change evidence.",
+      "when": "Refresh reads and reports.",
+      "then": "No verified-remediation outcome or green success claim is inferred; source observation and work stay distinct.",
+      "verification_layers": [
+        "domain",
+        "query"
+      ],
+      "task_ids": [
+        "T08"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A032",
+      "milestone": "M2",
+      "priority": "P1",
+      "title": "Current work deduplicates; overdue work overlaps",
+      "given": "Current investigation and overdue remediation in separate targets.",
+      "when": "Read Needs attention and In progress.",
+      "then": "Unchanged current investigation does not endlessly requeue; overdue work can appear in both views; counts state nonadditivity.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T09"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A033",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Ticket preview is read-only",
+      "given": "Configured fake adapter and selected exact targets.",
+      "when": "Open/cancel preview, then explicitly confirm once.",
+      "then": "No POST before confirmation; preview destination/payload match committed request; no credentials disclosed.",
+      "verification_layers": [
+        "adapter",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A034",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Ticket replay and operation conflicts",
+      "given": "Previously successful operation and same ID with modified request.",
+      "when": "Replay identical request then reuse ID with different binding.",
+      "then": "Identical replay returns existing result; modified reuse fails; no second external ticket.",
+      "verification_layers": [
+        "domain",
+        "adapter",
+        "concurrency"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A035",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Unknown remote outcome survives local failure",
+      "given": "Timeout after possible remote success, or local persistence failure after remote creation.",
+      "when": "Reload and attempt recovery.",
+      "then": "Durable operation remains; no blind resend/new ID; UI says reconciliation required, not successful or safe to retry.",
+      "verification_layers": [
+        "domain",
+        "adapter",
+        "concurrency",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A036",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "Recovery cannot evade ownership or uncertainty",
+      "given": "Original reviewer/admin and unrelated reviewer; empty/ambiguous remote marker results.",
+      "when": "Reconcile the existing claim.",
+      "then": "Only authorized recovery; unresolved remote match remains blocked; no POST, claim deletion or invented success.",
+      "verification_layers": [
+        "domain",
+        "adapter",
+        "liveview"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A037",
+      "milestone": "M1",
+      "priority": "P0",
+      "title": "No external call under source locks",
+      "given": "Instrumented fake ticket adapter and commit transaction.",
+      "when": "Create a confirmed work item.",
+      "then": "Durable claim committed and database locks released before external POST; uncertainty handling retained.",
+      "verification_layers": [
+        "domain",
+        "adapter",
+        "concurrency"
+      ],
+      "task_ids": [
+        "T01",
+        "T03"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A038",
+      "milestone": "M3",
+      "priority": "P1",
+      "title": "Real responsive shared workflow",
+      "given": "Actual LiveView, long evidence, many targets, required width matrix.",
+      "when": "Open/act/close/back at 320–1920 widths.",
+      "then": "Readable layout without page overflow; visible action/back controls; no squeezed detail or production iframe/mock.",
+      "verification_layers": [
+        "browser"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A039",
+      "milestone": "M3",
+      "priority": "P1",
+      "title": "Keyboard, focus, zoom and assistive flow",
+      "given": "Real browser keyboard, actual zoom/text spacing and available screen reader.",
+      "when": "Navigate tabs/rows/dialogs, Escape, error and return focus; test 200%/400% zoom.",
+      "then": "Usable semantics/focus and no hidden critical controls; unavailable manual checks are documented, not called certified.",
+      "verification_layers": [
+        "browser",
+        "manual_accessibility"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A040",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Error paths do not fabricate success",
+      "given": "DB unavailable, conflict, role revoked, double submit, adapter failure.",
+      "when": "Attempt actions and recover.",
+      "then": "Accurate bounded errors and retained draft/operation context; zero unsupported success or duplicate mutation.",
+      "verification_layers": [
+        "domain",
+        "liveview",
+        "browser"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A041",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "AI is explicit and optional",
+      "given": "No wrapper, configured fake wrapper, viewer/reviewer roles.",
+      "when": "Navigate, select/filter, explicitly request analysis.",
+      "then": "No call on navigation; authorized explicit call only; manual actions work when unconfigured or failed.",
+      "verification_layers": [
+        "adapter",
+        "liveview"
+      ],
+      "task_ids": [
+        "T10"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A042",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Untrusted AI evidence and invented references fail",
+      "given": "Advisory contains instruction-like text; response cites unknown/unauthorized evidence or returns HTML.",
+      "when": "Run analysis and attempt to use output.",
+      "then": "Instructions are data; structure and semantic checks reject unusable output; displayed text escaped; no external action.",
+      "verification_layers": [
+        "adapter",
+        "domain"
+      ],
+      "task_ids": [
+        "T10"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A043",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "AI cannot expand or replace scope",
+      "given": "Response adds/drops targets, changes CVE/finding IDs/hashes or arrives after selection changes.",
+      "when": "Validate and display result.",
+      "then": "Exact request binding enforced; stale/mismatched output not usable as a current draft; no modified mutation selection.",
+      "verification_layers": [
+        "adapter",
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T10"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A044",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "AI cannot invent fixes or applicability",
+      "given": "Invented fixed version, mismatched package, unsupported not-affected claim.",
+      "when": "Validate model output.",
+      "then": "Reject or retain as unusable output; no invented upgrade or effective exception; valid draft still requires human confirmation.",
+      "verification_layers": [
+        "adapter",
+        "domain"
+      ],
+      "task_ids": [
+        "T10"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A045",
+      "milestone": "M3",
+      "priority": "P1",
+      "title": "AI cache and late responses respect material context",
+      "given": "Same evidence, changed policy/artifact, cancellation, user edits.",
+      "when": "Analyze repeatedly and deliver late responses.",
+      "then": "Bounded authorized cache reuse only when relevant context matches; stale outputs do not overwrite user work.",
+      "verification_layers": [
+        "adapter",
+        "domain",
+        "liveview"
+      ],
+      "task_ids": [
+        "T10"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A046",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "AI privacy and execution limits",
+      "given": "Oversized/malformed output, timeout, role revoked while running, secret-bearing irrelevant input.",
+      "when": "Invoke through the real adapter boundary with fakes.",
+      "then": "Bounds/authorization/redaction hold; no command execution or unrelated inventory transmission; no automatic retries/approval.",
+      "verification_layers": [
+        "adapter",
+        "domain"
+      ],
+      "task_ids": [
+        "T10"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A047",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Reporting/UI use identical target predicates",
+      "given": "Shared deterministic snapshot with mixed teams/states and public reference.",
+      "when": "Compare domain, SQL, UI and reporting adapter.",
+      "then": "Exact IDs/counting units agree; reference-only excluded; attention/progress overlap and nonadditive team totals explicit.",
+      "verification_layers": [
+        "query",
+        "domain",
+        "reporting"
+      ],
+      "task_ids": [
+        "T11"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A048",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Reporting does not turn acceptance into remediation",
+      "given": "Valid accepted risk, not affected, legacy fixed, source unavailable, verified outcome.",
+      "when": "Project current and historical reporting records.",
+      "then": "Separate states/counters; missing data is not zero risk; current state is not invented historical time series.",
+      "verification_layers": [
+        "domain",
+        "reporting"
+      ],
+      "task_ids": [
+        "T11"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A049",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Authorized exact-scope Grafana drilldown",
+      "given": "Configured/missing Grafana URL and links with valid/malformed scope.",
+      "when": "Open reporting detail links.",
+      "then": "Authorized correct CVE/context, no auto write selection, credentials in URLs, open redirect or fake configured destination.",
+      "verification_layers": [
+        "router",
+        "reporting",
+        "browser"
+      ],
+      "task_ids": [
+        "T11"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A050",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Representative legacy/new migration and rollback",
+      "given": "Owned fixture with cases, global/scoped decisions, mixed boundaries and durable operations.",
+      "when": "Apply additive changes and rehearse UI rollback.",
+      "then": "IDs/evidence/history/chronology/recovery preserved; compatible readers retained; no destructive downgrade or speculative backfill.",
+      "verification_layers": [
+        "migration",
+        "domain"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A051",
+      "milestone": "M0",
+      "priority": "P0",
+      "title": "Owned resources and read/write boundary",
+      "given": "Repository database guidance and a clean isolated fixture environment.",
+      "when": "Run characterization/mutation/browser checks.",
+      "then": "Only proven-owned resources modified/cleaned; no production data, external service write, unrelated process or tool state altered.",
+      "verification_layers": [
+        "process_audit"
+      ],
+      "task_ids": [
+        "T00",
+        "T01"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A052",
+      "milestone": "M3",
+      "priority": "P1",
+      "title": "Bounded hydration and concurrent snapshot behavior",
+      "given": "Representative high CVE count and one CVE with many targets/packages; concurrent import.",
+      "when": "Capture plans/reads/memory and perform scoped decision.",
+      "then": "Bounded page hydration, consistent page/counts and complete selected evidence; measured limits reported, not claimed as solved by page size.",
+      "verification_layers": [
+        "query",
+        "concurrency",
+        "performance"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A053",
+      "milestone": "M3",
+      "priority": "P1",
+      "title": "Remove UI bloat without deleting domain capability",
+      "given": "Old route/component references, case history/import/replay mechanisms.",
+      "when": "Audit and remove unreachable presentation code after compatibility tests.",
+      "then": "No duplicate primary screens, new dashboard substitutes, lost history or blindly deleted backend/evidence stores.",
+      "verification_layers": [
+        "static",
+        "router",
+        "browser"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A054",
+      "milestone": "M0",
+      "priority": "P0",
+      "title": "Old acceptance and security findings are mapped",
+      "given": "Old PTV package and documented unresolved original security items.",
+      "when": "Classify old requirements against new design.",
+      "then": "Superseded layout assertions identified; safety obligations retained; unavailable original security findings not falsely closed.",
+      "verification_layers": [
+        "review"
+      ],
+      "task_ids": [
+        "T00"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A055",
+      "milestone": "M3",
+      "priority": "P0",
+      "title": "Delivery evidence is real and scoped",
+      "given": "Implementation report with tests, screenshots and integration claims.",
+      "when": "Independently verify claims.",
+      "then": "Checks distinguish PASS/FAIL/BLOCKED/NOT RUN, mock/live, bundle/app, source/current evidence; no fabricated certification or fake action success.",
+      "verification_layers": [
+        "review"
+      ],
+      "task_ids": [
+        "T12"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A056",
+      "milestone": "M1",
+      "priority": "P1",
+      "title": "Package-specific fix mapping",
+      "given": "Same CVE has several packages/versions or conflicting reported upgrade targets.",
+      "when": "Render row, evidence and action preview.",
+      "then": "Preserve package→installed→reported-fix provenance; summarize multiple targets without implying a universal upgrade version.",
+      "verification_layers": [
+        "component",
+        "domain",
+        "browser"
+      ],
+      "task_ids": [
+        "T02"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A057",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "Exception register preserves source identity",
+      "given": "Case exception and workspace decision with overlapping IDs/CVE.",
+      "when": "Open, inspect and attempt an edit.",
+      "then": "Composite source identity, frozen evidence and revision semantics preserved; writes go to correct domain; no silent store conversion.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "liveview"
+      ],
+      "task_ids": [
+        "T06",
+        "T07",
+        "T09"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    },
+    {
+      "id": "A058",
+      "milestone": "M2",
+      "priority": "P0",
+      "title": "New labels are supported before writing",
+      "given": "New assessment/verification labels and mixed old/new rows.",
+      "when": "Exercise changesets, commit, SQL, readers, serializations, history and reporting.",
+      "then": "No write before compatible interpretation exists; unsupported labels do not vanish or get misclassified as accepted/fixed.",
+      "verification_layers": [
+        "domain",
+        "query",
+        "migration"
+      ],
+      "task_ids": [
+        "T07",
+        "T08"
+      ],
+      "status": "NOT_RUN",
+      "status_note": "Acceptance specification only; application execution belongs to implementation."
+    }
+  ]
+}

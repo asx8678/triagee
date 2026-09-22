@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "snapshot_at": "2026-09-22T09:00:00Z",
+  "policy_version": "action-first-v1",
+  "cve": "CVE-2099-1009",
+  "placement_id": 111,
+  "image_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "image_repository": "synthetic/preview-api",
+  "team": "Platform",
+  "environment": "production",
+  "observation_state": "recorded_present",
+  "assessment": {
+    "type": "unassessed",
+    "status": "none",
+    "source_kind": null,
+    "source_record_id": null,
+    "valid_until": null,
+    "expiry_boundary": null
+  },
+  "workflow": {
+    "state": "none",
+    "owner": null,
+    "due_at": null,
+    "ticket_url": null,
+    "ticket_operation_state": "none"
+  },
+  "verification": {
+    "status": "not_verified",
+    "verified_at": null,
+    "evidence_ids": []
+  },
+  "needs_attention": true,
+  "attention_reasons": [
+    "exposure_unknown"
+  ],
+  "context_rank": 2,
+  "packages": [
+    {
+      "finding_id": 211,
+      "name": "template-kit",
+      "installed_version": "6.2.0",
+      "reported_fixed_versions": [],
+      "fix_evidence_ids": []
+    }
+  ],
+  "provenance": {
+    "last_observed_at": "2026-09-22T08:40:00Z",
+    "coverage": "unknown",
+    "limitations": [
+      "Synthetic data. No coverage or actual deployment claim."
+    ],
+    "source_ids": [
+      "synthetic-fixture"
+    ]
+  },
+  "detail_path": "/?page=findings&item=CVE-2099-1009&placement_ids=111"
+}

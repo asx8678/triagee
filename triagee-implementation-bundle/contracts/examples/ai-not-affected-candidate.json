@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "cve": "CVE-2099-1011",
+  "recommended_action": "propose_not_affected",
+  "applicability": "not_affected_candidate",
+  "rationale": "In this synthetic fixture, the advisory requires feature X to be enabled, and trusted configuration evidence for the exact selected artifact shows it is disabled. This is a candidate scoped assessment for human review, not an approval.",
+  "assessed_scope": [
+    {
+      "placement_id": 113,
+      "finding_ids": [
+        213
+      ],
+      "evidence_hash": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "supporting_evidence": [
+    {
+      "evidence_id": "E-advisory-1011",
+      "supports": "The synthetic advisory identifies enabled feature X as a necessary condition."
+    },
+    {
+      "evidence_id": "E-config-113",
+      "supports": "The supplied configuration record is bound to the selected artifact and records feature X disabled."
+    }
+  ],
+  "missing_evidence": [],
+  "contradictions": [],
+  "package_actions": [
+    {
+      "finding_id": 213,
+      "action": "verify",
+      "reported_fixed_version": null,
+      "evidence_ids": [
+        "E-advisory-1011",
+        "E-config-113"
+      ],
+      "note": "A reviewer must verify that the configuration evidence is authoritative and that no other applicable exploit path is described."
+    }
+  ],
+  "review_conditions": [
+    "Reassess after a configuration or artifact change, new advisory conditions, or the human-selected review boundary."
+  ],
+  "human_review_required": true
+}

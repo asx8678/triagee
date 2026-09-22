@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "cve": "CVE-2099-1009",
+  "recommended_action": "investigate",
+  "applicability": "unknown",
+  "rationale": "Synthetic package evidence records a match, but no current exposure or required-feature configuration evidence was supplied. This does not justify a not-affected conclusion.",
+  "assessed_scope": [
+    {
+      "placement_id": 111,
+      "finding_ids": [
+        211
+      ],
+      "evidence_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  ],
+  "supporting_evidence": [
+    {
+      "evidence_id": "E-package-211",
+      "supports": "Synthetic fixture records template-kit 6.2.0 in the selected artifact."
+    }
+  ],
+  "missing_evidence": [
+    "Current exposure evidence for placement 111.",
+    "Configuration evidence for the feature required by the advisory."
+  ],
+  "contradictions": [],
+  "package_actions": [
+    {
+      "finding_id": 211,
+      "action": "investigate",
+      "reported_fixed_version": null,
+      "evidence_ids": [
+        "E-package-211"
+      ],
+      "note": "Collect scope-specific configuration and exposure evidence before an applicability decision."
+    }
+  ],
+  "review_conditions": [
+    "Reassess when the missing context is supplied or artifact identity changes."
+  ],
+  "human_review_required": true
+}
