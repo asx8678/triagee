@@ -363,11 +363,12 @@ defmodule Triage.WorkspaceQueryTest do
            ])
          )}
 
-      # Separate term-shape failures (values, timestamp precision, nils) from
-      # byte-order/encoding failures: both matter to the stored fingerprint.
-      assert :erlang.binary_to_term(encoded, [:safe]) == evidence
-      assert encoded == :erlang.term_to_binary(evidence)
+      # The SQL must rebuild the canonical encoding byte for byte and then
+      # hash it identically: value-shape failures (timestamp precision, nils)
+      # and ordering failures both surface here.
+      assert encoded == Triage.Canonical.canonical(evidence)
       assert actual == t.evidence_hash
+      assert actual == Triage.Workspace.hash(evidence)
     end
   end
 
@@ -404,6 +405,9 @@ defmodule Triage.WorkspaceQueryTest do
     teams =
       all
       |> Enum.group_by(&Workspace.team_key(&1.placement.owner))
+      # Team rows are current-work lists: a team whose every target is retired
+      # keeps its history on the CVE level but shows no zero-work row.
+      |> Enum.reject(fn {_name, ts} -> not Enum.any?(ts, & &1.active?) end)
       |> Enum.map(fn {name, ts} -> %{name: name, metrics: counts(Workspace.metrics(ts))} end)
       |> Enum.sort_by(& &1.name)
 

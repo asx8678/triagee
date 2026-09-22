@@ -189,6 +189,45 @@ defmodule Triage.WorkspaceTest do
     assert Repo.aggregate(Decisions.Decision, :count) == 0
   end
 
+  test "retiring a placement keeps its decisions inspectable without counting as exposure", c do
+    {:ok, [decision]} =
+      Commit.save(c.cve, [c.prod.id], versions(c.cve), Ecto.UUID.generate(), fields("fixed"))
+
+    c.prod |> Ecto.Changeset.change(active: false) |> Repo.update!()
+
+    # Operational counts exclude the retired scope entirely.
+    metrics = Workspace.metrics(Workspace.targets())
+    assert {c.cve, c.staging.id} in metrics["active"].targets
+    refute {c.cve, c.prod.id} in metrics["active"].targets
+    refute {c.cve, c.prod.id} in metrics["unknown"].targets
+
+    # The target survives as non-operational history with its decision bound.
+    [retired] =
+      Workspace.targets(%{"cve" => c.cve, "placement_ids" => [c.prod.id]})
+
+    assert retired.active? == false
+    assert retired.covered?
+    refute retired.needs_decision?
+
+    # The stored decision stays reachable through the historical views.
+    assert [%{id: id}] = Workspace.history(c.cve, Workspace.targets(%{"cve" => c.cve}))
+    assert id == decision.id
+
+    for mode <- ["all", "history", "fixed"] do
+      page = Workspace.page(%{"page" => "inventory", "mode" => mode})
+
+      assert c.cve in Enum.map(page.page_rows, & &1.cve),
+             "#{mode} must keep the retired scope's CVE"
+    end
+
+    page = Workspace.page(%{"page" => "inventory", "mode" => "fixed", "inspect" => c.cve})
+    assert page.total == 1
+    assert page.inspector.cve == c.cve
+
+    assert c.prod.id in Enum.map(page.inspector.scopes, & &1.id),
+           "the retired scope must stay visible in the inspector"
+  end
+
   test "unassigned scope has an exact filter key, not an empty all-teams filter", c do
     orphan = placement!(c.image, "(unknown)", "prod")
     targets = Workspace.targets(%{"team" => "__unassigned__"})

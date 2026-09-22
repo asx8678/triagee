@@ -553,6 +553,10 @@ defmodule Triage.Timeline do
     Enum.map(Map.get(lane, :decisions, []), fn d ->
       %{
         from: DateTime.to_date(d.decided_at),
+        # The chart applies the workspace's scoped/global chronology
+        # (`Decisions.effective/2`), so spans carry the raw chronology keys.
+        decided_at: d.decided_at,
+        id: d.id,
         until: d.expires_at && DateTime.to_date(d.expires_at),
         decision: d.decision,
         placement_id: d.placement_id,

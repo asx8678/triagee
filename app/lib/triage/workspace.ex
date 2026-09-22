@@ -27,7 +27,7 @@ defmodule Triage.Workspace do
     query =
       from f in Finding,
         join: p in ImagePlacement,
-        on: p.image_id == f.image_id and p.active,
+        on: p.image_id == f.image_id,
         join: i in Image,
         on: i.id == f.image_id,
         where:
@@ -52,6 +52,11 @@ defmodule Triage.Workspace do
       first = hd(scopes)
       findings = Enum.map(scopes, & &1.finding) |> Enum.sort_by(& &1.id)
       active = Enum.filter(findings, &is_nil(&1.resolved_at))
+      # A retired placement is history, not exposure: its decisions stay
+      # inspectable, but it never counts as operational work. The evidence
+      # hash includes placement.active, so retirement also invalidates stale
+      # draft and retry bindings like any other evidence change.
+      operational = active != [] and first.placement.active
       exposed = Map.get(exposure, id, "unknown")
 
       risks =
@@ -87,7 +92,13 @@ defmodule Triage.Workspace do
         )
 
       decision = Decisions.covering_decision(decisions, cve, id)
-      covered = decision != nil and decision.metadata["evidence_hash"] in [nil, evidence_hash]
+
+      # A retired placement is history: its recorded decision stays visible as
+      # coverage of that historical scope even though retirement itself changed
+      # the evidence hash. Operational targets still require an exact binding.
+      covered =
+        decision != nil and
+          (not operational or decision.metadata["evidence_hash"] in [nil, evidence_hash])
 
       %{
         id: id,
@@ -95,13 +106,13 @@ defmodule Triage.Workspace do
         placement: first.placement,
         image: first.image,
         findings: findings,
-        active?: active != [],
+        active?: operational,
         exposure: exposed,
         risk: Risk.aggregate(risks),
         evidence_hash: evidence_hash,
         decision: decision,
         covered?: covered,
-        needs_decision?: active != [] and not covered,
+        needs_decision?: operational and not covered,
         fingerprint:
           hash({evidence_hash, exposed, risks, decisions[{cve, nil}], decisions[{cve, id}]}),
         first_seen: findings |> Enum.map(& &1.first_seen) |> Enum.min(DateTime),
@@ -240,10 +251,7 @@ defmodule Triage.Workspace do
   defp history_scope_value("team", value), do: team_key(value)
   defp history_scope_value(_field, value), do: value
 
-  def hash(value),
-    do:
-      value
-      |> :erlang.term_to_binary()
-      |> then(&:crypto.hash(:sha256, &1))
-      |> Base.encode16(case: :lower)
+  # Canonical encoding, never default term_to_binary: these hashes are stored
+  # and compared across restarts, and ETF orders small maps by VM atom state.
+  def hash(value), do: Triage.Canonical.hash(value)
 end

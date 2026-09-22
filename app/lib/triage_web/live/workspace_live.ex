@@ -224,6 +224,7 @@ defmodule TriageWeb.WorkspaceLive do
           targets: Enum.map(initial_targets, & &1.id),
           versions: Map.new(row.scopes, &{&1.id, &1.fingerprint}),
           operation: Ecto.UUID.generate(),
+          revision: nil,
           saved: false,
           dirty: false,
           stale: false
@@ -459,9 +460,14 @@ defmodule TriageWeb.WorkspaceLive do
   def handle_event("save", %{"decision" => fields}, %{assigns: %{draft: %{}}} = socket)
       when is_map(fields) do
     socket =
-      update_draft(socket, %{
-        fields: Map.merge(socket.assigns.draft.fields, Map.take(fields, ~w(action reason due_on)))
-      })
+      update_draft(
+        socket,
+        %{
+          fields:
+            Map.merge(socket.assigns.draft.fields, Map.take(fields, ~w(action reason due_on)))
+        },
+        persist: false
+      )
 
     changeset = Commit.form(socket.assigns.draft.fields)
 
@@ -493,7 +499,10 @@ defmodule TriageWeb.WorkspaceLive do
       socket.assigns.draft.targets == [] ->
         {:noreply, assign(socket, error: "Select at least one affected scope.")}
 
-      fields["action"] in ["accepted_risk", "create_ticket"] ->
+      # Decide from the draft's effective action after the merge, never the
+      # raw submitted fields: a payload that omits `action` must open the
+      # confirmation dialog rather than commit the retained action directly.
+      socket.assigns.draft.fields["action"] in ["accepted_risk", "create_ticket"] ->
         {:noreply, assign(socket, confirmation: %{}, error: nil)}
 
       true ->
@@ -518,7 +527,14 @@ defmodule TriageWeb.WorkspaceLive do
       do: {:noreply, commit(socket)}
 
   def handle_event("cancel-decision", _, %{assigns: %{row: row}} = socket) when not is_nil(row) do
-    case Drafts.delete(socket.assigns.current_principal, row.cve) do
+    draft = socket.assigns.draft
+
+    case Drafts.delete(
+           socket.assigns.current_principal,
+           row.cve,
+           draft && draft.operation,
+           draft && draft[:revision]
+         ) do
       :ok ->
         {:noreply,
          socket
@@ -648,35 +664,66 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp update_draft(%{assigns: %{draft: nil}} = socket, _changes), do: socket
 
-  defp update_draft(socket, changes) do
+  # `persist: false` is for the commit path: the fields are about to become a
+  # decision, and re-storing the draft there must not turn a concurrent tab's
+  # newer saved revision into a blocking error. The post-commit cleanup still
+  # removes only this tab's own operation and revision.
+  defp update_draft(socket, changes, opts \\ []) do
     draft = renew_saved_draft(socket, changes) |> Map.merge(changes)
     draft = Map.put(draft, :dirty, not draft.saved)
     draft = if draft.saved, do: Map.put(draft, :stale, false), else: draft
 
-    result =
-      if draft.saved,
-        do: Drafts.delete(socket.assigns.current_principal, socket.assigns.item),
-        else: Drafts.put(socket.assigns.current_principal, socket.assigns.item, draft)
-
-    persisted = result == :ok or match?({:ok, _}, result)
+    {result, draft} =
+      if Keyword.get(opts, :persist, true) do
+        persist_draft(socket, draft)
+      else
+        {:ok, draft}
+      end
 
     assign(socket,
       draft: draft,
       drafts: Map.put(socket.assigns.drafts, socket.assigns.item, draft),
       decision_form: to_form(draft.fields, as: :decision),
       confirmation: nil,
-      draft_error: not persisted,
-      error: persistence_error(persisted, draft.saved)
+      draft_error: not persisted?(result),
+      error: persistence_message(result, draft)
     )
   end
 
-  defp persistence_error(true, _saved), do: nil
+  # A committed draft cleans up only its own stored operation at the revision
+  # this tab last saw; an unsaved draft is stored under optimistic concurrency
+  # so a stale tab cannot overwrite newer work from another tab or device.
+  defp persist_draft(socket, %{saved: true} = draft) do
+    {Drafts.delete(
+       socket.assigns.current_principal,
+       socket.assigns.item,
+       draft.operation,
+       draft[:revision]
+     ), draft}
+  end
 
-  defp persistence_error(false, true),
+  defp persist_draft(socket, draft) do
+    case Drafts.put(socket.assigns.current_principal, socket.assigns.item, draft) do
+      {:ok, revision} -> {:ok, Map.put(draft, :revision, revision)}
+      {:conflict, stored} -> {{:conflict, stored}, draft}
+      {:error, reason} -> {{:error, reason}, draft}
+    end
+  end
+
+  defp persisted?(:ok), do: true
+  defp persisted?(_other), do: false
+
+  defp persistence_message(:ok, _draft), do: nil
+
+  defp persistence_message({:conflict, _stored}, _draft),
+    do:
+      "Draft was changed in another tab or device. Your edits are kept here; reopen this item to load the saved draft."
+
+  defp persistence_message(_error, %{saved: true}),
     do:
       "Decision committed, but draft cleanup failed. Its original operation is preserved; do not repeat the action."
 
-  defp persistence_error(false, false),
+  defp persistence_message(_error, _draft),
     do: "Draft could not be stored. Keep this tab open and retry; nothing was committed."
 
   defp renew_saved_draft(socket, changes) do

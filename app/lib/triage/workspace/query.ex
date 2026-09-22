@@ -124,7 +124,7 @@ defmodule Triage.Workspace.Query do
       SELECT f.cve, p.id, p.image_id,
         CASE WHEN p.owner IS NULL OR p.owner IN ('', '(unknown)', 'unassigned')
           THEN '__unassigned__' ELSE p.owner END AS team,
-        bool_or(f.resolved_at IS NULL) AS active,
+        bool_or(f.resolved_at IS NULL) AND p.active AS active,
         max(#{severity("f.severity")}) AS severity,
         max(CASE WHEN f.resolved_at IS NULL THEN #{priority()} END) AS priority,
         min(f.first_seen) AS first_seen,
@@ -133,7 +133,7 @@ defmodule Triage.Workspace.Query do
           string_agg(coalesce(f.package_name, ''), ' ' ORDER BY f.id)), $5::text) > 0 AS text_match,
         ($6::text = '' OR bool_or(f.severity = $6::text)) AS severity_match
       FROM findings f
-      JOIN image_placements p ON p.image_id = f.image_id AND p.active
+      JOIN image_placements p ON p.image_id = f.image_id
       JOIN images i ON i.id = f.image_id
       LEFT JOIN LATERAL (
         SELECT CASE WHEN x.expires_at < $3::timestamp THEN 'unknown' ELSE x.exposure END AS exposure
@@ -156,7 +156,8 @@ defmodule Triage.Workspace.Query do
           (d.expires_at IS NULL OR d.expires_at > $3::timestamp OR
             (d.expires_at = $3::timestamp AND coalesce(d.metadata->>'expiry_boundary', '') <> 'exclusive'))
           AND d.id IS NOT NULL AND
-          CASE WHEN d.metadata->>'evidence_hash' IS NULL THEN true
+          CASE WHEN NOT t.active THEN true
+            WHEN d.metadata->>'evidence_hash' IS NULL THEN true
             ELSE d.metadata->>'evidence_hash' = #{EvidenceSQL.hash_sql()} END,
           false) AS covered
       FROM target_facts t
@@ -191,6 +192,7 @@ defmodule Triage.Workspace.Query do
       SELECT #{counts()} FROM targets
     ), teams AS (
       SELECT team AS name, #{counts()} FROM targets GROUP BY team
+      HAVING count(*) FILTER (WHERE active) > 0
     )
     SELECT jsonb_build_object(
       'ids', coalesce((SELECT jsonb_agg(cve ORDER BY #{order}) FROM page), '[]'::jsonb),

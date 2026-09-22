@@ -208,16 +208,32 @@ defmodule Triage.Decisions do
   end
 
   @doc """
+  The later of two decisions by recorded chronology — `decided_at` at
+  microsecond precision, with the row id as tie-breaker. This is the shared
+  precedence between a scoped and a whole-advisory decision that both claim a
+  placement: the newest effective record wins, never the narrower or wider
+  scope. A `nil` passes through unchanged.
+  """
+  @spec effective(map() | nil, map() | nil) :: map() | nil
+  def effective(nil, other), do: other
+  def effective(other, nil), do: other
+
+  def effective(a, b) do
+    if chronology(a) >= chronology(b), do: a, else: b
+  end
+
+  defp chronology(%{decided_at: decided_at, id: id}),
+    do: {DateTime.to_unix(decided_at, :microsecond), id}
+
+  @doc """
   Active coverage for one placement from the latest effective scoped or global
-  decision. A newer scoped replacement takes precedence over an older global
-  claim; if it expires, that older claim must not silently become active again.
-  Call with `latest_by_scope/2`, which already excludes future decisions.
+  decision, chosen by `effective/2` chronology. A newer scoped replacement
+  takes precedence over an older global claim; if it expires, that older claim
+  must not silently become active again. Call with `latest_by_scope/2`, which
+  already excludes future decisions.
   """
   def covering_decision(decisions, cve, placement_id) do
-    latest =
-      [decisions[{cve, nil}], decisions[{cve, placement_id}]]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.max_by(&{DateTime.to_unix(&1.decided_at, :microsecond), &1.id}, fn -> nil end)
+    latest = effective(decisions[{cve, nil}], decisions[{cve, placement_id}])
 
     if active?(latest), do: latest
   end

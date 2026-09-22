@@ -39,7 +39,9 @@ defmodule Triage.ReviewIntegrations do
     case Keyword.get(config(), :ai_executable) do
       executable when is_binary(executable) ->
         # An administrator-provided read-only wrapper, not a shell command.
-        # Contract: one JSON argument in, one JSON object on stdout, no tools/actions.
+        # Contract: one JSON argument in, one JSON object on stdout, no
+        # tools/actions, and it must not leave children running after it
+        # exits on its own.
         port =
           Port.open({:spawn_executable, executable}, [
             :binary,
@@ -49,8 +51,16 @@ defmodule Triage.ReviewIntegrations do
             {:args, [Jason.encode!(input)]}
           ])
 
-        deadline = System.monotonic_time(:millisecond) + 30_000
-        collect(port, "", deadline)
+        deadline =
+          System.monotonic_time(:millisecond) + Keyword.get(config(), :ai_deadline_ms, 30_000)
+
+        try do
+          collect(port, "", deadline)
+        after
+          # Also covers crashes between messages: a wrapper that kept running
+          # would hold the port, the 30-second contract and its children open.
+          unless :erlang.port_info(port) == :undefined, do: stop_program!(port)
+        end
 
       _ ->
         {:error, "Internal AI is not configured. A human can still make the decision."}
@@ -67,7 +77,7 @@ defmodule Triage.ReviewIntegrations do
         collect(port, output <> data, deadline)
 
       {^port, {:data, _}} ->
-        Port.close(port)
+        stop_program!(port)
         {:error, "Internal AI output exceeded the limit."}
 
       {^port, {:exit_status, 0}} ->
@@ -77,9 +87,34 @@ defmodule Triage.ReviewIntegrations do
         {:error, "Internal AI failed; no recommendation was accepted."}
     after
       remaining ->
-        Port.close(port)
+        stop_program!(port)
         {:error, "Internal AI timed out; no recommendation was accepted."}
     end
+  end
+
+  # Port.close/1 only closes the Erlang side: the external program — and any
+  # child it spawned — keeps running. Stop the tree explicitly: children
+  # first (while they are still parented), then the program itself, with
+  # SIGTERM so a well-behaved wrapper can clean up.
+  defp stop_program!(port) do
+    with {:os_pid, os_pid} <- :erlang.port_info(port, :os_pid) do
+      pid = Integer.to_string(os_pid)
+
+      _ = signal("pkill", ["-TERM", "-P", pid])
+      _ = signal("kill", ["-TERM", pid])
+    end
+
+    Port.close(port)
+  catch
+    :error, _ -> :ok
+  end
+
+  defp signal(tool, args) do
+    if executable = System.find_executable(tool) do
+      _ = System.cmd(executable, args, stderr_to_stdout: true)
+    end
+
+    :ok
   end
 
   def validate_advice(output) do

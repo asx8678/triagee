@@ -8,6 +8,7 @@ defmodule Triage.Workspace.Draft do
     field :targets, {:array, :integer}
     field :versions, :map
     field :operation_id, Ecto.UUID
+    field :revision, :integer, default: 0
     timestamps(type: :utc_datetime_usec)
   end
 end

@@ -2,6 +2,8 @@ defmodule TriageWeb.SessionController do
   use TriageWeb, :controller
   alias Triage.Accounts
 
+  @loopback [{127, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1}]
+
   if Application.compile_env(:triage, :build_environment, :prod) in [:dev, :test] do
     def skip(conn, _params) do
       cond do
@@ -25,8 +27,11 @@ defmodule TriageWeb.SessionController do
     end
 
     defp local_skip?(conn) do
+      # Direct means direct: a reverse proxy also connects from loopback, so a
+      # forwarded header proves the request did not come from the operator's
+      # own machine, and Skip must not appear for it.
       Accounts.local_login_skip_enabled?() and
-        conn.remote_ip in [{127, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1}]
+        conn.remote_ip in @loopback and is_nil(forwarded_peer(conn))
     end
   else
     def skip(conn, _params), do: send_resp(conn, 404, "Not found")
@@ -70,7 +75,43 @@ defmodule TriageWeb.SessionController do
     |> redirect(to: "/")
   end
 
-  defp peer(conn), do: conn.remote_ip |> :inet.ntoa() |> to_string()
+  # The documented shared deployment fronts this loopback listener with a
+  # TLS reverse proxy. A proxied login is throttled under the client address
+  # the proxy appended — the rightmost X-Forwarded-For entry. Entries before it
+  # are client-controlled and ignored, so a remote attacker can neither lock
+  # out an identity they merely name nor shed their own; a request without the
+  # header keeps its own transport address.
+  defp peer(conn) do
+    case forwarded_peer(conn) do
+      nil -> conn.remote_ip |> :inet.ntoa() |> to_string()
+      address -> address |> :inet.ntoa() |> to_string()
+    end
+  end
+
+  defp forwarded_peer(%{remote_ip: remote_ip, req_headers: headers})
+       when remote_ip in @loopback,
+       do:
+         headers
+         |> Enum.find_value(fn
+           {"x-forwarded-for", value} -> value
+           _other -> nil
+         end)
+         |> last_address()
+
+  defp forwarded_peer(_conn), do: nil
+
+  defp last_address(value) when is_binary(value) do
+    value |> String.split(",") |> List.last() |> String.trim() |> parse_address()
+  end
+
+  defp last_address(_other), do: nil
+
+  defp parse_address(text) do
+    case :inet.parse_address(to_charlist(text)) do
+      {:ok, address} -> address
+      _other -> nil
+    end
+  end
 
   defp login_error(conn, status, error) do
     conn

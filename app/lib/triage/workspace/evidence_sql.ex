@@ -1,17 +1,20 @@
 defmodule Triage.Workspace.EvidenceSQL do
   @moduledoc """
-  SQL encoding of the existing workspace evidence fingerprint, not a new hash policy.
+  SQL encoding of the workspace evidence hash.
 
-  Workspace hashes Erlang's external term format (ETF). Comparing JSON snapshots
-  instead would miss reopen counts, accept forged hashes, and change legacy
-  coverage. These expressions encode only the small, fixed maps used by that
-  fingerprint. Constants (including atom encodings) come from the running VM;
-  strings, integers and UTC second-precision timestamps come from PostgreSQL.
-  No SQL functions/extensions or database writes are required.
+  `Triage.Workspace.hash/1` hashes `Triage.Canonical`'s versioned, VM-state-free
+  encoding, so identical evidence hashes identically in any BEAM. These
+  expressions rebuild exactly that encoding from PostgreSQL — atom keys as
+  name literals, map entries sorted by encoded key, length-prefixed scalars
+  and fixed-width timestamps — so a database-side hash matches the
+  application-side hash for the same row without hydrating evidence. Only the
+  small, fixed evidence maps are encoded; no functions or extensions beyond
+  `sha256`, `convert_to` and `to_char` are required, and nothing is written.
   """
 
   @doc false
-  def hash_sql, do: "encode(sha256(#{term_sql()}), 'hex')"
+  def hash_sql,
+    do: "encode(sha256(convert_to('#{version()}|' || #{term_sql()}, 'UTF8')), 'hex')"
 
   @doc false
   def term_sql do
@@ -34,105 +37,54 @@ defmodule Triage.Workspace.EvidenceSQL do
         fix: string("hf.fix"),
         description: string("hf.description"),
         resolved_at: datetime("hf.resolved_at"),
-        reopen_count: small_integer("hf.reopen_count"),
+        reopen_count: integer("hf.reopen_count"),
         first_seen: datetime("hf.first_seen"),
         suppressed: boolean("hf.suppressed")
       })
 
-    # A target necessarily has at least one finding. The list tail is NIL_EXT.
+    # Elixir sorts a target's findings by id before hashing; a target always
+    # has at least one finding, and the coalesce keeps an empty list encodable.
     findings = """
-    (SELECT decode('6c', 'hex') || int4send(count(*)::integer) ||
-      string_agg(#{finding}, ''::bytea ORDER BY hf.id) || decode('6a', 'hex')
-      FROM findings hf WHERE hf.image_id = p.image_id AND hf.cve = t.cve)
+    (SELECT 'l[' || coalesce(string_agg(#{finding}, ',' ORDER BY hf.id), '') || ']'
+       FROM findings hf WHERE hf.image_id = p.image_id AND hf.cve = t.cve)
     """
 
-    "(decode('836803', 'hex') || #{placement} || #{string("i.digest")} || #{findings})"
+    "'p[' || #{placement} || ',' || #{string("i.digest")} || ',' || #{findings} || ']'"
   end
 
+  # Map entries sort by their encoded keys, mirroring Triage.Canonical: the
+  # scalar encodings are self-delimiting, so key order decides entry order.
   defp map_sql(fields) do
     body =
       fields
-      # Default term_to_binary/1 uses the VM's native small-map key order,
-      # not atom term order (Enum.sort/1). Keep that order for every map,
-      # including DateTime; equal decoded terms alone do not imply equal hashes.
-      |> :maps.to_list()
-      |> Enum.flat_map(fn {key, expression} -> [constant(key), expression] end)
+      |> Enum.sort_by(fn {key, _expression} -> Triage.Canonical.canonical(key) end)
+      |> Enum.map_join(" || ',' || ", fn {key, expression} ->
+        literal(Triage.Canonical.canonical(key)) <> " || '=' || " <> expression
+      end)
 
-    "(" <> Enum.join([bytes(<<116, map_size(fields)::32>>) | body], " || ") <> ")"
+    "'m{' || " <> body <> " || '}'"
   end
 
-  defp constant(value) do
-    <<131, body::binary>> = :erlang.term_to_binary(value)
-    bytes(body)
-  end
+  defp literal(text), do: "'#{String.replace(text, "'", "''")}'"
 
-  defp bytes(value), do: "decode('#{Base.encode16(value, case: :lower)}', 'hex')"
+  defp version, do: String.replace(Triage.Canonical.version(), "'", "''")
 
   defp nullable(column, expression),
-    do: "(CASE WHEN #{column} IS NULL THEN #{constant(nil)} ELSE #{expression} END)"
+    do: "(CASE WHEN #{column} IS NULL THEN 'n' ELSE #{expression} END)"
 
+  # The server encoding is UTF-8, so the column text already is the byte
+  # sequence Triage.Canonical hashes; convert_to() would return bytea, which
+  # concatenates as hex-escaped text instead of the raw bytes.
   defp string(column) do
-    nullable(
-      column,
-      "decode('6d', 'hex') || int4send(octet_length(convert_to(#{column}, 'UTF8'))) || convert_to(#{column}, 'UTF8')"
-    )
+    nullable(column, "'s' || octet_length(#{column})::text || ':' || #{column}")
   end
 
-  defp boolean(column) do
-    nullable(column, "CASE WHEN #{column} THEN #{constant(true)} ELSE #{constant(false)} END")
-  end
+  defp boolean(column), do: nullable(column, "(CASE WHEN #{column} THEN 't' ELSE 'f' END)")
 
-  defp integer(column) do
-    # Positive bigint IDs can exceed INTEGER_EXT. ETF big digits are little-endian.
-    big =
-      for size <- 4..8 do
-        digits =
-          for index <- 0..(size - 1) do
-            "set_byte(decode('00', 'hex'), 0, (((#{column})::bigint >> #{index * 8}) & 255)::integer)"
-          end
+  defp integer(column),
+    do: nullable(column, "'i' || length((#{column})::text)::text || ':' || (#{column})::text")
 
-        bound = Integer.pow(256, size) - 1
-
-        "WHEN (#{column})::numeric <= #{bound} THEN #{bytes(<<110, size, 0>>)} || " <>
-          Enum.join(digits, " || ")
-      end
-
-    nullable(column, """
-    CASE WHEN (#{column}) BETWEEN 0 AND 255
-      THEN set_byte(decode('6100', 'hex'), 1, (#{column})::integer)
-    WHEN (#{column}) BETWEEN -2147483648 AND 2147483647
-      THEN decode('62', 'hex') || int4send((#{column})::integer)
-    ELSE CASE #{Enum.join(big, " ")} END END
-    """)
-  end
-
-  defp datetime(column) do
-    fields = %{
-      __struct__: constant(DateTime),
-      calendar: constant(Calendar.ISO),
-      year: date_part(column, "year"),
-      month: date_part(column, "month"),
-      day: date_part(column, "day"),
-      hour: date_part(column, "hour"),
-      minute: date_part(column, "minute"),
-      second: date_part(column, "second"),
-      microsecond: constant({0, 0}),
-      time_zone: constant("Etc/UTC"),
-      zone_abbr: constant("UTC"),
-      utc_offset: constant(0),
-      std_offset: constant(0)
-    }
-
-    nullable(column, map_sql(fields))
-  end
-
-  defp small_integer(column) do
-    nullable(column, """
-    CASE WHEN (#{column}) BETWEEN 0 AND 255
-      THEN set_byte(decode('6100', 'hex'), 1, (#{column})::integer)
-      ELSE decode('62', 'hex') || int4send((#{column})::integer) END
-    """)
-  end
-
-  defp date_part(column, part), do: small_integer("extract(#{part} from #{column})::integer")
+  # Matches Triage.Canonical's fixed six-digit-microsecond UTC format exactly.
+  defp datetime(column),
+    do: nullable(column, "'w' || to_char(#{column}, 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')")
 end

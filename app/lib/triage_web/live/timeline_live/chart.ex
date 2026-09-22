@@ -475,7 +475,11 @@ defmodule TriageWeb.TimelineLive.Chart do
 
     ids != [] and
       Enum.all?(ids, fn id ->
-        decision = latest[id] || latest[nil]
+        # Same chronology as the workspace (`Decisions.covering_decision/3`):
+        # the newer of the scoped and whole-advisory claims decides, so an
+        # older scoped acceptance cannot outvote a newer global action, nor
+        # the other way around.
+        decision = Triage.Decisions.effective(latest[id], latest[nil])
 
         decision && decision.decision == "accepted_risk" &&
           (is_nil(detected_on) || Date.compare(decision.from, detected_on) != :lt) &&
