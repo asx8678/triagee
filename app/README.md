@@ -119,6 +119,8 @@ Server-side configuration:
 | `TRIAGE_AZURE_TEAMS_JSON` | Exact team names mapped to `project` and `area_path`; optional `work_item_type` |
 | `TRIAGE_AI_EXECUTABLE` | Absolute path to an administrator-owned read-only CLI wrapper |
 
+For connecting a least-privilege Azure DevOps token — and verifying it can create tickets but never delete them — see [Azure credentials setup and verification](docs/AZURE_CREDENTIALS.md).
+
 The AI wrapper accepts one JSON argument and returns a JSON object containing
 `recommendation` (`whitelist`, `fix`, or `investigate`) and a nonempty `reason`
 (up to 8,000 bytes). Output is capped at 65,536 bytes with a 30-second deadline.

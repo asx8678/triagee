@@ -484,6 +484,51 @@ defmodule Triage.WorkspaceTicketOperationsTest do
              "https://dev.azure.com/test-only/Security/_workitems/edit/42"
   end
 
+  test "the ticket lifecycle issues only create and read requests, never update or delete", c do
+    before = versions(c.cve)
+    test = self()
+
+    adapter(fn request ->
+      send(test, {:surface, request.method, request.url.path})
+      {request, %Req.TransportError{reason: :timeout}}
+    end)
+
+    id = c.operation
+    assert {:error, {:reconciliation_required, ^id}} = save(c, before)
+
+    operation = Repo.get!(TicketOperation, id)
+
+    adapter(fn request ->
+      send(test, {:surface, request.method, request.url.path})
+
+      cond do
+        String.ends_with?(request.url.path, "/_apis/wit/wiql") ->
+          response(request, %{"workItems" => [%{"id" => 42}]})
+
+        String.ends_with?(request.url.path, "/_apis/wit/workitems/42") ->
+          response(request, %{
+            "id" => 42,
+            "fields" => %{"System.Tags" => "security; " <> operation.marker}
+          })
+
+        true ->
+          response(request, %{"id" => 42})
+      end
+    end)
+
+    assert {:ok, [decision]} = Commit.reconcile(id, c.principal)
+    assert decision.metadata["ticket_url"] =~ "/42"
+
+    # The complete request surface across creation and reconciliation:
+    # one work item creation POST, one read-only WIQL search, one GET. Any
+    # modification (PATCH on the work item) or deletion (DELETE, $destroy)
+    # would have to appear here — and neither does.
+    assert_receive {:surface, :post, "/test-only/Security/_apis/wit/workitems/$Task"}
+    assert_receive {:surface, :post, "/test-only/Security/_apis/wit/wiql"}
+    assert_receive {:surface, :get, "/test-only/Security/_apis/wit/workitems/42"}
+    refute_receive {:surface, _, _}
+  end
+
   # Req keeps headers downcased; both the map and pair-list shapes are handled
   # so the assertion fails on a missing header, not on representation.
   defp header(%{headers: headers}, name) when is_map(headers),

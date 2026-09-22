@@ -10,7 +10,7 @@ No owner or self-declared identity input is required. Local decisions use `Local
 
 ## Azure DevOps configuration
 
-Set these in the server environment and restart the server:
+Set these in the server environment and restart the server. For a least-privilege token setup and a verification checklist, see [Azure credentials](AZURE_CREDENTIALS.md).
 
 - `ADO_ORG_URL`, e.g. `https://dev.azure.com/your-org` (HTTPS required)
 - `ADO_PROJECT`
