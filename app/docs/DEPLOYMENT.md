@@ -20,7 +20,7 @@ row-level tenancy.
 
 ## Build and install
 
-From `app/`, using the versions pinned in CI (Elixir 1.20.4, OTP 27.3.4.16):
+From `app/`, using the versions pinned in CI (Elixir 1.20.4, OTP 27.3.4.17):
 
 ```sh
 mise x -- mix deps.get --only prod
