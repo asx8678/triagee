@@ -502,20 +502,27 @@ defmodule TriageWeb.WorkspaceComponents do
               disabled={not @can_review}
               type="date"
               label="Whitelist through (UTC)"
+              aria-describedby="whitelist-expiry-help"
             />
             <.input
               :if={@draft.fields["action"] == "accepted_risk"}
               field={@form[:reason]}
               disabled={not @can_review}
               type="textarea"
-              label="Comment (optional)"
+              label="Reason for accepting the risk (optional)"
               maxlength="2000"
             />
             <p :if={@draft.fields["action"] == "fixed"} class="form-note">
               Marks selected scopes Fixed with today's date. No comment required.
             </p>
-            <p :if={@draft.fields["action"] == "accepted_risk"} class="form-note">
-              Defaults to three calendar months from today. Expired whitelists return to Needs decision.
+            <p
+              :if={@draft.fields["action"] == "accepted_risk"}
+              id="whitelist-expiry-help"
+              class="form-note"
+            >
+              Risk is accepted through the selected date, until midnight UTC at the start of the next day.
+              Then these deployments return to Needs decision unless a newer decision applies.
+              Defaults to three months from today.
             </p>
             <p :if={@draft.fields["action"] == "create_ticket"} class="form-note">
               Creates an Azure DevOps ticket with CVE and selected deployment evidence. Requires server configuration.
@@ -1009,9 +1016,8 @@ defmodule TriageWeb.WorkspaceComponents do
             rel="noopener noreferrer"
           >Azure DevOps ticket</a>
         </p><p :if={d.expires_at}>
-          Expires {time(d.expires_at)} · {if d.metadata["expiry_boundary"] == "exclusive",
-            do: "exclusive boundary",
-            else: "legacy inclusive boundary"}
+          {if d.metadata["expiry_boundary"] == "exclusive", do: "Expires at", else: "Valid through"}
+          {time(d.expires_at)}
         </p>
       </div>
     </article><p :if={@history == []}>No recorded decisions for these scopes.</p>

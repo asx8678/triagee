@@ -20,9 +20,27 @@ defmodule TriageWeb.SessionHTML do
             <div class="auth-intro">
               <p class="auth-eyebrow">Vulnerability review</p>
               <h1 id="login-heading">Sign in</h1>
-              <p class="muted">Use your administrator-provided account to continue.</p>
+              <p class="muted">
+                {if @skip_login?,
+                  do: "Continue with a local development account, or sign in below.",
+                  else: "Use your administrator-provided account to continue."}
+              </p>
             </div>
             <p :if={@error} id="login-error" class="auth-error" role="alert">{@error}</p>
+            <div :if={@skip_login?} class="auth-skip">
+              <.form for={to_form(%{})} id="login-skip-form" action={~p"/login/skip"} method="post">
+                <button
+                  id="login-skip"
+                  class="primary auth-submit"
+                  type="submit"
+                  aria-describedby="login-skip-note"
+                >
+                  Continue as local user
+                </button>
+              </.form>
+              <p id="login-skip-note" class="muted">Development mode · no credentials needed</p>
+            </div>
+            <p :if={@skip_login?} class="auth-help muted">Or sign in with an account</p>
             <.form
               for={@form}
               id="login-form"
@@ -48,14 +66,6 @@ defmodule TriageWeb.SessionHTML do
               />
               <button id="login-submit" class="primary auth-submit" type="submit">Sign in</button>
             </.form>
-            <div :if={@skip_login?} class="auth-skip">
-              <.form for={to_form(%{})} id="login-skip-form" action={~p"/login/skip"} method="post">
-                <button id="login-skip" class="quiet" type="submit" aria-describedby="login-skip-note">
-                  Skip
-                </button>
-              </.form>
-              <span id="login-skip-note" class="muted">Continue as local user</span>
-            </div>
             <p id="login-help" class="auth-help muted">
               Accounts are provisioned by your administrator. Public registration is disabled.
             </p>

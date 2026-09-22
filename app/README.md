@@ -7,7 +7,7 @@ and explicitly request remediation. A ticket or risk acceptance is not a fix.
 ## Safety boundary
 
 **Production and write access require provisioned accounts; there is no public registration or default password.**
-For local development, **Skip** signs in as `local-user@triage.test` with normal reviewer access (not a guest or admin).
+For local development, **Continue as local user** appears above the credential fields and signs in as `local-user@triage.test` with normal reviewer access, without entering credentials.
 This shortcut is unavailable in production; see [Local runtime](LOCAL_RUNTIME.md#skip-sign-in-for-local-development).
 Viewer/reviewer/admin roles are enforced server-side and workspace audit identity
 comes from the authenticated session. Runtime binding still accepts only
@@ -40,9 +40,42 @@ implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener 
 ## Single workspace UI
 
 The homepage `/` is the new workspace; `/workspace` is an alias for the same UI.
-Overview, Vulnerabilities and Review use `/?page=...`. The full original timeline
-is restored at `/timeline` inside the same workspace shell; `/?page=timeline`
-also works. Navigation keeps the LiveView connection and unsaved review drafts.
+The primary navigation is **Review**, **Risk decisions**, and **Timeline**:
+
+- **Review** (`/?page=findings`, with `/?page=review` for existing detail links):
+  review CVEs, select deployments, and record the next action.
+- **Risk decisions** (`/?page=exceptions`): the last 365 days of whitelist and
+  not-affected decision records, including older replacements. The table shows
+  the CVE, deployments, action, reason, reviewer, and expiry. Expiry status only
+  describes the record's time limit; open the CVE for its current effective status.
+  A whitelist applies through the selected date and expires at the following
+  midnight UTC. The deployments then need review unless a newer decision applies.
+- **Timeline** (`/?page=daily`): one history per CVE, ordered from detection
+  through whitelisting, work actions, marked fixes, and scanner observations.
+  Each CVE shows its first detection, first recorded action on any deployment,
+  and response time. Every action includes its timestamp, scope, reviewer,
+  reason, expiry when present, and elapsed time since detection. CVEs without a
+  recorded action show a waiting duration. Response time describes the recorded
+  action; it does not establish verified remediation or coverage of every
+  deployment. A single operation across several deployments is one step with
+  all its scopes. Independent later reviews remain dated steps; repeated
+  whitelist decisions are labelled **Whitelist updated**. CVEs are sorted by
+  latest activity and paged as complete histories, so detection and action
+  cannot end up on separate pages.
+
+To add three fictional local Timeline examples, run
+`mise x -- mix run priv/repo/timeline_samples.exs` in development. The two
+whitelist examples respond after 2 and 5 hours. The third shows detection,
+a fix marked by a reviewer, then a later scanner clearance. These records use
+`CVE-2099-9028` through `CVE-2099-9030`, have no public advisory URLs, and are
+added only if missing; repeated runs preserve existing history.
+
+Risk decisions and the detection timeline show history across all teams and
+environments; their scope bar states this explicitly. Team/environment filters
+remain available in Review. Existing URLs preserve bookmarks and unsaved drafts.
+Overview and Vulnerabilities remain at their existing `/?page=...` URLs. The full
+observation chart remains at `/timeline` and `/?page=timeline` in the same shell.
+Navigation keeps the LiveView connection and unsaved review drafts.
 Retired screen URLs redirect into the workspace and no longer mount their old
 LiveViews. The old stylesheet and links back to old screens are not loaded.
 Stored inventory, decisions and case evidence are unchanged.

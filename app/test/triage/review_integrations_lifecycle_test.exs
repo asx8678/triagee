@@ -45,7 +45,9 @@ defmodule Triage.ReviewIntegrationsLifecycleTest do
         printf '%s %s\n' "$$" "$!" > "$0.pids"
         sleep 120
         """,
-        ai_deadline_ms: 150
+        # Allow the shell and its children to start under full-suite load.
+        # This still cancels a 120-second sleep well before normal completion.
+        ai_deadline_ms: 1_500
       )
 
     assert {:error, "Internal AI timed out; no recommendation was accepted."} =

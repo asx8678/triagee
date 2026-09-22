@@ -7,7 +7,7 @@ defmodule TriageWeb.WorkspaceLive do
   import TriageWeb.WorkspaceComponents
   import TriageWeb.ExceptionsComponents
 
-  @pages ~w(findings exceptions overview inventory review timeline news)
+  @pages ~w(findings exceptions daily overview inventory review timeline news)
   @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview)
 
   def mount(_params, _session, socket) do
@@ -43,7 +43,9 @@ defmodule TriageWeb.WorkspaceLive do
        news_headlines_loading: false,
        news_cves_error: nil,
        news_headlines_error: nil,
-       compact: false
+       compact: false,
+       daily_before: nil,
+       daily_data: nil
      )}
   end
 
@@ -83,8 +85,9 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp page_title(page) do
     cond do
-      page in ~w(findings review) -> "Findings"
-      page == "exceptions" -> "Exceptions"
+      page in ~w(findings review) -> "Review"
+      page == "exceptions" -> "Risk decisions"
+      page == "daily" -> "Timeline"
       page == "inventory" -> "Vulnerabilities"
       true -> String.capitalize(page)
     end
@@ -123,6 +126,25 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp pin_review_item(params, _socket), do: params
 
+  # Daily feed: an error (e.g. malformed cursor) renders the honest empty
+  # feed rather than a widened view.
+  defp load_daily_data(params, before) do
+    case Triage.DailyTimeline.list(before: before, scope: params["scope"] || "all") do
+      {:ok, data} ->
+        data
+
+      {:error, _} ->
+        %{
+          days: [],
+          has_more?: false,
+          next_before: nil,
+          total_cves: 0,
+          event_count: 0,
+          earlier?: true
+        }
+    end
+  end
+
   defp load(socket) do
     params = socket.assigns.params
 
@@ -141,6 +163,13 @@ defmodule TriageWeb.WorkspaceLive do
             params
           ),
         else: []
+
+    daily_data =
+      if socket.assigns.page == "daily" do
+        load_daily_data(params, socket.assigns[:daily_before])
+      else
+        nil
+      end
 
     exception_decisions =
       if socket.assigns.page == "exceptions" do
@@ -166,6 +195,7 @@ defmodule TriageWeb.WorkspaceLive do
       manual_cves: Triage.ManualCves.list(),
       row_history: history,
       exception_decisions: exception_decisions,
+      daily_data: daily_data,
       scope_form: scope_form(params),
       search_form: search_form(params)
     )
@@ -187,6 +217,8 @@ defmodule TriageWeb.WorkspaceLive do
     |> Map.take(~w(page team environment q severity sort offset item batch))
     |> Map.merge(%{"mode" => params["mode"] || "needs", "page" => "review"})
   end
+
+  defp page_params(%{"page" => "daily"} = params), do: params
 
   defp page_params(%{"page" => "exceptions"} = params), do: params
 
@@ -734,6 +766,16 @@ defmodule TriageWeb.WorkspaceLive do
   def handle_event("dismiss-action-toast", _, socket),
     do: {:noreply, assign(socket, action_toast: nil)}
 
+  def handle_event("daily-prev", %{"before" => cursor}, socket) do
+    {:noreply,
+     socket
+     |> assign(:daily_before, cursor)
+     |> load()}
+  end
+
+  def handle_event("daily-latest", _, socket),
+    do: {:noreply, socket |> assign(:daily_before, nil) |> load()}
+
   def handle_event(_, _, socket), do: {:noreply, socket}
 
   defp update_draft(%{assigns: %{draft: nil}} = socket, _changes), do: socket
@@ -1021,6 +1063,9 @@ defmodule TriageWeb.WorkspaceLive do
   def nav_path(params, page),
     do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => page})
 
+  defp nav_active?("findings", page), do: page in ~w(findings review)
+  defp nav_active?(nav_page, page), do: nav_page == page
+
   def drill(params, mode, extra \\ %{}),
     do:
       workspace_path(
@@ -1105,16 +1150,15 @@ defmodule TriageWeb.WorkspaceLive do
             <.link
               :for={
                 {page, label} <- [
-                  {"findings", "Findings"},
-                  {"exceptions", "Exceptions"}
+                  {"findings", "Review"},
+                  {"exceptions", "Risk decisions"},
+                  {"daily", "Timeline"}
                 ]
               }
               id={"workspace-nav-#{page}"}
               patch={nav_path(@params, page)}
-              class={[
-                (page == "findings" and @page in ~w(findings review)) || (@page == page && "active")
-              ]}
-              aria-current={if @page == page, do: "page"}
+              class={[nav_active?(page, @page) && "active"]}
+              aria-current={if nav_active?(page, @page), do: "page"}
             >
               {label}<span :if={page == "findings"} class="nav-count">{@metrics["needs"].value}</span>
             </.link>
@@ -1138,8 +1182,14 @@ defmodule TriageWeb.WorkspaceLive do
         <div :if={@page == "news"} class="scopebar">
           <span class="scope-label">Public intelligence</span><span>Global CVE news · Independent of your inventory</span>
         </div>
+        <div :if={@page in ~w(exceptions daily)} id="workspace-history-scope" class="scopebar">
+          <span class="scope-label">History</span><span>All teams · All environments</span>
+          <span class="dataset"><span class="tag">{if @page == "exceptions",
+            do: "Risk decision history",
+            else: "Detections & actions"}</span></span>
+        </div>
         <.form
-          :if={@page != "news"}
+          :if={@page not in ~w(news exceptions daily)}
           for={@scope_form}
           id="workspace-scope"
           class="scopebar"
@@ -1181,11 +1231,15 @@ defmodule TriageWeb.WorkspaceLive do
           class={[
             "page",
             @page == "inventory" && "inventory-page",
-            @page == "review" && "review-page",
+            @page in ~w(findings review) && "review-page",
             @queue_shown && "show-queue"
           ]}
         >
-          <h1 :if={@page in ~w(inventory review timeline)} id="workspace-page-title" class="sr-only">
+          <h1
+            :if={@page in ~w(findings inventory review timeline)}
+            id="workspace-page-title"
+            class="sr-only"
+          >
             {@page_title}
           </h1>
           <p :if={@invalid_params} class="form-error" role="alert">
@@ -1290,6 +1344,16 @@ defmodule TriageWeb.WorkspaceLive do
             history={@row_history}
           />
           <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
+          <TriageWeb.DailyComponents.panel
+            :if={@page == "daily" and @daily_data}
+            days={@daily_data.days}
+            has_more?={@daily_data.has_more?}
+            next_before={@daily_data.next_before}
+            total_cves={@daily_data.total_cves}
+            event_count={@daily_data.event_count}
+            earlier?={@daily_data.earlier?}
+            params={@params}
+          />
           <TriageWeb.SecurityNewsComponents.panel :if={@page == "news"} {assigns} />
           <.exceptions_register
             :if={@page == "exceptions"}

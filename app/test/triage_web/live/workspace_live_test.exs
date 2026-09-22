@@ -327,9 +327,9 @@ defmodule TriageWeb.WorkspaceLiveTest do
   test "homepage and workspace alias expose only the new shell", %{conn: conn} do
     for path <- ["/", "/workspace"] do
       {:ok, view, html} = live(conn, path)
-      # T04: Findings is the landing workspace; Exceptions is the second destination.
-      assert has_element?(view, "#workspace-nav-findings")
-      assert has_element?(view, "#workspace-nav-exceptions")
+      # Both existing review URLs share the Review navigation item.
+      assert has_element?(view, "#workspace-nav-findings.active[aria-current=page]", "Review")
+      assert has_element?(view, "#workspace-nav-exceptions", "Risk decisions")
       assert has_element?(view, "#workspace-review")
       refute has_element?(view, ".app-shell")
       refute html =~ "/assets/css/app.css"
@@ -427,7 +427,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert_patch(view, "/?environment=prod&page=exceptions&team=alpha")
     assert has_element?(view, "#exceptions-register")
 
-    # Navigating back to Findings restores the draft.
+    # Navigating back to Review restores the draft.
     view |> element("#workspace-nav-findings") |> render_click()
     assert_patch(view, "/?environment=prod&page=findings&team=alpha")
 

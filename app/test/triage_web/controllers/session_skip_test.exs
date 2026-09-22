@@ -23,8 +23,15 @@ defmodule TriageWeb.SessionSkipTest do
       assert Enum.count(LazyHTML.query(document, selector)) == 1
     end
 
-    assert LazyHTML.text(LazyHTML.query(document, "#login-skip")) |> String.trim() == "Skip"
-    assert LazyHTML.text(LazyHTML.query(document, "#login-skip-note")) == "Continue as local user"
+    assert LazyHTML.text(LazyHTML.query(document, "#login-skip")) |> String.trim() ==
+             "Continue as local user"
+
+    assert LazyHTML.text(LazyHTML.query(document, "#login-skip-note")) ==
+             "Development mode · no credentials needed"
+
+    assert Enum.count(LazyHTML.query(document, "#login-panel form:first-of-type #login-skip")) ==
+             1
+
     assert Enum.empty?(LazyHTML.query(document, "#login-form #login-skip"))
     assert Enum.empty?(LazyHTML.query(document, "#login-skip-form input[required]"))
   end
