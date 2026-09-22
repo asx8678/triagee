@@ -1,0 +1,285 @@
+/* A calmer presentation for the existing workspace, loaded after workspace.css.
+   No status, coverage, selection, or decision semantics are changed here. */
+@scope (.approved-workspace) {
+  :scope {
+    --ink: #243247;
+    --muted: #59677b;
+    --line: #e2e7ee;
+    --paper: #ffffff;
+    --bg: #f6f7f9;
+    --blue: #3456bd;
+    --blue-soft: #edf2ff;
+    --red: #b33145;
+    --red-soft: #fff3f5;
+    --amber: #805b16;
+    --radius: 12px;
+    --row: 56px;
+    --control-border: #8492a6;
+    --surface-soft: #f8f9fc;
+    --shadow-card: 0 2px 6px rgb(36 50 71 / 3%);
+    line-height: 1.55;
+  }
+
+  /* One quiet shell, with the same navigation and scope in the same places. */
+  :scope #shell { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  :scope .topbar {
+    min-height: 68px;
+    min-width: 0;
+    padding-block: 10px;
+    background: var(--paper);
+    color: var(--ink);
+    border-bottom-color: var(--line);
+    gap: 30px;
+  }
+  :scope .brand { color: var(--ink); letter-spacing: -.4px; }
+  :scope .topnav { align-self: center; gap: 6px; }
+  :scope .topnav :is(a, button) {
+    min-height: 40px;
+    padding: 9px 15px;
+    border: 0;
+    border-radius: 9px;
+    color: var(--muted);
+    background: transparent;
+    gap: 7px;
+  }
+  :scope .topnav :is(a, button):hover { background: var(--surface-soft); color: var(--ink); }
+  :scope .topnav :is(a, button).active {
+    color: var(--blue);
+    background: var(--blue-soft);
+    box-shadow: inset 0 0 0 1px #dbe4ff;
+  }
+  :scope .nav-count { border-radius: 6px; background: #e8edf5; color: #4c5b72; padding: 1px 6px; }
+  :scope .topmeta { color: var(--muted); }
+  :scope .topmeta button { color: var(--ink); background: var(--paper); border-color: var(--control-border); }
+  :scope .topmeta .settings-text { display: inline; }
+  :scope .scopebar { min-height: 54px; padding-block: 9px; background: #fcfcfd; flex-wrap: wrap; }
+  :scope .scopebar select { border-radius: 7px; min-height: 34px; height: auto; }
+  :scope .scopebar .fieldset .label { display: inline; }
+  :scope .scopebar .freshness { color: var(--amber); font-weight: 600; }
+  :scope .bottom-status { min-height: 30px; background: #fcfcfd; letter-spacing: 0; flex-wrap: wrap; padding-block: 5px; }
+  /* Keep absolutely positioned accessible captions inside this scrollport.
+     Without a containing block, offscreen captions can enlarge the document. */
+  :scope .page { position: relative; padding-top: 26px; scroll-padding-block: 24px; }
+  :scope .page-head { margin-bottom: 22px; flex-wrap: wrap; }
+  :scope .page-head h1 { font-size: 26px; letter-spacing: -.7px; }
+  :scope .page-head p { font-size: 13px; line-height: 1.6; margin-top: 7px; }
+
+  /* Soft edges do not mean low-contrast controls or invisible focus. */
+  :scope :is(button, a, input, select, textarea, summary) {
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+  :scope button:not(.event):not(.link):not(.cve-link):not(.sortable) {
+    border-radius: 8px;
+    min-height: 38px;
+  }
+  :scope .button-link { border-radius: 8px; min-height: 40px; padding: 9px 14px; }
+  :scope :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+    border-color: var(--control-border);
+    border-radius: 8px;
+    background: var(--paper);
+  }
+  :scope :is(input, select, textarea):hover { border-color: #64758e; }
+  :scope :is(button, a, input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 3px;
+  }
+  :scope input[type=checkbox]:focus-visible { outline-offset: 5px; }
+  :scope .primary { background: var(--blue); border-color: var(--blue); color: white; }
+  :scope .primary:hover:not(:disabled) { background: #29469f; border-color: #29469f; color: white; }
+  :scope .icon { width: 38px; }
+  :scope .link { border-radius: 5px; }
+  :scope .badge { border-radius: 6px; padding: 3px 7px; letter-spacing: .01em; }
+  :scope .p1 { background: var(--red); color: white; }
+  :scope .tag { border-radius: 6px; background: #f4f6fa; border-color: var(--line); }
+  :scope .state-dot { border-radius: 50%; }
+  :scope .fieldset .label { font-size: 12px; line-height: 1.5; margin-bottom: 7px; }
+  :scope .field-errors { line-height: 1.6; }
+
+  /* Clear hierarchy: cards group work; only genuine alerts get alert colours. */
+  :scope .panel { border-radius: var(--radius); box-shadow: var(--shadow-card); }
+  :scope .panel-head { padding: 18px 20px; }
+  :scope .panel-body { padding: 20px; }
+  :scope .panel-foot { padding: 12px 18px; background: #fcfcfd; flex-wrap: wrap; }
+  :scope .callout { border-radius: 12px; border-color: #ecd4da; border-left-color: var(--red); background: #fff8f9; padding: 16px 18px; }
+  :scope .callout .symbol { border: 0; border-radius: 10px; background: #fbe9ed; width: 36px; height: 36px; }
+  :scope .callout .confidence { border-left-color: #ecd4da; }
+  :scope .callout.caution { background: #fffbf2; border-color: #e7dabf; border-left-color: #af7b17; }
+  :scope .callout.caution .symbol { background: #f7ecd4; }
+  :scope .metrics { gap: 16px; margin-bottom: 22px; }
+  :scope .metric { border-radius: var(--radius); padding: 18px 20px; min-height: 120px; box-shadow: var(--shadow-card); }
+  :scope .metric .value { font-size: 34px; margin-block: 6px; line-height: 1.15; }
+  :scope .metric .sub { line-height: 1.5; display: block; }
+  :scope .metric.alert-top, :scope .metric.warn-top { padding-top: 16px; }
+  :scope .metric:hover { border-color: #a4b6e5; background: #fcfdff; box-shadow: 0 3px 12px rgb(52 86 189 / 7%); }
+  :scope .dashboard-grid, :scope .dashboard-secondary { gap: 20px; }
+  :scope .dashboard-secondary { margin-top: 20px; }
+  :scope .team-icon { border-radius: 9px; border: 0; width: 30px; height: 30px; }
+  :scope .attention-item { position: relative; padding: 18px 20px; gap: 14px; }
+  :scope .attention-item .number { border: 0; border-radius: 9px; background: #fbecef; width: 34px; height: 34px; }
+  :scope .attention-item > a { align-self: center; padding: 6px; text-decoration: none; }
+  /* Each item has just one existing link. Extend its target, not its meaning. */
+  :scope .attention-item > a::after { content: ""; position: absolute; inset: 0; }
+  :scope .attention-item:has(> a):hover { background: var(--surface-soft); }
+  :scope .attention-item:focus-within { background: var(--blue-soft); box-shadow: inset 0 0 0 2px var(--blue); }
+
+  /* Navigation stays recognisable; selected tabs are surfaces, not sharp rules. */
+  :scope .tabs { padding: 9px 12px; gap: 6px; flex-wrap: wrap; }
+  :scope .tabs :is(a, button) { border: 0; border-radius: 8px; min-height: 36px; padding: 8px 12px; }
+  :scope .tabs :is(a, button).active { background: var(--blue-soft); color: var(--blue); border: 0; }
+  :scope .tabs :is(a, button):hover { background: #f2f5fa; }
+  :scope .review-tools .tabs { border-radius: 10px; padding: 5px; }
+  :scope .toolbar { padding: 14px 16px; gap: 12px; }
+  :scope .toolbar input, :scope .toolbar select { min-height: 38px; font-size: 13px; }
+  :scope .filter-summary { background: #fafbfc; padding: 9px 16px; }
+  :scope .data-table { font-size: 13px; }
+  :scope .data-table th { background: #f7f8fb; color: var(--muted); padding: 12px 16px; }
+  :scope .data-table td { border-bottom-color: #edf0f4; padding: 12px 16px; }
+  :scope .data-table :is(.cve-link, .subline) { line-height: 1.5; }
+  :scope .data-table .cve-link { font-size: 13px; border-radius: 4px; }
+  :scope .data-table tbody tr:hover { background: #f8faff; }
+  :scope .data-table tbody tr:focus-within, :scope .data-table tbody tr.selected { background: var(--blue-soft); }
+  :scope .dashboard-grid .data-table td { height: 52px; padding-block: 10px; }
+  :scope .compact { --row: 42px; }
+  :scope .compact .data-table td { padding-block: 6px; }
+
+  /* Review: one shared content scroll, plus the queue; actions stay anchored. */
+  :scope .review-grid { gap: 20px; }
+  :scope .queue-heading { padding: 14px 16px; background: #fafbfc; }
+  :scope .queue-list { padding: 6px; }
+  :scope .queue-item { width: 100%; border: 0; border-radius: 9px; padding: 14px 12px; margin-bottom: 4px; }
+  :scope .queue-item.active { background: var(--blue-soft); border-left: 0; padding-left: 12px; box-shadow: inset 3px 0 var(--blue); }
+  :scope .queue-item .queue-package { color: var(--muted); }
+  :scope .compact .queue-item { padding-block: 9px; min-height: 76px; }
+  :scope .review-heading { padding: 18px 20px; }
+  :scope .review-heading h2 { font-size: 21px; }
+  :scope .review-content { overflow: auto; align-items: stretch; }
+  :scope .evidence-column, :scope .decision-column { overflow: visible; padding: 20px; }
+  :scope .decision-column { background: #f7f9fc; }
+  :scope .decision-column :is(input, select, textarea) { min-height: 40px; border-radius: 8px; border-color: var(--control-border); }
+  :scope .decision-column textarea { min-height: 112px; }
+  :scope .decision-column .intro { line-height: 1.6; margin-bottom: 18px; }
+  :scope .decision-column .fieldset { margin-bottom: 16px; }
+  :scope .summary-copy { font-size: 13px; line-height: 1.7; }
+  :scope .fact { border-radius: 9px; background: #f8f9fc; border-color: var(--line); padding: 12px; }
+  :scope .fact dt { font-size: 11px; }
+  :scope .scope-table th { background: #f7f8fb; }
+  :scope .scope-table :is(th, td) { padding: 10px 8px; }
+  :scope .policy-strip { border-radius: 8px; background: #f7f8fb; color: var(--muted); border-color: var(--line); flex-wrap: wrap; }
+  :scope :is(.inline-notice, .quiet-notice, .scope-alert, .form-error, .workspace-notice) { border-radius: 8px; }
+  :scope .review-content summary { padding-block: 5px; line-height: 1.5; }
+  :scope .review-footer { padding: 14px 20px; min-height: 68px; gap: 12px; box-shadow: 0 -3px 12px rgb(36 50 71 / 3%); }
+
+  /* Keep native dialog focus/escape behaviour. Avoid a heavy full-screen veil. */
+  :scope dialog { border-radius: 14px; box-shadow: 0 16px 64px rgb(24 36 55 / 16%); }
+  :scope dialog::backdrop { background: rgb(28 40 59 / 27%); }
+  :scope dialog.inspector {
+    top: 12px; right: 12px;
+    height: calc(100dvh - 24px); max-height: calc(100dvh - 24px);
+    width: min(860px, calc(100vw - 24px));
+    border: 1px solid var(--line); border-radius: 16px;
+  }
+  :scope dialog.inspector.expanded { width: min(1240px, calc(100vw - 24px)); }
+  :scope .inspector-head, :scope .inspector-body { padding: 22px 24px; }
+  :scope .inspector-foot { padding: 16px 24px; flex-wrap: wrap; }
+  :scope .inspector .facts .fact { background: #f8f9fc; }
+  :scope .inspector .note { border-radius: 9px; line-height: 1.6; }
+  :scope .modal-foot { background: #fafbfc; }
+  :scope .toast { border-radius: 10px; }
+
+  @media (min-width: 1280px) {
+    :scope .review-content { grid-template-columns: minmax(0, 1fr) 320px; }
+  }
+  @media (min-width: 1750px) {
+    :scope .review-content { grid-template-columns: minmax(0, 1fr) 350px; }
+  }
+  @media (max-width: 850px) {
+    :scope .topbar { gap: 14px; flex-wrap: wrap; }
+    :scope .topnav { order: 3; width: 100%; height: auto; }
+    :scope .topnav :is(a, button) { padding-inline: 10px; flex: 1; }
+    :scope .metric { padding: 14px; }
+    :scope .metrics { gap: 10px; }
+    :scope .review-grid { gap: 12px; }
+    :scope .evidence-column, :scope .decision-column { padding: 16px; }
+    /* Coverage warnings must not disappear just to make the page look cleaner. */
+    :scope .scopebar .freshness { display: block; }
+    :scope .callout { flex-wrap: wrap; }
+    :scope .callout .confidence { display: block; max-width: none; flex-basis: 100%; border-left: 0; border-top: 1px solid #ecd4da; padding: 10px 0 0; }
+  }
+  @media (max-width: 640px) {
+    :scope .topbar { padding: 10px 12px; gap: 10px; }
+    :scope .topnav { width: 100%; height: auto; gap: 4px; }
+    :scope .topnav :is(a, button) { padding: 8px 6px; min-height: 40px; gap: 4px; }
+    :scope .scopebar { gap: 9px; padding-inline: 12px; }
+    :scope .scopebar .fieldset .label { display: block; margin: 0 0 3px; }
+    :scope .scopebar select { max-width: 140px; }
+    :scope .scopebar .freshness { margin-left: 0; font-size: 11px; }
+    :scope .page { padding: 18px 12px; }
+    :scope .page-head h1 { font-size: 23px; }
+    :scope .page-head p { max-width: none; }
+    :scope .page-head > .row { flex-wrap: wrap; }
+    :scope .page-head > .row button:not(.primary) { display: inline-flex; }
+    :scope .metrics { gap: 10px; }
+    :scope .metric { min-height: 112px; }
+    :scope .metric .value { font-size: 30px; }
+    :scope .panel-head, :scope .panel-body { padding: 16px; }
+    :scope .tabs { gap: 3px; padding: 7px; }
+    :scope .tabs :is(a, button) { padding-inline: 9px; }
+    /* On phones, page scrolling must not squeeze the table or form to zero. */
+    :scope .inventory-page { overflow: auto; }
+    :scope .inventory-page > .panel { flex: none; display: block; }
+    :scope .inventory-page .table-wrap { max-height: 60dvh; }
+    :scope .review-page { display: block; overflow: auto; }
+    :scope .review-workspace { height: auto; }
+    :scope .review-content { overflow: visible; }
+    :scope .queue-list { max-height: 60dvh; }
+    :scope .review-tools { flex-wrap: wrap; }
+    :scope .review-tools .tabs { flex-basis: 100%; }
+    :scope .review-footer { padding: 12px; flex-wrap: wrap; }
+    :scope .review-footer .save-state { display: block; max-width: none; flex-basis: 100%; }
+    :scope dialog.inspector, :scope dialog.inspector.expanded { top: 0; right: 0; width: 100vw; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; }
+    :scope .inspector-head, :scope .inspector-body { padding: 18px 16px; }
+    :scope .inspector-foot { padding: 12px 16px; }
+  }
+  @media (max-width: 360px) {
+    :scope .topnav { gap: 3px; }
+    :scope .topnav :is(a, button) { font-size: 11px; padding-inline: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :scope *, :scope *::before, :scope *::after { transition: none !important; scroll-behavior: auto !important; }
+  }
+  @media print {
+    :scope #shell { display: block; height: auto; }
+    :scope .topbar, :scope .scopebar, :scope .bottom-status { display: none; }
+    :scope .panel, :scope .metric, :scope .review-footer { box-shadow: none; }
+    :scope .review-content { overflow: visible; display: block; }
+  }
+}
+
+/* The restored timeline has its own scope: keep event shapes, counts, colours,
+   future-day hatching, and unknown-coverage semantics intact. */
+@scope (.restored-timeline) {
+  :scope { --triage-radius: 12px; }
+  :scope .page-header h1 { font-size: 26px; }
+  :scope .timeline-jump { gap: 6px; margin-block: 16px; }
+  :scope .timeline-jump a { padding: 7px 11px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; text-decoration: none; }
+  :scope .timeline-jump a:hover { background: var(--blue-soft); }
+  :scope .filter-toolbar { padding: 16px 18px; border-radius: 12px; }
+  :scope .filter-toolbar select { min-height: 40px; }
+  :scope .button { border-radius: 8px; min-height: 38px; padding: 8px 12px; }
+  :scope .tl-section { border-radius: 12px; padding: 20px; box-shadow: var(--shadow-card); }
+  :scope .metric-strip > div { border-radius: 10px; padding: 14px; }
+  :scope .metric-strip dt { line-height: 1.5; }
+  :scope .metric-strip dd { font-size: 20px; }
+  :scope .metric-strip > div:first-child dd { font-size: 12px; }
+  :scope .explain, :scope .notice, :scope .tl-chart-legend-groups { border-radius: 9px; }
+  :scope .explain summary { padding-block: 5px; }
+  :scope .tl-gap { border-radius: 8px; }
+  :scope .tl-grid-table { border-collapse: separate; border-spacing: 3px; }
+  :scope .tl-grid-table :is(th, td) { border-radius: 5px; }
+  :scope .status-badge { border-radius: 6px; }
+  :scope .data-table th { background: #f7f8fb; }
+  @media (max-width: 640px) {
+    :scope .tl-section, :scope .filter-toolbar { padding: 14px; }
+    :scope .timeline-jump a { padding: 6px 9px; }
+  }
+}

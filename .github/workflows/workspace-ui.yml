@@ -1,0 +1,70 @@
+name: workspace-ui
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "scripts/check_workspace_ui.py"
+      - ".github/workflows/workspace-ui.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27.3.4.16"
+          elixir-version: "1.20.4"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: app/deps
+          key: deps-${{ runner.os }}-${{ hashFiles('app/mix.lock') }}
+      - name: Prepare isolated demo application
+        working-directory: app
+        run: |
+          mix deps.get
+          mix ecto.setup
+          mix ecto.seed
+          mix assets.setup
+      - name: Workspace LiveView regression tests
+        working-directory: app
+        run: MIX_ENV=test mix test test/triage_web/live/workspace_live_test.exs
+      - name: Install browser test tools
+        run: |
+          python -m pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Check the running workspace
+        run: |
+          mkdir -p ui-results
+          (cd app && exec mix phx.server) >ui-results/server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          python scripts/check_workspace_ui.py --output ui-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-ui-${{ github.sha }}
+          path: ui-results/
+          if-no-files-found: warn
+          retention-days: 7
