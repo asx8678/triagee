@@ -419,4 +419,80 @@ defmodule Triage.WorkspaceTicketOperationsTest do
     System.put_env("ADO_PROJECT", "Different")
     assert {:error, :configuration_changed} = AzureDevOps.create_payload(destination, [])
   end
+
+  test "the creation request matches the documented Azure DevOps REST contract", c do
+    test = self()
+
+    adapter(fn request ->
+      send(
+        test,
+        {:contract,
+         %{
+           method: request.method,
+           scheme: request.url.scheme,
+           host: request.url.host,
+           path: request.url.path,
+           query: request.url.query,
+           content_type: header(request, "content-type"),
+           authorization: header(request, "authorization"),
+           auth_option: request.options[:auth],
+           patch: Jason.decode!(IO.iodata_to_binary(request.body))
+         }}
+      )
+
+      response(request, %{"id" => 42})
+    end)
+
+    assert {:ok, [decision]} = save(c, versions(c.cve))
+    assert_receive {:contract, contract}
+
+    # POST {org}/{project}/_apis/wit/workitems/${type}?api-version=7.1 — the
+    # documented work item creation route. Azure rejects any other media type
+    # than JSON Patch and authenticates the PAT as the Basic-auth password.
+    assert contract.method == :post
+    assert contract.scheme == "https"
+    assert contract.host == "dev.azure.com"
+    assert contract.path == "/test-only/Security/_apis/wit/workitems/$Task"
+    assert contract.query == "api-version=7.1"
+    assert contract.content_type == "application/json-patch+json"
+
+    expected_auth = "Basic " <> Base.encode64(":" <> System.get_env("ADO_PAT"))
+
+    cond do
+      contract.authorization ->
+        assert contract.authorization == expected_auth
+
+      contract.auth_option ->
+        assert contract.auth_option == {:basic, ":" <> System.get_env("ADO_PAT")}
+
+      true ->
+        flunk("the creation request carried no authentication")
+    end
+
+    # A JSON Patch document: add operations against System fields only.
+    assert is_list(contract.patch) and contract.patch != []
+
+    assert Enum.all?(contract.patch, fn op ->
+             op["op"] == "add" and String.starts_with?(op["path"], "/fields/System.")
+           end)
+
+    assert Enum.any?(contract.patch, fn op ->
+             op["path"] == "/fields/System.Title" and op["value"] == "#{c.cve} needs to be fixed"
+           end)
+
+    assert decision.metadata["ticket_url"] ==
+             "https://dev.azure.com/test-only/Security/_workitems/edit/42"
+  end
+
+  # Req keeps headers downcased; both the map and pair-list shapes are handled
+  # so the assertion fails on a missing header, not on representation.
+  defp header(%{headers: headers}, name) when is_map(headers),
+    do: headers |> Map.get(name, []) |> List.wrap() |> List.first()
+
+  defp header(%{headers: headers}, name) do
+    case List.keyfind(headers, name, 0) do
+      {_key, value} -> value |> List.wrap() |> List.first()
+      nil -> nil
+    end
+  end
 end
