@@ -21,6 +21,12 @@ config :triage, :intel,
   sources: [],
   max_response_bytes: 8_000_000
 
+# Read-only machine reporting is disabled until an operator explicitly enables
+# it and provisions an expiring scoped token.
+config :triage, :reporting_api,
+  enabled: false,
+  rate_limit: 120
+
 # Offline collection policy. The network-capable loopback transport is disabled
 # in every environment except test, which enables it in `config/test.exs`. The
 # gate is read with `Application.compile_env/3`, so the value is baked into the

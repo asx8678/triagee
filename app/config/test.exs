@@ -53,6 +53,9 @@ config :triage, TriageWeb.Endpoint,
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+# Persist real jobs but never contact a provider or run background jobs in tests.
+config :triage, Oban, testing: :manual, queues: false, plugins: false
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

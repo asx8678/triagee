@@ -40,6 +40,9 @@ defmodule TriageWeb.Endpoint do
     at: "/",
     from: :triage,
     gzip: not code_reloading?,
+    cache_control_for_etags: if(code_reloading?, do: "no-cache", else: "public"),
+    cache_control_for_vsn_requests:
+      if(code_reloading?, do: "no-cache", else: "public, max-age=31536000, immutable"),
     only: TriageWeb.static_paths(),
     raise_on_missing_only: code_reloading?
 

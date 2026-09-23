@@ -5,8 +5,9 @@
 *.ez
 .env
 
-# Local BEAM crash artifacts
+# Local BEAM crash and test runtime artifacts
 erl_crash.dump
+/tmp/
 
 # Generated browser assets — regenerate with `mix assets.setup`
 # (part of `mix setup`, `mix test`, `mix precommit` and `mix ci`)

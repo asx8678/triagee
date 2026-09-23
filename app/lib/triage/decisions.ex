@@ -33,16 +33,20 @@ defmodule Triage.Decisions do
   alias Triage.Inventory.ImagePlacement
   alias Triage.Repo
 
-  @decisions ~w(accepted_risk not_affected mitigated fixed)
+  # Exactly three choices (owner decision, 22 Sep 2026). `mitigated` was removed
+  # from the vocabulary: a control that reduces exploitability is the same kind
+  # of reason-backed, covering claim as `not_affected`, so the two labels only
+  # split history. It is gone from the labels, from the dismissal set in
+  # `Triage.Evidence` and from the SQL twin, so no state can resurrect it.
+  @decisions ~w(accepted_risk not_affected fixed)
   @expiry_required ~w(accepted_risk)
   @work_actions ~w(request_remediation investigate request_verification create_ticket)
 
   @labels %{
-    "fixed" => "Fixed",
+    "fixed" => "Reported fix (unverified)",
     "create_ticket" => "Ticket created",
     "accepted_risk" => "Whitelisted",
     "not_affected" => "Not affected",
-    "mitigated" => "Mitigated by a control",
     "request_remediation" => "Remediation requested",
     "investigate" => "Investigation requested",
     "request_verification" => "Verification requested (not verified)"
@@ -100,11 +104,23 @@ defmodule Triage.Decisions do
       |> validate_work()
     end
 
+    # A new risk acceptance must justify itself (A13): an acceptance without
+    # a nonblank rationale is a suppression attempt, not a decision. `fixed`
+    # and `create_ticket` stay exempt — they are work/ticket claims governed
+    # by the attention policy, not acceptances. Historical rows are never
+    # rewritten to manufacture missing justifications.
     defp validate_comment(changeset) do
-      if get_field(changeset, :decision) in ["fixed", "accepted_risk", "create_ticket"],
+      if get_field(changeset, :decision) in ["fixed", "create_ticket"],
         do: changeset,
-        else: changeset |> validate_required([:reason]) |> validate_length(:reason, min: 3)
+        else:
+          changeset
+          |> update_change(:reason, &trim_reason/1)
+          |> validate_required([:reason])
+          |> validate_length(:reason, min: 3)
     end
+
+    defp trim_reason(reason) when is_binary(reason), do: String.trim(reason)
+    defp trim_reason(reason), do: reason
 
     defp validate_work(changeset) do
       if get_field(changeset, :decision) == "create_ticket" do

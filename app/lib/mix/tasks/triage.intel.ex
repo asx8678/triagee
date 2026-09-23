@@ -10,8 +10,9 @@ defmodule Mix.Tasks.Triage.Intel do
         sources: [:kev]  # one or more of :kev | :nvd
 
   All requests are HTTPS allowlisted, redirect-refused, byte- and time-bounded,
-  and text is sanitized before cache. A failed refresh preserves the last good
-  cache and records a failed receipt.
+  and text is sanitized before cache. A failed or unverifiable refresh preserves
+  the last good generation and records a failed receipt; a successful refresh
+  writes its immutable generation and its receipt in one transaction.
 
       mix triage.intel --kev
       mix triage.intel --nvd CVE-2024-3094
@@ -96,18 +97,31 @@ defmodule Mix.Tasks.Triage.Intel do
       # app.config loads dependencies; it does not start Req's Finch supervisor.
       {:ok, _} = Application.ensure_all_started(:req)
 
-      case Client.fetch(request) do
-        {:ok, rows} ->
-          {:ok, count} = Intel.replace_advisories(source, rows)
-          {:ok, _} = Intel.record_receipt(source, true, count)
-          suffix = if kind == :kev, do: " (#{length(rows)} rows)", else: ""
-          Mix.shell().info("  #{label}: #{count} advisories cached#{suffix}")
+      # The attempt start orders generations: an older refresh finishing later
+      # cannot displace a newer valid generation.
+      started_at = DateTime.utc_now()
+
+      case Client.fetch_generation(request) do
+        {:ok, parsed} ->
+          {:ok, %{generation: generation, current?: current?}} =
+            Intel.commit_generation(source, parsed.rows,
+              declared_count: parsed.declared_count,
+              complete: parsed.complete?,
+              metadata: parsed.metadata,
+              catalog_version: parsed.catalog_version,
+              started_at: started_at,
+              receipt: true
+            )
+
+          note = if current?, do: "", else: " (stored as history; a newer generation is current)"
+          Mix.shell().info("  #{label}: #{generation.row_count} advisories cached#{note}")
           0
 
         {:error, reason} ->
           message = safe_error(reason)
           {:ok, _} = Intel.record_receipt(source, false, nil, message)
-          Mix.shell().error("  #{label}: FAILED — #{message}")
+
+          Mix.shell().error("  #{label}: FAILED — #{message} (last valid generation preserved)")
           1
       end
     else
@@ -140,6 +154,17 @@ defmodule Mix.Tasks.Triage.Intel do
   end
 
   defp safe_error(:kev_parse_failed), do: "KEV payload parse failed"
+  defp safe_error(:kev_declared_count_missing), do: "KEV feed declared no catalog count"
+
+  defp safe_error(:kev_declared_count_mismatch),
+    do: "KEV declared count does not match the feed"
+
+  defp safe_error(:kev_empty_feed), do: "KEV feed was empty — refused as unverified"
+
+  defp safe_error(:nvd_declared_count_mismatch),
+    do: "NVD result count does not match the response"
+
+  defp safe_error(:invalid_rows), do: "rows were not storable advisories"
   defp safe_error(:nvd_parse_failed), do: "NVD payload parse failed"
   defp safe_error(:json_decode_failed), do: "invalid JSON"
   defp safe_error(:intel_disabled), do: "disabled by config"

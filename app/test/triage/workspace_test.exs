@@ -101,13 +101,45 @@ defmodule Triage.WorkspaceTest do
              Commit.save(c.cve, [c.prod.id], versions(c.cve), Ecto.UUID.generate(), attrs)
 
     assert decision.expires_at == nil
-    assert Decisions.label(decision.decision) == "Fixed"
+    assert Decisions.label(decision.decision) == "Reported fix (unverified)"
     targets = Workspace.targets()
     assert Enum.map(Workspace.select(targets, "fixed"), & &1.id) == [c.prod.id]
     assert Enum.map(Workspace.select(targets, "needs"), & &1.id) == [c.staging.id]
     assert Workspace.select(targets, "progress") == []
     assert Repo.reload!(c.finding).resolved_at == nil
     assert Decisions.state(decision, DateTime.add(DateTime.utc_now(), 86_400 * 365)) == :active
+
+    # A reported fix is a claim, not a verified remediation (A24): it stays
+    # in attention as verification-needed work instead of sinking to band 3.
+    fixed_target = Enum.find(Workspace.targets(), &(&1.id == c.prod.id))
+    assert fixed_target.covered?
+    assert Triage.Attention.band(fixed_target) == 1
+    assert Triage.Attention.needs_attention?(fixed_target)
+    assert Triage.Attention.reason(fixed_target) == "Reported fix awaiting verification"
+
+    uncovered = Enum.find(Workspace.targets(), &(&1.id == c.staging.id))
+    assert Triage.Attention.band(uncovered) == 0
+  end
+
+  test "a risk acceptance requires a nonblank rationale at the context level", c do
+    for blank <- [nil, "", "   "] do
+      attrs = fields("accepted_risk") |> Map.put("reason", blank)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Commit.save(c.cve, [c.prod.id], versions(c.cve), Ecto.UUID.generate(), attrs)
+    end
+
+    assert {:error, %Ecto.Changeset{}} =
+             Decisions.record(%{
+               cve: c.cve,
+               decision: "accepted_risk",
+               reason: "   ",
+               actor: "operator",
+               expires_at: DateTime.add(DateTime.utc_now(), 30, :day),
+               placement_id: c.prod.id
+             })
+
+    assert Repo.aggregate(Triage.Decisions.Decision, :count) == 0
   end
 
   test "operation retries return the same records, payload reuse is rejected", c do
@@ -286,6 +318,10 @@ defmodule Triage.WorkspaceTest do
     prod = Enum.find(Workspace.targets(), &(&1.id == c.prod.id))
     assert prod.decision.decision == "investigate"
     expired = Workspace.targets(%{}, work.expires_at)
+
+    # Once the scoped work expires only that scope needs a decision again: the
+    # legacy global acceptance is grandfathered (flagged unverified) rather than
+    # demoted, so the sibling scope is not resurrected into the queue.
     assert Workspace.metrics(expired)["needs"].targets == [{c.cve, c.prod.id}]
   end
 
@@ -305,7 +341,7 @@ defmodule Triage.WorkspaceTest do
     assert {:ok, global} =
              Decisions.record(%{
                cve: c.cve,
-               decision: "mitigated",
+               decision: "not_affected",
                actor: "legacy",
                reason: "Old global claim"
              })

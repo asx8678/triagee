@@ -59,6 +59,7 @@ defmodule Triage.MixProject do
       {:dns_cluster, "~> 0.3.0"},
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5"},
+      {:oban, "~> 2.19.0"},
 
       # Compiles assets/css/tailwind.css into the served stylesheet. A build
       # tool only: it ships no runtime code, and `mix assets.setup` drives it.

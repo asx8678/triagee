@@ -5,7 +5,7 @@ defmodule Triage.RuntimeConfigTest do
 
   @runtime Path.expand("../../config/runtime.exs", __DIR__)
   @config Path.expand("../../config/config.exs", __DIR__)
-  @controlled_env ~w(TRIAGE_BIND PORT DATABASE_URL SECRET_KEY_BASE PHX_HOST PHX_SERVER)
+  @controlled_env ~w(TRIAGE_DEMO_MODE TRIAGE_REPORTING_API_ENABLED TRIAGE_BIND PORT DATABASE_URL SECRET_KEY_BASE PHX_HOST PHX_SERVER TRIAGE_ANALYSIS_ENABLED TRIAGE_KIRO_CLI TRIAGE_KIRO_MODEL TRIAGE_CLASSIFIER_ENABLED TRIAGE_CLASSIFIER_AUTOMATIC TRIAGE_CLASSIFIER_URL TRIAGE_CLASSIFIER_MODEL TRIAGE_CLASSIFIER_API_KEY)
   @prod_env %{
     "DATABASE_URL" => "ecto://runtime.invalid/triage",
     "SECRET_KEY_BASE" => String.duplicate("x", 64)
@@ -48,6 +48,74 @@ defmodule Triage.RuntimeConfigTest do
     end
   end
 
+  test "demo mode defaults on only in development and rejects ambiguous flags" do
+    code = """
+    [path, mode] = System.argv()
+    env = case mode do
+      "dev" -> :dev
+      "test" -> :test
+      "prod" -> :prod
+    end
+    config = Config.Reader.read!(path, env: env)
+    IO.write(to_string(config[:triage][:demo_mode]))
+    """
+
+    for {env, flag, expected} <- [
+          {"dev", nil, "true"},
+          {"test", nil, "false"},
+          {"prod", nil, "false"},
+          {"dev", "false", "false"},
+          {"test", "true", "true"}
+        ] do
+      child_env =
+        @controlled_env
+        |> Map.new(&{&1, nil})
+        |> Map.merge(@prod_env)
+        |> Map.put("TRIAGE_DEMO_MODE", flag)
+        |> Map.to_list()
+
+      assert {^expected, 0} =
+               System.cmd(System.find_executable("elixir"), ["-e", code, "--", @runtime, env],
+                 env: child_env,
+                 stderr_to_stdout: true
+               )
+    end
+
+    assert {:error, error} = read_runtime(:test, %{"TRIAGE_DEMO_MODE" => "yes"})
+    assert error =~ "TRIAGE_DEMO_MODE must be exactly true or false"
+  end
+
+  test "reporting API is default-off and accepts only explicit booleans" do
+    assert {:ok, _} = read_runtime(:test)
+    assert {:ok, _} = read_runtime(:test, %{"TRIAGE_REPORTING_API_ENABLED" => "true"})
+    assert {:ok, _} = read_runtime(:test, %{"TRIAGE_REPORTING_API_ENABLED" => "1"})
+    assert {:ok, _} = read_runtime(:test, %{"TRIAGE_REPORTING_API_ENABLED" => "false"})
+
+    for rejected <- ["yes", "TRUE", "on", "", " true"] do
+      assert {:error, output} =
+               read_runtime(:test, %{"TRIAGE_REPORTING_API_ENABLED" => rejected})
+
+      assert output =~ "TRIAGE_REPORTING_API_ENABLED must be exactly true or false"
+    end
+  end
+
+  test "retired HTTP classifier flags cannot enable the old pipeline" do
+    assert {:ok, _} = read_runtime(:test)
+
+    for flag <- ~w(TRIAGE_CLASSIFIER_ENABLED TRIAGE_CLASSIFIER_AUTOMATIC),
+        value <- ["true", "yes"] do
+      assert {:error, output} = read_runtime(:test, %{flag => value})
+      assert output =~ flag
+      assert output =~ "retired"
+    end
+
+    assert {:ok, _} =
+             read_runtime(:test, %{
+               "TRIAGE_ANALYSIS_ENABLED" => "true",
+               "TRIAGE_KIRO_CLI" => "/opt/reviewed/kiro-cli"
+             })
+  end
+
   defp read_prod_force_ssl do
     code = """
     [path] = System.argv()
@@ -62,6 +130,43 @@ defmodule Triage.RuntimeConfigTest do
         System.find_executable("elixir"),
         ["-e", code, "--", @config],
         env: Enum.map(@controlled_env, &{&1, nil}),
+        stderr_to_stdout: true
+      )
+
+    if status == 0 do
+      {:ok, output |> Base.decode64!() |> :erlang.binary_to_term([:safe])}
+    else
+      {:error, output}
+    end
+  end
+
+  # W01a: project the AI analysis configuration the same way, so the
+  # explicit-off default and strict boolean parsing are proven at boot.
+  defp read_runtime_ai(env, overrides) do
+    child_env = Enum.map(@controlled_env, &{&1, nil})
+    encoded_overrides = overrides |> :erlang.term_to_binary() |> Base.encode64()
+
+    code = """
+    [path, env_name, encoded_overrides] = System.argv()
+    overrides = encoded_overrides |> Base.decode64!() |> :erlang.binary_to_term([:safe])
+    Enum.each(overrides, fn {key, value} -> System.put_env(key, value) end)
+
+    env = case env_name do
+      "dev" -> :dev
+      "test" -> :test
+      "prod" -> :prod
+    end
+
+    config = Config.Reader.read!(path, env: env)
+    ai = config |> Keyword.fetch!(:triage) |> Keyword.get(Triage.AiTriage, :none)
+    IO.write(Base.encode64(:erlang.term_to_binary(ai)))
+    """
+
+    {output, status} =
+      System.cmd(
+        System.find_executable("elixir"),
+        ["-e", code, "--", @runtime, Atom.to_string(env), encoded_overrides],
+        env: child_env,
         stderr_to_stdout: true
       )
 
@@ -108,6 +213,33 @@ defmodule Triage.RuntimeConfigTest do
     for rejected <- ["", "-1", "65536", "4000x", "4.0", " 4000", "+4000"] do
       assert {:error, output} = read_runtime(:test, %{"PORT" => rejected})
       assert output =~ "PORT must be a decimal integer from 0 through 65535"
+    end
+  end
+
+  test "AI analysis is disabled by default and accepts only explicit booleans" do
+    for env <- [:dev, :test, :prod] do
+      required = if env == :prod, do: @prod_env, else: %{}
+
+      assert {:ok, [enabled: false, cli_path: nil, model: nil]} = read_runtime_ai(env, required)
+
+      assert {:ok, [enabled: true, cli_path: nil, model: nil]} =
+               read_runtime_ai(env, Map.put(required, "TRIAGE_ANALYSIS_ENABLED", "true"))
+
+      assert {:ok, [enabled: true, cli_path: nil, model: nil]} =
+               read_runtime_ai(env, Map.put(required, "TRIAGE_ANALYSIS_ENABLED", "1"))
+
+      assert {:ok, [enabled: false, cli_path: nil, model: nil]} =
+               read_runtime_ai(env, Map.put(required, "TRIAGE_ANALYSIS_ENABLED", "false"))
+    end
+
+    # The runner path is carried but never implies enablement.
+    assert {:ok, [enabled: false, cli_path: "/opt/reviewed/kiro-cli", model: nil]} =
+             read_runtime_ai(:test, %{"TRIAGE_KIRO_CLI" => "/opt/reviewed/kiro-cli"})
+
+    # Invalid values fail closed at boot instead of guessing.
+    for rejected <- ["yes", "TRUE", "on", "", " true"] do
+      assert {:error, output} = read_runtime_ai(:test, %{"TRIAGE_ANALYSIS_ENABLED" => rejected})
+      assert output =~ "TRIAGE_ANALYSIS_ENABLED must be exactly true or false"
     end
   end
 

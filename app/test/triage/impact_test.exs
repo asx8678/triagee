@@ -1,5 +1,7 @@
 defmodule Triage.ImpactTest do
-  use Triage.DataCase, async: true
+  # Serialized: this module truncates the shared inventory, so running it
+  # concurrently with fingerprint-bound suites corrupts their assertions.
+  use Triage.DataCase, async: false
 
   import Ecto.Query
 

@@ -26,18 +26,17 @@ defmodule TriageWeb.WorkspaceLiveTest do
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
     view |> element("#scope-target-#{c.staging.id}") |> render_click()
     view |> decision_form(fields("fixed")) |> render_submit()
-    assert has_element?(view, ".action-toast", "marked as fixed")
+    assert has_element?(view, ".action-toast", "reported fixed")
     refute has_element?(view, ".workspace-notice")
     refute render(view) =~ "Active scanner evidence is unchanged"
     assert has_element?(view, ".action-toast .confirmation-title", "Action completed")
-    assert has_element?(view, ".fixed-heading .fixed-banner", "FIXED")
-    assert has_element?(view, ".review-heading .status-fixed", "Fixed")
-    assert has_element?(view, ".review-heading .status-fixed", "Fixed")
+    assert has_element?(view, ".fixed-heading .fixed-banner", "REPORTED FIXED")
+    assert has_element?(view, ".review-heading .status-fixed", "Reported fix")
     view |> element("button[phx-click='dismiss-action-toast']") |> render_click()
     refute has_element?(view, ".action-toast")
     {:ok, reloaded, _} = live(c.conn, "/?page=review&mode=fixed&item=#{c.cve}")
-    assert has_element?(reloaded, ".status-fixed", "Fixed")
-    assert has_element?(reloaded, ".fixed-heading .fixed-banner", "FIXED")
+    assert has_element?(reloaded, ".status-fixed", "Reported fix")
+    assert has_element?(reloaded, ".fixed-heading .fixed-banner", "REPORTED FIXED")
     assert has_element?(reloaded, "#queue-#{c.cve}.fixed-item")
     refute has_element?(reloaded, ".action-toast")
   end
@@ -47,7 +46,12 @@ defmodule TriageWeb.WorkspaceLiveTest do
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
     view |> element("#scope-target-#{c.staging.id}") |> render_click()
     view |> form("#workspace-decision", decision: %{action: "accepted_risk"}) |> render_change()
-    view |> form("#workspace-decision") |> render_submit()
+
+    # A13: the acceptance rationale is required before the confirmation step.
+    view
+    |> form("#workspace-decision", decision: %{reason: "Vendor patch window acceptance"})
+    |> render_submit()
+
     view |> element("#confirm-risk") |> render_click()
 
     assert has_element?(
@@ -87,14 +91,22 @@ defmodule TriageWeb.WorkspaceLiveTest do
     # A fresh draft preselects no action, no conclusion and no write targets.
     assert has_element?(view, "#save-decision[disabled]", "Select an action")
     assert has_element?(view, "#decision-no-targets", "Select at least one deployment")
+    assert has_element?(view, "#decision-action-help", "Choose one of the three actions")
+    refute has_element?(view, "#ai-triage h3")
+    refute render(view) =~ "KIRO · HEADLESS"
+
+    assert Triage.Workspace.Commit.review_actions() == ~w(fixed accepted_risk create_ticket)
+
+    for {action, index} <- Enum.with_index(Triage.Workspace.Commit.review_actions(), 2) do
+      assert has_element?(view, "#decision_action option:nth-child(#{index})[value=#{action}]")
+    end
+
+    refute has_element?(view, "#decision_action option:nth-child(5)")
 
     for {action, label} <- [
           {"fixed", "Mark as fixed"},
           {"accepted_risk", "Whitelist now"},
-          {"create_ticket", "Create Azure DevOps ticket"},
-          {"investigate", "Request investigation"},
-          {"request_remediation", "Request remediation"},
-          {"request_verification", "Request verification"}
+          {"create_ticket", "Create Azure DevOps ticket"}
         ] do
       view |> form("#workspace-decision", decision: %{action: action}) |> render_change()
       assert has_element?(view, "#save-decision", label)
@@ -133,14 +145,11 @@ defmodule TriageWeb.WorkspaceLiveTest do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
     assert has_element?(view, "option[value=create_ticket]")
-    assert has_element?(view, "option[value=investigate]")
-    assert has_element?(view, "option[value=request_remediation]")
+    refute has_element?(view, "option[value=investigate]")
+    refute has_element?(view, "option[value=request_remediation]")
+    refute has_element?(view, "option[value=request_verification]")
     refute has_element?(view, "input[name='decision[actor]']")
-
-    # Work actions reveal the owner, follow-up date and required justification.
-    view |> form("#workspace-decision", decision: %{action: "investigate"}) |> render_change()
-    assert has_element?(view, "input[name='decision[owner]']")
-    assert has_element?(view, "textarea[name='decision[reason]']")
+    refute has_element?(view, "input[name='decision[owner]']")
 
     view |> form("#workspace-decision", decision: %{action: "accepted_risk"}) |> render_change()
 
@@ -149,9 +158,25 @@ defmodule TriageWeb.WorkspaceLiveTest do
              "#decision_due_on[value='#{Triage.Workspace.Commit.default_due_on()}']"
            )
 
+    # A13: a blank rationale cannot reach the confirmation step; nothing is
+    # recorded. This deliberately corrects the earlier optional-comment flow.
     view |> form("#workspace-decision", decision: %{reason: ""}) |> render_submit()
+    assert has_element?(view, "#decision-error")
+    assert Decisions.history_for_cve(c.cve) == []
+
+    view
+    |> form("#workspace-decision",
+      decision: %{reason: "Accepted until service replacement lands"}
+    )
+    |> render_submit()
+
     view |> element("#confirm-risk") |> render_click()
-    assert Enum.all?(Decisions.history_for_cve(c.cve), &(&1.reason == ""))
+
+    assert Enum.all?(
+             Decisions.history_for_cve(c.cve),
+             &(&1.reason == "Accepted until service replacement lands")
+           )
+
     assert has_element?(view, "#draft-state", "Decision saved")
   end
 
@@ -188,7 +213,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
 
     # The detail shows the append-only history inline; no separate destination.
     assert [decision] = Decisions.history_for_cve(c.cve)
-    assert has_element?(view, "#decision-history-#{decision.id}", "Fixed")
+    assert has_element?(view, "#decision-history-#{decision.id}", "Reported fix (unverified)")
     refute has_element?(view, "#workspace-inspector")
   end
 
@@ -205,37 +230,95 @@ defmodule TriageWeb.WorkspaceLiveTest do
     refute has_element?(deep, "#workspace-inspector")
   end
 
-  test "work requests require owner, date and justification, then record scoped work", c do
+  test "whitelist button explains missing targets and enables without AI classification", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
-    render_change(view, "target", %{"id" => to_string(c.prod.id)})
+    view |> form("#workspace-decision", decision: %{action: "accepted_risk"}) |> render_change()
 
-    # The server rejects a work request without owner, date and justification
-    # (I11), even if a client bypassed the disabled button.
-    render_hook(view, "save", %{
-      "decision" => %{"action" => "investigate", "owner" => "", "due_on" => "", "reason" => ""}
-    })
+    assert has_element?(
+             view,
+             "#save-decision[disabled][aria-describedby=decision-action-help]",
+             "Whitelist now"
+           )
 
-    assert has_element?(view, "#decision-error", "Complete the required fields")
-    assert Repo.aggregate(Decisions.Decision, :count) == 0
+    assert has_element?(view, "#decision-action-help", "Select at least one deployment")
 
-    due = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+    assert has_element?(
+             view,
+             "#decision-action-help a[href='#review-deployments']",
+             "Select deployments"
+           )
 
-    render_change(view, "draft", %{
+    refute has_element?(view, "#classification-result")
+
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+    assert has_element?(view, "#save-decision:not([disabled])", "Whitelist now")
+    refute has_element?(view, "#decision-action-help")
+
+    view
+    |> form("#workspace-decision", decision: %{reason: "Reviewed this production deployment"})
+    |> render_submit()
+
+    assert has_element?(view, "#risk-confirmation")
+    assert Decisions.history_for_cve(c.cve) == []
+    view |> element("#confirm-risk") |> render_click()
+    assert [%{decision: "accepted_risk", placement_id: id}] = Decisions.history_for_cve(c.cve)
+    assert id == c.prod.id
+  end
+
+  test "Review rejects retired work actions even when a client supplies valid fields", c do
+    {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+
+    for action <- ~w(investigate request_remediation request_verification) do
+      fields = %{
+        "action" => action,
+        "owner" => "Team A",
+        "due_on" => Date.to_iso8601(Date.add(Date.utc_today(), 7)),
+        "reason" => "Review this exact deployment"
+      }
+
+      render_hook(view, "draft", %{"decision" => fields})
+      render_hook(view, "save", %{"decision" => fields})
+
+      assert has_element?(
+               view,
+               "#decision-error",
+               "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
+             )
+
+      assert has_element?(view, "#save-decision[disabled]", "Select an action")
+      assert has_element?(view, "#decision-action-help", "Choose one of the three actions")
+      assert Decisions.history_for_cve(c.cve) == []
+    end
+  end
+
+  test "restored legacy drafts require an explicit supported choice without losing selection",
+       c do
+    {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+
+    render_hook(view, "draft", %{
       "decision" => %{
         "action" => "investigate",
         "owner" => "Team A",
-        "due_on" => due,
-        "reason" => "Verify deployment paths before scheduling the upgrade."
+        "reason" => "Keep my draft context",
+        "due_on" => Date.to_iso8601(Date.add(Date.utc_today(), 7))
       }
     })
 
-    view |> decision_form(fields("investigate")) |> render_submit()
+    {:ok, restored, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+    assert has_element?(restored, "#scope-target-#{c.prod.id}[checked]")
+    assert has_element?(restored, "#save-decision[disabled]", "Select an action")
+    assert has_element?(restored, "#decision-action-help", "Choose one of the three actions")
+    refute has_element?(restored, "input[name='decision[owner]']")
 
-    assert [%{decision: "investigate"} = recorded] = Decisions.history_for_cve(c.cve)
-    assert recorded.work_owner == "Team A"
-    assert Date.compare(recorded.due_on, Date.add(Date.utc_today(), 7)) == :eq
-    refute is_nil(recorded.expires_at)
-    assert has_element?(view, ".action-toast", "in progress")
+    restored
+    |> form("#workspace-decision", decision: %{action: "accepted_risk"})
+    |> render_change()
+
+    assert has_element?(restored, "textarea[name='decision[reason]']", "Keep my draft context")
+    assert has_element?(restored, "#save-decision:not([disabled])", "Whitelist now")
+    assert Decisions.history_for_cve(c.cve) == []
   end
 
   test "whitelist selection restores blank date and preserves an explicit date while editing",
@@ -258,7 +341,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
     view |> element("#scope-target-#{c.staging.id}") |> render_click()
     view |> decision_form(fields("fixed")) |> render_submit()
-    assert has_element?(view, ".action-toast", "marked as fixed"), render(view)
+    assert has_element?(view, ".action-toast", "reported fixed"), render(view)
 
     assert Decisions.history_for_cve(c.cve) |> Enum.map(& &1.placement_id) |> Enum.sort() ==
              Enum.sort([c.prod.id, c.staging.id])
@@ -268,11 +351,11 @@ defmodule TriageWeb.WorkspaceLiveTest do
 
     {:ok, fixed, _} = live(c.conn, "/?page=review&mode=fixed&item=#{c.cve}")
     assert has_element?(fixed, "#queue-#{c.cve}")
-    assert has_element?(fixed, ".review-tools a", "Fixed")
+    assert has_element?(fixed, ".review-tools a", "Reported fixed")
 
     assert Enum.all?(
              Workspace.select(Workspace.targets(%{"cve" => c.cve}), "fixed"),
-             &(&1.decision.label == "Fixed")
+             &(&1.decision.label == "Reported fix (unverified)")
            )
   end
 
@@ -356,7 +439,11 @@ defmodule TriageWeb.WorkspaceLiveTest do
     live_routes =
       Phoenix.Router.routes(TriageWeb.Router) |> Enum.filter(&(&1.plug == Phoenix.LiveView.Plug))
 
-    assert Enum.sort(Enum.map(live_routes, & &1.path)) == ["/", "/timeline", "/workspace"]
+    assert Enum.sort(Enum.map(live_routes, & &1.path)) == [
+             "/",
+             "/timeline",
+             "/workspace"
+           ]
   end
 
   test "full original timeline stays inside the new workspace and retains scope", c do

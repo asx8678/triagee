@@ -1,10 +1,23 @@
 defmodule TriageWeb.DailyAndAiLiveTest do
-  @moduledoc "CVE timeline navigation and recorded detections."
+  @moduledoc """
+  CVE timeline page and the AI triage suggestion panel.
+
+  The AI panel is a suggestion only: no automatic whitelisting is possible,
+  and the reviewer always confirms explicitly (D11/I06).
+
+  W01a: analysis is explicitly disabled by default, async delivery is bound
+  to the exact request, row CVE, target fingerprints and reviewer permission,
+  and stale or forged deliveries are discarded without touching reviewer
+  drafts (A12). The fake runner fixture is the only runner these tests use.
+  """
   use TriageWeb.ConnCase, async: false
   @moduletag authenticated: :reviewer
   import Phoenix.LiveViewTest
   import Triage.Fixtures
-  alias Triage.Repo
+  alias Triage.{Repo, Workspace}
+  alias Triage.Workspace.Commit
+
+  @fake_runner Path.expand("../../fixtures/experiment/fake_kiro_cli.sh", __DIR__)
 
   setup do
     Triage.DataCase.reset_inventory!()
@@ -130,6 +143,223 @@ defmodule TriageWeb.DailyAndAiLiveTest do
              ]
 
       refute render(view) =~ "Reported fixed"
+    end
+  end
+
+  describe "AI triage panel" do
+    defp configure_ai!(overrides) do
+      previous = Application.get_env(:triage, Triage.AiTriage)
+      Application.put_env(:triage, Triage.AiTriage, Keyword.put(overrides, :test_env, true))
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:triage, Triage.AiTriage, previous),
+          else: Application.delete_env(:triage, Triage.AiTriage)
+      end)
+
+      :ok
+    end
+
+    defp runner_mode(mode) do
+      System.put_env("TRIAGE_FAKE_RUNNER_MODE", mode)
+
+      on_exit(fn ->
+        System.delete_env("TRIAGE_FAKE_RUNNER_MODE")
+        System.delete_env("TRIAGE_FAKE_RUNNER_LOG")
+      end)
+    end
+
+    test "shows the disabled state honestly when analysis is not enabled", c do
+      configure_ai!(enabled: false, cli_path: @fake_runner)
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      assert has_element?(view, "#ai-triage")
+      assert has_element?(view, "#classification-setup", "Connect Kiro")
+      assert render(view) =~ "TRIAGE_ANALYSIS_ENABLED"
+      assert has_element?(view, "#classify-now[disabled]", "Classify now")
+    end
+
+    test "a fake-runner assessment renders only through the bound request", c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      view |> element("#ai-triage .ai-analyze-btn") |> render_click()
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :classifier)
+      render(view)
+
+      assert has_element?(view, "#ai-triage .ai-result")
+      assert has_element?(view, "#classification-risk strong", "42")
+      assert has_element?(view, "#classification-whitelist strong", "18")
+      assert render(view) =~ "Investigate this CVE"
+      assert render(view) =~ "Fake runner fixture: deterministic pipeline response."
+      assert render(view) =~ "does not approve, whitelist, or commit anything"
+    end
+
+    test "duplicate triggers are bounded to one runner invocation", c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+
+      log =
+        Path.join(
+          System.tmp_dir!(),
+          "triage_fake_runner_#{System.unique_integer([:positive])}.log"
+        )
+
+      on_exit(fn -> File.rm(log) end)
+      File.rm(log)
+      System.put_env("TRIAGE_FAKE_RUNNER_LOG", log)
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      view |> element("#ai-triage .ai-analyze-btn") |> render_click()
+      # A second trigger while one request is in flight starts no new runner,
+      # even if the hidden button were bypassed.
+      view |> render_click("ai-analyze", %{})
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :classifier)
+      render(view)
+
+      assert File.read!(log) |> String.split("\n", trim: true) |> length() == 1
+      assert has_element?(view, "#ai-triage .ai-result")
+    end
+
+    test "a stale result after navigating to another CVE is never displayed", c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      view |> element("#ai-triage .ai-analyze-btn") |> render_click()
+
+      # Navigate to the second advisory before the result is delivered.
+      view |> element("#queue-#{c.other_cve}") |> render_click()
+      assert render(view) =~ c.other_cve
+
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :classifier)
+      render(view)
+
+      refute has_element?(view, "#ai-triage .ai-result")
+      refute render(view) =~ "Fake runner fixture"
+    end
+
+    test "an evidence change during analysis discards the result and preserves the draft", c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+
+      # A reviewer draft is in progress; a discarded AI result must never
+      # clobber it (A12).
+      render_hook(view, "draft", %{
+        "decision" => %{"action" => "accepted_risk", "reason" => "My manual justification"}
+      })
+
+      # The draft is durably stored before analysis starts.
+      assert {:ok, %{fields: %{"reason" => "My manual justification"}}} =
+               Triage.Workspace.Drafts.get(c.principal, c.cve)
+
+      view |> element("#ai-triage .ai-analyze-btn") |> render_click()
+
+      # A concurrent decision changes the evidence revision fingerprints.
+      # Its expiry sits outside the attention review window so the covered
+      # item stays in the progress queue (the review-due band-1 case has
+      # its own parity regression).
+      versions = Workspace.targets(%{"cve" => c.cve}) |> Map.new(&{&1.id, &1.fingerprint})
+
+      assert {:ok, [_]} =
+               Commit.save(
+                 c.cve,
+                 [c.prod.id],
+                 versions,
+                 Ecto.UUID.generate(),
+                 %{
+                   "action" => "investigate",
+                   "owner" => "Other reviewer",
+                   "actor" => "Other reviewer",
+                   "reason" => "Concurrent work recorded elsewhere",
+                   "due_on" => Date.utc_today() |> Date.add(30) |> Date.to_iso8601()
+                 }
+               )
+
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :classifier)
+      render(view)
+
+      assert has_element?(view, "#ai-triage .ai-error")
+      assert render(view) =~ "Evidence changed during analysis"
+      refute has_element?(view, "#ai-triage .ai-result")
+
+      # The manual draft survives the discard in the durable store (A12).
+      assert {:ok, %{fields: %{"reason" => "My manual justification"}}} =
+               Triage.Workspace.Drafts.get(c.principal, c.cve)
+
+      # It also restores into a fresh mount of the item: the concurrent
+      # decision moved the covered advisory into the progress queue, so the
+      # preserved justification is still reachable there.
+      {:ok, reloaded, _} = live(c.conn, "/?page=review&mode=progress&item=#{c.cve}")
+
+      assert has_element?(
+               reloaded,
+               "textarea[name='decision[reason]']",
+               "My manual justification"
+             )
+    end
+
+    test "a runner failure renders the bounded error, never a fallback score", c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+      runner_mode("invalid_json")
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      view |> element("#ai-triage .ai-analyze-btn") |> render_click()
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :classifier)
+      render(view)
+
+      assert has_element?(view, "#ai-triage .ai-error")
+      assert render(view) =~ "unexpected response format"
+      refute has_element?(view, "#ai-triage .ai-result")
+    end
+
+    test "saved scores survive reconnect and are invalidated without overwriting a dirty draft",
+         c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      view |> element("#classify-now") |> render_click()
+      assert %{success: 1} = Oban.drain_queue(queue: :classifier)
+      assert has_element?(view, "#classification-risk strong", "42")
+      {:ok, reconnected, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+      assert has_element?(reconnected, "#classification-risk strong", "42")
+
+      render_hook(reconnected, "draft", %{
+        "decision" => %{"action" => "accepted_risk", "reason" => "Preserve this manual draft"}
+      })
+
+      Repo.update!(
+        Ecto.Changeset.change(c.finding, description: "New evidence after classification")
+      )
+
+      send(reconnected.pid, {:workspace_changed, c.cve})
+      assert has_element?(reconnected, ".ai-error", "Evidence changed")
+      refute has_element?(reconnected, "#classification-result")
+
+      assert {:ok, %{fields: %{"reason" => "Preserve this manual draft"}}} =
+               Triage.Workspace.Drafts.get(c.principal, c.cve)
+    end
+
+    test "forged pre-binding deliveries are discarded without touching the view", c do
+      configure_ai!(enabled: true, cli_path: @fake_runner)
+
+      {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")
+
+      # Old message shape from earlier deployments: no request binding.
+      send(
+        view.pid,
+        {:ai_assessment, c.cve,
+         {:ok,
+          %{
+            cve: c.cve,
+            danger_score: 99,
+            danger_level: "critical",
+            recommendation: "remediate",
+            rationale: "forged content must never render"
+          }}}
+      )
+
+      html = render(view)
+      refute has_element?(view, "#ai-triage .ai-result")
+      refute html =~ "forged content"
     end
   end
 end

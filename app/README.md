@@ -37,17 +37,52 @@ mise x -- mix phx.server
 demo seed in development only, and builds assets. Test setup never seeds the demo
 implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener port.
 
+## Kiro classification in Review
+
+Select a CVE in **Review** and click **Classify now**. Phoenix sends its complete
+stored evidence for the current team/environment scope to **headless Kiro**, then
+shows a **risk score**, **whitelist-suitability score**, and reasoning directly in
+Review. Results are saved independently of the browser connection. Classification
+never applies a whitelist, edits a repository or creates an Azure ticket.
+
+Enable explicitly with `TRIAGE_ANALYSIS_ENABLED=true` and `TRIAGE_KIRO_CLI` pointing
+to your authenticated `kiro-cli`; optionally pin `TRIAGE_KIRO_MODEL`. No separate
+model HTTP endpoint/API key is used. There is no classification merely from
+browsing. The old `/classifier` screen redirects to Review, and its HTTP-model
+flags are retired. See [setup, scoring and safety](docs/AI_CLASSIFIER.md).
+
+## Presentation demo
+
+Development preselects **Whitelist temporarily** and the CVE's active deployments
+in the current scope, so **Whitelist now** starts enabled. A reason and confirmation
+are still required; existing drafts are preserved. Set `TRIAGE_DEMO_MODE=false`
+for neutral defaults (the default in test/production).
+
+Load the expanded fictional estate with
+`mise x -- mix triage.demo --database triage_dev`: 30 CVEs, 18 workloads and
+54 placements across seven teams and three environments. No reset or external
+calls. Use **Demo mode · examples** in the scope bar or the
+[presentation walkthrough](docs/DEMO.md).
+
 ## Single workspace UI
 
 The homepage `/` is the new workspace; `/workspace` is an alias for the same UI.
 The primary navigation is **Review**, **Risk decisions**, and **Timeline**:
 
 - **Review** (`/?page=findings`, with `/?page=review` for existing detail links):
-  review CVEs, select deployments, and record the next action.
-- **Risk decisions** (`/?page=exceptions`): the last 365 days of whitelist and
-  not-affected decision records, including older replacements. The table shows
-  the CVE, deployments, action, reason, reviewer, and expiry. Expiry status only
-  describes the record's time limit; open the CVE for its current effective status.
+  review CVEs, select deployments, and choose **Mark as fixed**, **Whitelist
+  temporarily**, or **Create Azure DevOps ticket**. Disabled decision buttons
+  explain what is missing and link to deployment selection. AI classification is
+  optional and never blocks manual whitelisting; a reason and confirmation are
+  still required. Historical work requests remain visible in the timeline.
+- **Risk decisions** (`/?page=exceptions`): a searchable register of the last
+  365 days of whitelist and not-affected decisions, including older replacements.
+  Summary tiles filter by expiry; team/environment filters and search are saved
+  in the URL. Identical approvals from one operation are grouped across deployments,
+  with full reasons, exact UTC dates and individual record IDs in expandable details.
+  Pages show up to 12 grouped entries. Counts distinguish decisions from underlying
+  records. Expiry is not current coverage or proof of remediation: **Review** opens
+  the CVE with the explicitly selected scope, not an unrelated previous Review scope.
   A whitelist applies through the selected date and expires at the following
   midnight UTC. The deployments then need review unless a newer decision applies.
 - **Timeline** (`/?page=daily`): one history per CVE, ordered from detection
@@ -151,8 +186,20 @@ Server-side configuration:
 | `TRIAGE_AZURE_PAT` | Server-side credential; never commit it |
 | `TRIAGE_AZURE_TEAMS_JSON` | Exact team names mapped to `project` and `area_path`; optional `work_item_type` |
 | `TRIAGE_AI_EXECUTABLE` | Absolute path to an administrator-owned read-only CLI wrapper |
+| `TRIAGE_ANALYSIS_ENABLED` | AI triage is disabled by default; must be exactly `true`/`1` (or `false`/`0`) or startup fails. Never implied by any installed binary |
+| `TRIAGE_KIRO_CLI` | Absolute path to the administrator-reviewed analysis runner; required alongside `TRIAGE_ANALYSIS_ENABLED` for any AI suggestion |
 
 For connecting a least-privilege Azure DevOps token — and verifying it can create tickets but never delete them — see [Azure credentials setup and verification](docs/AZURE_CREDENTIALS.md).
+
+Public-intelligence refreshes store each validated snapshot as an immutable generation and serve only the current one; a failed or unverifiable refresh keeps the previous generation and records a receipt. Exposure evidence is displayed from the latest observation, but only evidence from a source with an approved bounded age may support a dismissal:
+
+```elixir
+config :triage, :exposure_policy, %{
+  "scanner:trivy" => %{max_age_days: 30, require_expiry: true}
+}
+```
+
+Without an entry for a source, that source's evidence can prompt investigation but can never close work. See `app/docs/experiment-requirements.md` for the acceptance ledger.
 
 The AI wrapper accepts one JSON argument and returns a JSON object containing
 `recommendation` (`whitelist`, `fix`, or `investigate`) and a nonempty `reason`
@@ -221,3 +268,9 @@ See [Domain/API guide](docs/DOMAIN_API.md) for retained backend contracts and
 [Workspace boundaries](docs/WORKSPACE.md) for source paths, rollback safety and
 remaining acceptance requirements. Historical test counts do not certify the
 current code.
+
+The [Grafana reporting API guide](docs/GRAFANA_API.md) documents the implemented
+local read-only `/api/v1` surface, scoped bearer-token lifecycle and credential-free
+starter dashboard. The [OpenAPI contract](docs/openapi/grafana-v1.yaml) and
+[implementation plan](docs/GRAFANA_API_PLAN.md) distinguish verified local API work
+from the still-pending live Grafana, network, load and rollout gates.

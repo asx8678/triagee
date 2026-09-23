@@ -55,7 +55,10 @@ defmodule Triage.ManualCves do
           fetched_at: DateTime.utc_now() |> DateTime.truncate(:second)
         })
       )
-      |> Repo.insert(on_conflict: :nothing, conflict_target: [:source, :external_id])
+      # Identity for legacy (generation-less) advisory rows is enforced by the
+      # partial unique index; a target-less DO NOTHING stays valid after the
+      # generation migration replaced the old full unique index.
+      |> Repo.insert(on_conflict: :nothing)
     else
       {:error, :invalid_advisory}
     end

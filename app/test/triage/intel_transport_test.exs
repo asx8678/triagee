@@ -19,12 +19,21 @@ defmodule Triage.IntelTransportTest do
     end)
   end
 
+  # A KEV body that satisfies the catalogue contract (declared count matches),
+  # so transport-limit tests exercise the parse path production uses.
+  defp kev_cap_body do
+    Jason.encode!(%{
+      "vulnerabilities" => [%{"cveID" => "CVE-2026-1001", "dateAdded" => "2026-01-02"}],
+      "count" => 1
+    })
+  end
+
   test "runtime cap is used for real Req streaming and final admission, with a safe diagnostic" do
-    body = Jason.encode!(%{"vulnerabilities" => []})
+    body = kev_cap_body()
     max = byte_size(body)
     Application.put_env(:triage, :intel, enabled: true, max_response_bytes: max)
     respond(200, body)
-    assert Client.fetch(:kev) == {:ok, []}
+    assert {:ok, [%{external_id: "CVE-2026-1001"}]} = Client.fetch(:kev)
     assert_received {:request, request}
 
     initial = {request, Req.Response.new(body: "")}
@@ -45,11 +54,11 @@ defmodule Triage.IntelTransportTest do
     respond(200, body)
     assert Client.fetch(:kev) == {:error, {:response_too_large, max - 1}}
     Application.put_env(:triage, :intel, enabled: true, max_response_bytes: max + 1)
-    assert Client.fetch(:kev) == {:ok, []}
+    assert {:ok, [%{external_id: "CVE-2026-1001"}]} = Client.fetch(:kev)
   end
 
   test "injected bodies use the same cap and it cannot change during a fetch" do
-    body = Jason.encode!(%{"vulnerabilities" => []})
+    body = kev_cap_body()
     max = byte_size(body)
     Application.put_env(:triage, :intel, max_response_bytes: max)
 
@@ -60,7 +69,7 @@ defmodule Triage.IntelTransportTest do
       end
     }
 
-    assert Client.fetch(:kev, changing) == {:ok, []}
+    assert {:ok, [%{external_id: "CVE-2026-1001"}]} = Client.fetch(:kev, changing)
 
     assert Client.fetch(:kev, %{req: fn _ -> {:ok, body} end}) ==
              {:error, {:response_too_large, max - 1}}
@@ -114,7 +123,7 @@ defmodule Triage.IntelTransportTest do
           {{:nvd, "CVE-2024-3094"}, Client.nvd_url() <> "?cveId=CVE-2024-3094",
            %{"cve" => %{"id" => "CVE-2024-3094"}}}
         ] do
-      respond(200, Jason.encode!(%{"vulnerabilities" => [entry]}), [
+      respond(200, Jason.encode!(%{"vulnerabilities" => [entry], "count" => 1}), [
         {"content-type", "application/json"}
       ])
 

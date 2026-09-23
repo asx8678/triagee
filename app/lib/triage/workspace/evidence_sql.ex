@@ -16,18 +16,87 @@ defmodule Triage.Workspace.EvidenceSQL do
   def hash_sql,
     do: "encode(sha256(convert_to('#{version()}|' || #{term_sql()}, 'UTF8')), 'hex')"
 
-  @doc false
+  @doc """
+  The v1 evidence hash (placement, image digest, findings only). Kept because
+  stored decisions carry it and work requests still bind to it; it cannot
+  express exposure or intelligence change, so it is never a current approval.
+  """
   def term_sql do
-    placement =
+    "'p[' || #{placement_sql()} || ',' || #{string("i.digest")} || ',' || #{findings_sql()} || ']'"
+  end
+
+  @doc """
+  SQL for the pre-packet dismissal policy: under the default `:flag` a legacy
+  dismissal keeps covering while its own v1 hash is absent or still matches;
+  under `:demote` it never covers. Mirrors `Triage.Evidence.legacy_policy/0`.
+  """
+  def legacy_dismissal_sql do
+    if Triage.Evidence.legacy_policy() == :demote do
+      "false"
+    else
+      "(coalesce(d.metadata->>'evidence_hash', '') = '' OR d.metadata->>'evidence_hash' = #{hash_sql()})"
+    end
+  end
+
+  @doc """
+  The v2 packet hash, byte-identical to `Triage.Evidence.Packet.hash/1`:
+  a two-tuple of the hash domain and the material map (version, cve, placement,
+  digest, findings, material exposure, material intelligence).
+  """
+  def packet_hash_sql,
+    do: "encode(sha256(convert_to('#{version()}|' || #{packet_term_sql()}, 'UTF8')), 'hex')"
+
+  @doc false
+  def packet_term_sql do
+    domain = literal(Triage.Canonical.canonical(Triage.Evidence.Packet.hash_domain()))
+    version = literal(Triage.Canonical.canonical(Triage.Evidence.Packet.version()))
+
+    material =
       map_sql(%{
-        id: integer("p.id"),
-        image_id: integer("p.image_id"),
-        owner: string("p.owner"),
-        environment: string("p.environment"),
-        namespace: string("p.namespace"),
-        active: boolean("p.active")
+        "version" => version,
+        "cve" => string("t.cve"),
+        "placement" => placement_sql(),
+        "image_digest" => string("i.digest"),
+        "findings" => findings_sql(),
+        "exposure" => exposure_material_sql(),
+        "intel" => intel_material_sql()
       })
 
+    "'p[' || #{domain} || ',' || #{material} || ']'"
+  end
+
+  # Material exposure mirrors Triage.Evidence.Packet.exposure_material/1: the
+  # validity class plus the displayed value, never observation timestamps.
+  defp exposure_material_sql do
+    map_sql(%{
+      "state" => string("coalesce(t.exposure_state, 'none')"),
+      "value" => string("coalesce(t.exposure, 'unknown')")
+    })
+  end
+
+  # Material intelligence mirrors intel_material/1: per-CVE KEV facts only, so
+  # an unrelated advisory changing elsewhere does not invalidate an approval.
+  defp intel_material_sql do
+    map_sql(%{
+      "kev" => boolean("coalesce(t.kev_present, false)"),
+      "ransomware" => boolean("t.kev_ransomware"),
+      "due_date" => datetime("t.kev_due_date"),
+      "required_action" => boolean("coalesce(t.kev_required_action, false)")
+    })
+  end
+
+  defp placement_sql do
+    map_sql(%{
+      id: integer("p.id"),
+      image_id: integer("p.image_id"),
+      owner: string("p.owner"),
+      environment: string("p.environment"),
+      namespace: string("p.namespace"),
+      active: boolean("p.active")
+    })
+  end
+
+  defp findings_sql do
     finding =
       map_sql(%{
         id: integer("hf.id"),
@@ -44,12 +113,10 @@ defmodule Triage.Workspace.EvidenceSQL do
 
     # Elixir sorts a target's findings by id before hashing; a target always
     # has at least one finding, and the coalesce keeps an empty list encodable.
-    findings = """
+    """
     (SELECT 'l[' || coalesce(string_agg(#{finding}, ',' ORDER BY hf.id), '') || ']'
        FROM findings hf WHERE hf.image_id = p.image_id AND hf.cve = t.cve)
     """
-
-    "'p[' || #{placement} || ',' || #{string("i.digest")} || ',' || #{findings} || ']'"
   end
 
   # Map entries sort by their encoded keys, mirroring Triage.Canonical: the

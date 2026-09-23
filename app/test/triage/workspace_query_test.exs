@@ -21,8 +21,10 @@ defmodule Triage.WorkspaceQueryTest do
     finding!(image, "CVE-2034-1001", package_name: "second %_ package", severity: "LOW")
     finding!(image, "CVE-2034-2000", resolved_at: at(0))
     finding!(image, "CVE-2034-3000", suppressed: true)
-    Exposure.record(prod.id, "internet_exposed", "fixture", @now)
-    Exposure.record(staging.id, "internal", "fixture", @now)
+    # Recorded at the fixture's own clock: the observation-time guard is judged
+    # against the caller's clock, and this suite deliberately runs on @now.
+    Exposure.record(prod.id, "internet_exposed", "fixture", @now, nil, @now)
+    Exposure.record(staging.id, "internal", "fixture", @now, nil, @now)
 
     reference = image!("query-reference")
     placement!(reference, "public-reference", "prod")
@@ -171,8 +173,17 @@ defmodule Triage.WorkspaceQueryTest do
     assert Enum.sum(Enum.map(page.teams, & &1.metrics["active"].value)) == 18
 
     # Expired newest evidence does not resurrect an older internal observation.
+    # The record boundary refuses this contradictory window (an expiry before
+    # its own observation), so the state is written directly — a legacy or
+    # direct-write row must still be displayed safely, never as a live value.
     Enum.each(Workspace.targets(%{}, @now) |> Enum.uniq_by(& &1.id), fn t ->
-      Exposure.record(t.id, "internal", "expired", DateTime.add(@now, 10), DateTime.add(@now, -1))
+      Repo.insert!(%Exposure.Evidence{
+        placement_id: t.id,
+        exposure: "internal",
+        source: "expired",
+        observed_at: DateTime.add(@now, 10),
+        expires_at: DateTime.add(@now, -1)
+      })
     end)
 
     assert_reference(%{})
@@ -325,12 +336,26 @@ defmodule Triage.WorkspaceQueryTest do
             reason: "Query parity fixture",
             actor: "fixture",
             decided_at: @now,
-            metadata: %{}
+            # Scoped fixture decisions bind the v2 packet so coverage is
+            # exercised as a current approval; CVE-global decisions cannot bind
+            # one placement's packet, so they stay legacy (readable, not a
+            # current approval). Callers may override to pin behaviour.
+            metadata: default_metadata(cve, placement_id)
           ],
           overrides
         )
       )
     )
+  end
+
+  defp default_metadata(_cve, nil), do: %{}
+
+  defp default_metadata(cve, placement_id),
+    do: %{"packet_hash" => packet_hash!(cve, placement_id)}
+
+  defp packet_hash!(cve, placement_id) do
+    [target] = Workspace.targets(%{"cve" => cve, "placement_ids" => [placement_id]}, @now)
+    target.packet_hash
   end
 
   defp assert_sql_hashes do

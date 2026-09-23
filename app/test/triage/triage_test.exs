@@ -246,7 +246,7 @@ defmodule Triage.TriageTest do
     assert {:ok, _} =
              Triage.Decisions.record(%{
                cve: "CVE-2026-5002",
-               decision: "mitigated",
+               decision: "not_affected",
                reason: "Synthetic mitigation that already lapsed.",
                actor: "test-operator",
                decided_at: at(60),
@@ -255,7 +255,7 @@ defmodule Triage.TriageTest do
 
     row = row!("CVE-2026-5002", "active")
     assert row.state == :awaiting_assessment
-    assert row.decision.decision == "mitigated"
+    assert row.decision.decision == "not_affected"
     assert row.decision.state == :expired
     assert board("whitelisted").rows == []
   end

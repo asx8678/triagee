@@ -18,6 +18,17 @@ defmodule TriageWeb.WorkspaceRedirectController do
     redirect(conn, to: TriageWeb.WorkspaceLive.workspace_path(scope, destination))
   end
 
+  def classifier(conn, params) do
+    scope = params |> Map.take(~w(team environment)) |> Map.filter(fn {_, v} -> is_binary(v) end)
+
+    destination =
+      if is_binary(params["cve"]),
+        do: %{"page" => "review", "item" => params["cve"]},
+        else: %{"page" => "review"}
+
+    redirect(conn, to: TriageWeb.WorkspaceLive.workspace_path(scope, destination))
+  end
+
   defp destination(path_info) do
     case path_info do
       ["triage", "history"] -> %{"page" => "timeline"}

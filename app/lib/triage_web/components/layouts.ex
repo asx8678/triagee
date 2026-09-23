@@ -2,7 +2,17 @@ defmodule TriageWeb.Layouts do
   @moduledoc "Application shell and persistent, runtime-grounded safety context."
   use TriageWeb, :html
 
+  # This tracked theme is edited directly, rather than produced by Tailwind.
+  # Recompile the layout when it changes so ordinary reloads cannot reuse an old URL.
+  @workspace_css_path Path.expand("../../../priv/static/assets/css/workspace.css", __DIR__)
+  @external_resource @workspace_css_path
+  @workspace_css_version Base.encode16(:crypto.hash(:sha256, File.read!(@workspace_css_path)),
+                           case: :lower
+                         )
+
   embed_templates "layouts/*"
+
+  defp workspace_css_version, do: @workspace_css_version
 
   attr :flash, :map, required: true
   attr :active_page, :string, default: nil

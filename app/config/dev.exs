@@ -30,7 +30,9 @@ config :triage, TriageWeb.Endpoint,
   secret_key_base: "hC4HG8qTPx98cDM7hNDMr99YeQiDagghonz1eg2a3fOjvc2Bba6nylEzo07tuORP",
   watchers: [
     tailwind: {Tailwind, :install_and_run, [:triage, ~w(--watch)]}
-  ]
+  ],
+  # Refresh styles in already-open LiveViews without reloading the page or its draft.
+  live_reload: [patterns: [~r"priv/static/assets/css/.*\.css$"]]
 
 # ## SSL Support
 #

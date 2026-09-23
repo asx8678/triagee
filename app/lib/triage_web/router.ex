@@ -15,9 +15,24 @@ defmodule TriageWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :reporting_api do
+    plug TriageWeb.ReportingAuth
+  end
+
   scope "/", TriageWeb do
     pipe_through :api
     get "/health", HealthController, :show
+  end
+
+  scope "/api/v1", TriageWeb.Api.V1 do
+    pipe_through [:api, :reporting_api]
+
+    get "/summary", ReportingController, :summary
+    get "/cves", ReportingController, :cves
+    get "/cves/:cve", ReportingController, :cve
+    get "/targets", ReportingController, :targets
+    get "/targets/:placement_id/packages", ReportingController, :packages
+    get "/options", ReportingController, :options
   end
 
   scope "/", TriageWeb do
@@ -41,6 +56,7 @@ defmodule TriageWeb.Router do
       live "/timeline", WorkspaceLive, :timeline
     end
 
+    get "/classifier", WorkspaceRedirectController, :classifier
     get "/triage", WorkspaceRedirectController, :show
     get "/triage/history", WorkspaceRedirectController, :show
     get "/triage/:cve", WorkspaceRedirectController, :show

@@ -552,7 +552,7 @@ defmodule Triage.Seeds do
 
       seed_decision!(%{
         cve: "CVE-2026-60002",
-        decision: "mitigated",
+        decision: "not_affected",
         reason: "Demo decision: temporary ingress rule, expired with the old ingress.",
         actor: "local-operator",
         decided_at: DateTime.add(now, -60, :day),

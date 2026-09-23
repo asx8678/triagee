@@ -1,5 +1,24 @@
 import Config
 
+# Presentation convenience only: never approves a decision or enables AI/Azure.
+demo_mode =
+  case System.get_env("TRIAGE_DEMO_MODE", if(config_env() == :dev, do: "true", else: "false")) do
+    "true" -> true
+    "false" -> false
+    _ -> raise "TRIAGE_DEMO_MODE must be exactly true or false"
+  end
+
+config :triage, :demo_mode, demo_mode
+
+reporting_api_enabled =
+  case System.get_env("TRIAGE_REPORTING_API_ENABLED", "false") do
+    value when value in ~w(true 1) -> true
+    value when value in ~w(false 0) -> false
+    other -> raise "TRIAGE_REPORTING_API_ENABLED must be exactly true or false; got: #{other}"
+  end
+
+config :triage, :reporting_api, enabled: reporting_api_enabled, rate_limit: 120
+
 # Keep the application behind a local TLS reverse proxy or an SSH tunnel.
 # Authentication does not weaken this boundary: only numeric loopback binds are accepted.
 bind = System.get_env("TRIAGE_BIND", "127.0.0.1")
@@ -108,3 +127,34 @@ config :triage, Triage.ReviewIntegrations,
   token: System.get_env("TRIAGE_AZURE_PAT"),
   teams: review_teams,
   ai_executable: System.get_env("TRIAGE_AI_EXECUTABLE")
+
+# AI triage analysis is explicitly disabled by default (W01a). The presence
+# of a kiro-cli executable is never enablement: an administrator must set
+# BOTH a literal TRIAGE_ANALYSIS_ENABLED flag and the reviewed runner path.
+# Invalid values fail closed at boot instead of guessing.
+analysis_enabled =
+  case System.get_env("TRIAGE_ANALYSIS_ENABLED", "false") do
+    value when value in ~w(true 1) -> true
+    value when value in ~w(false 0) -> false
+    other -> raise "TRIAGE_ANALYSIS_ENABLED must be exactly true or false; got: #{other}"
+  end
+
+config :triage, Triage.AiTriage,
+  enabled: analysis_enabled,
+  cli_path: System.get_env("TRIAGE_KIRO_CLI"),
+  model: System.get_env("TRIAGE_KIRO_MODEL")
+
+# The standalone HTTP classifier is retired. Preserve its stored audit records,
+# but never start its model calls or automatic scanner from old environment flags.
+for flag <- ~w(TRIAGE_CLASSIFIER_ENABLED TRIAGE_CLASSIFIER_AUTOMATIC) do
+  unless System.get_env(flag, "false") in ~w(false 0) do
+    raise "#{flag} is retired. Use TRIAGE_ANALYSIS_ENABLED and TRIAGE_KIRO_CLI for Kiro in Review."
+  end
+end
+
+config :triage, Triage.Classifier.Model, enabled: false, automatic: false
+
+config :triage, Oban,
+  repo: Triage.Repo,
+  queues: [classifier: 1],
+  plugins: []

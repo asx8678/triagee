@@ -1,5 +1,8 @@
+# Serialized: this module truncates the shared inventory, and a concurrent
+# truncation corrupts fingerprint-bound assertions in other suites (the ticket
+# operations tests capture target versions and re-check them mid-test).
 defmodule Triage.DecisionsTest do
-  use Triage.DataCase, async: true
+  use Triage.DataCase, async: false
 
   import Triage.Fixtures
 
@@ -47,6 +50,37 @@ defmodule Triage.DecisionsTest do
     assert current.state == :active
     assert Decisions.active?(current)
     assert current.expires_at == decision.expires_at
+  end
+
+  test "an accepted risk without a nonblank rationale is rejected at the context level", %{
+    placement: placement
+  } do
+    for reason <- [nil, "", "   "] do
+      assert {:error, %Ecto.Changeset{}} =
+               Decisions.record(attrs(%{placement_id: placement.id, reason: reason}))
+    end
+  end
+
+  test "legacy rows keep their original missing rationale verbatim", %{placement: placement} do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    legacy =
+      Repo.insert!(%Triage.Decisions.Decision{
+        cve: "CVE-2098-6101",
+        decision: "accepted_risk",
+        reason: "",
+        actor: "legacy-operator",
+        decided_at: now,
+        expires_at: DateTime.add(now, 30, :day),
+        placement_id: placement.id
+      })
+
+    # Never rewritten, never manufactured; still readable and still covering.
+    assert Repo.reload!(legacy).reason == ""
+    current = Decisions.latest_by_scope(["CVE-2098-6101"])[{"CVE-2098-6101", placement.id}]
+    assert current.id == legacy.id
+    assert current.state == :active
+    assert current.reason == ""
   end
 
   test "placement decisions never cover siblings and triage requires every scope", context do
@@ -175,9 +209,12 @@ defmodule Triage.DecisionsTest do
     assert Decisions.history_for_cve("CVE-2098-6101") == []
   end
 
-  test "whitelist comments are optional but internal actor is required" do
-    assert {:ok, decision} = Decisions.record(attrs(%{reason: ""}))
-    assert decision.reason == ""
+  test "whitelist rationales are required but the internal actor is still enforced" do
+    # A13: an acceptance without a nonblank rationale is a suppression
+    # attempt, not a decision. This deliberately corrects the earlier
+    # optional-comment assertion.
+    assert {:error, reason_changeset} = Decisions.record(attrs(%{reason: ""}))
+    assert errors_on(reason_changeset).reason != []
 
     assert {:error, actor_changeset} = Decisions.record(Map.delete(attrs(), :actor))
     assert "can't be blank" in errors_on(actor_changeset).actor

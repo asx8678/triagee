@@ -36,6 +36,10 @@ defmodule Triage.Intel do
       field :required_action, :string
       field :due_date, :utc_datetime
       field :known_ransomware, :boolean
+      # The immutable validated generation this row belongs to. NULL means a
+      # pre-generation (legacy) row: readable while it is the only cache for its
+      # source, never retroactively certified as a complete catalogue.
+      belongs_to :generation, Triage.Intel.Generation
 
       timestamps(type: :utc_datetime)
     end
@@ -50,10 +54,14 @@ defmodule Triage.Intel do
         :fetched_at,
         :required_action,
         :due_date,
-        :known_ransomware
+        :known_ransomware,
+        :generation_id
       ])
       |> validate_required([:source, :external_id, :fetched_at])
-      |> unique_constraint([:source, :external_id])
+      |> unique_constraint([:source, :external_id], name: :intel_advisories_legacy_identity_index)
+      |> unique_constraint([:source, :generation_id, :external_id],
+        name: :intel_advisories_generation_identity_index
+      )
     end
   end
 
@@ -104,7 +112,7 @@ defmodule Triage.Intel do
     end
   end
 
-  alias __MODULE__.{Advisory, NewsItem, RefreshReceipt}
+  alias __MODULE__.{Advisory, CurrentGeneration, Generation, NewsItem, RefreshReceipt}
 
   @news_limit_default 10
   @valid_schemes ~w(https)
@@ -123,6 +131,7 @@ defmodule Triage.Intel do
   @doc "Advisories for a CVE external id, all sources, newest fetch first."
   def cached_advisories(external_id) when is_binary(external_id) do
     from(a in Advisory, where: a.external_id == ^external_id, order_by: [desc: a.fetched_at])
+    |> current_rows()
     |> Repo.all()
   end
 
@@ -140,6 +149,7 @@ defmodule Triage.Intel do
       where: a.source == "kev" and a.external_id == ^cve,
       order_by: [desc: a.fetched_at, desc: a.id]
     )
+    |> current_rows()
     |> Repo.all()
   end
 
@@ -172,6 +182,7 @@ defmodule Triage.Intel do
         where: a.source == "kev" and a.external_id in ^ids,
         order_by: [desc: a.fetched_at, desc: a.id]
       )
+      |> current_rows()
       |> Repo.all()
       |> Enum.reduce(%{}, fn row, acc -> Map.put_new(acc, row.external_id, row) end)
     end
@@ -203,6 +214,7 @@ defmodule Triage.Intel do
     source = nvd_source(cve)
 
     from(a in Advisory, where: a.source == ^source, order_by: [desc: a.fetched_at, desc: a.id])
+    |> current_rows()
     |> Repo.all()
   end
 
@@ -221,7 +233,63 @@ defmodule Triage.Intel do
   @spec cached_advisory_count(String.t()) :: non_neg_integer()
   def cached_advisory_count(source) when is_binary(source) do
     from(a in Advisory, where: a.source == ^source)
+    |> current_rows()
     |> Repo.aggregate(:count)
+  end
+
+  ## ---- Generations (validated, immutable intelligence snapshots) ----
+
+  # Current readers see exactly one generation per source. Before a source has a
+  # committed generation, pre-migration rows (`generation_id IS NULL`) are the
+  # cache, exactly as they were before this table existed: readable, but never
+  # retroactively certified as a complete catalogue. Once a generation is
+  # current, legacy rows stay in history and are never mixed into a certified
+  # read.
+  defp current_rows(query) do
+    from(a in query,
+      where:
+        fragment(
+          "? IS NULL AND NOT EXISTS (SELECT 1 FROM intel_current_generations c WHERE c.source = ?)",
+          a.generation_id,
+          a.source
+        ) or
+          fragment(
+            "? = (SELECT c.generation_id FROM intel_current_generations c WHERE c.source = ?)",
+            a.generation_id,
+            a.source
+          )
+    )
+  end
+
+  @doc "The validated generation a source currently serves, or nil (legacy cache)."
+  @spec current_generation(String.t()) :: struct() | nil
+  def current_generation(source) when is_binary(source) do
+    from(c in CurrentGeneration,
+      join: g in Generation,
+      on: g.id == c.generation_id,
+      where: c.source == ^source,
+      select: g
+    )
+    |> Repo.one()
+  end
+
+  @doc "Stored generations for a source, newest first — cited history, never rewritten."
+  @spec generation_history(String.t(), pos_integer()) :: [struct()]
+  def generation_history(source, limit \\ 20)
+      when is_binary(source) and is_integer(limit) and limit > 0 do
+    from(g in Generation, where: g.source == ^source, order_by: [desc: g.id], limit: ^limit)
+    |> Repo.all()
+  end
+
+  @doc "The rows of one exact stored generation, readable after the source moves on."
+  @spec generation_rows(String.t(), integer()) :: [struct()]
+  def generation_rows(source, generation_id)
+      when is_binary(source) and is_integer(generation_id) do
+    from(a in Advisory,
+      where: a.source == ^source and a.generation_id == ^generation_id,
+      order_by: [asc: a.external_id]
+    )
+    |> Repo.all()
   end
 
   @doc "Latest refresh receipt per source (for stale-status display)."
@@ -240,12 +308,32 @@ defmodule Triage.Intel do
   per advisory. A failed receipt does not invalidate or remove cached matches.
   No receipt means no recorded refresh, even if rows were populated separately.
   """
-  @spec kev_status() :: %{source: String.t(), rows: non_neg_integer(), receipt: map() | nil}
+  @spec kev_status() :: %{
+          source: String.t(),
+          rows: non_neg_integer(),
+          receipt: map() | nil,
+          generation: map() | nil
+        }
   def kev_status do
     %{
       source: "kev",
       rows: cached_advisory_count("kev"),
-      receipt: Enum.find(latest_receipts(), &(&1.source == "kev"))
+      receipt: Enum.find(latest_receipts(), &(&1.source == "kev")),
+      generation: generation_summary(current_generation("kev"))
+    }
+  end
+
+  defp generation_summary(nil), do: nil
+
+  defp generation_summary(generation) do
+    %{
+      id: generation.id,
+      complete: generation.complete,
+      row_count: generation.row_count,
+      declared_count: generation.declared_count,
+      catalog_version: generation.catalog_version,
+      started_at: generation.started_at,
+      fetched_at: generation.fetched_at
     }
   end
 
@@ -265,17 +353,167 @@ defmodule Triage.Intel do
   ## ---- Cache writes (adapters call these via the CLI path only) ----
 
   @doc """
-  Replaces the cached advisory rows for one source.
+  Stores a validated replacement for one source as a new immutable generation.
 
-  Atomic per source: the old rows are removed only inside the same
-  transaction as the validated replacement set, so a partial failure can
-  never leave the cache empty for a source. `rows` must already be sanitized
-  normalized maps with `:source` supplying the source name — an empty list
-  is a valid outcome ("source reported nothing"), NOT a cache wipe order on
-  error; errors are recorded as receipts instead and never reach this call.
+  One transaction writes the generation, its rows, the current pointer and —
+  unless `receipt: false` — the success receipt, so a refresh can never leave a
+  new cache without its receipt or move the pointer without its rows.
+
+  `complete` must only be true when the caller's validation proved the source's
+  own completeness contract. The pointer moves only when this attempt is
+  strictly newer than the current generation, comparing `started_at` (when the
+  refresh began) rather than when this transaction happened to run: an older
+  attempt that completes last is stored as history and cannot displace a newer
+  valid generation.
   """
-  def replace_advisories(source, rows) when is_binary(source) and is_list(rows),
-    do: replace_source(Advisory, source, rows)
+  @spec commit_generation(String.t(), [map()], keyword()) ::
+          {:ok, %{generation: struct(), current?: boolean()}} | {:error, term()}
+  def commit_generation(source, rows, opts \\ [])
+      when is_binary(source) and is_list(rows) do
+    if valid_rows?(rows) do
+      Repo.transaction(fn -> write_generation(source, rows, opts) end)
+    else
+      {:error, :invalid_rows}
+    end
+  end
+
+  # The transaction body: generation, rows, pointer and receipt move together,
+  # so a refresh can never leave a new cache without its receipt, or a moved
+  # pointer without its rows.
+  defp write_generation(source, rows, opts) do
+    fetched_at = DateTime.utc_now()
+    now = DateTime.truncate(fetched_at, :second)
+    started_at = DateTime.truncate(Keyword.get(opts, :started_at) || fetched_at, :second)
+
+    generation = insert_generation!(source, rows, opts, started_at, fetched_at)
+    insert_advisory_rows!(source, generation.id, rows, now)
+
+    current? = move_pointer!(source, generation.id, started_at, now)
+    maybe_record_success(source, length(rows), current?, opts)
+
+    %{generation: generation, current?: current?}
+  end
+
+  defp insert_generation!(source, rows, opts, started_at, fetched_at) do
+    %Generation{}
+    |> Generation.changeset(%{
+      source: source,
+      content_hash: Triage.Workspace.hash({source, rows}),
+      row_count: length(rows),
+      declared_count: Keyword.get(opts, :declared_count),
+      complete: Keyword.get(opts, :complete, false) == true,
+      catalog_version: Keyword.get(opts, :catalog_version),
+      metadata: Keyword.get(opts, :metadata) || %{},
+      started_at: started_at,
+      fetched_at: fetched_at
+    })
+    |> Repo.insert!()
+  end
+
+  defp maybe_record_success(source, count, current?, opts) do
+    if Keyword.get(opts, :receipt, false) == true do
+      message = if current?, do: nil, else: "stored as history; a newer generation is current"
+      {:ok, _} = record_receipt(source, true, count, message)
+    end
+
+    :ok
+  end
+
+  @doc """
+  Low-level store used by tests, seeds and offline tooling.
+
+  Rows are stored as a new generation that becomes current when it is the
+  newest attempt, but the generation is never certified (`complete: false`) and
+  no receipt is written: this path performs no source validation, so it must
+  never be reported as a successful refresh. Live refreshes go through
+  `commit_generation/3` with a validated `complete` flag and a receipt.
+  """
+  def replace_advisories(source, rows) when is_binary(source) and is_list(rows) do
+    case commit_generation(source, rows, complete: false, receipt: false) do
+      {:ok, %{generation: generation}} -> {:ok, generation.row_count}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Rows are already sanitized by the client; this only guards the low-level
+  # API against entries no reader could ever resolve (no identity to look up).
+  defp valid_rows?(rows) do
+    Enum.all?(rows, fn row ->
+      is_map(row) and is_binary(row_attr(row, :external_id)) and row_attr(row, :external_id) != ""
+    end)
+  end
+
+  defp insert_advisory_rows!(_source, _generation_id, [], _now), do: :ok
+
+  defp insert_advisory_rows!(source, generation_id, rows, now) do
+    entries =
+      Enum.map(rows, fn row ->
+        %{
+          source: source,
+          external_id: row_attr(row, :external_id),
+          summary: row_attr(row, :summary),
+          published_at: truncate_datetime(row_attr(row, :published_at)),
+          fetched_at: now,
+          required_action: row_attr(row, :required_action),
+          due_date: truncate_datetime(row_attr(row, :due_date)),
+          known_ransomware: row_attr(row, :known_ransomware),
+          generation_id: generation_id,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    Repo.insert_all(Advisory, entries)
+  end
+
+  # The low-level API used changesets before, so atom- and string-keyed rows were
+  # both accepted; keep both accepted here.
+  defp row_attr(row, key) when is_map(row) do
+    case Map.fetch(row, key) do
+      {:ok, value} -> value
+      :error -> Map.get(row, Atom.to_string(key))
+    end
+  end
+
+  defp row_attr(_row, _key), do: nil
+
+  defp truncate_datetime(nil), do: nil
+  defp truncate_datetime(%DateTime{} = datetime), do: DateTime.truncate(datetime, :second)
+  defp truncate_datetime(other), do: other
+
+  # Serialized per source through a transaction-scoped advisory lock, so two
+  # concurrent commits decide the pointer in a fixed order instead of racing the
+  # upsert. `started_at` orders attempts; equal starts keep the later arrival.
+  defp move_pointer!(source, generation_id, attempt_started_at, now) do
+    Repo.query!("SELECT pg_advisory_xact_lock(hashtext($1))", [source])
+
+    current =
+      Repo.one(
+        from(c in CurrentGeneration,
+          join: g in Generation,
+          on: g.id == c.generation_id,
+          where: c.source == ^source,
+          select: %{generation_id: c.generation_id, started_at: g.started_at}
+        )
+      )
+
+    # A strictly older attempt never displaces a newer one. An equal start (the
+    # pointer and the attempt share a second) keeps the later arrival: two
+    # near-simultaneous refreshes of the same source converge instead of
+    # deadlocking on the tie.
+    newer? = is_nil(current) or DateTime.compare(attempt_started_at, current.started_at) != :lt
+
+    if newer? do
+      Repo.insert_all(
+        CurrentGeneration,
+        [%{source: source, generation_id: generation_id, inserted_at: now, updated_at: now}],
+        on_conflict: [set: [generation_id: generation_id, updated_at: now]],
+        conflict_target: [:source]
+      )
+    end
+
+    newer?
+  end
 
   @doc "Replaces the cached news rows for one source. Same atomic semantics as advisories."
   def replace_news(source, rows) when is_binary(source) and is_list(rows),

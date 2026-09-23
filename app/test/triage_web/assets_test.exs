@@ -144,10 +144,15 @@ defmodule TriageWeb.AssetsTest do
         |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
 
       # The retired theme is never loaded into the single workspace.
-      assert hrefs == [
-               "/assets/css/tailwind.css",
-               "/assets/css/workspace.css"
-             ]
+      assert ["/assets/css/tailwind.css", theme_href] = hrefs
+      theme_uri = URI.parse(theme_href)
+      assert theme_uri.path == "/assets/css/workspace.css"
+
+      version =
+        :crypto.hash(:sha256, File.read!("priv/static/assets/css/workspace.css"))
+        |> Base.encode16(case: :lower)
+
+      assert URI.decode_query(theme_uri.query) == %{"v" => version}
 
       workspace_hrefs =
         workspace_conn()
@@ -157,21 +162,32 @@ defmodule TriageWeb.AssetsTest do
         |> LazyHTML.filter("link[rel=stylesheet]")
         |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
 
-      assert workspace_hrefs == ["/assets/css/tailwind.css", "/assets/css/workspace.css"]
-      workspace_css = response(get(build_conn(), "/assets/css/workspace.css"), 200)
+      assert workspace_hrefs == hrefs
+      workspace_css = response(get(build_conn(), theme_href), 200)
       refute workspace_css =~ "-:scope"
 
       for selector <- [
             ".panel-body{",
             ".inspector-body{",
             ".modal-body{",
-            "dialog.confirm { margin:auto; }"
+            "dialog.confirm { margin:auto; }",
+            ".risk-metrics { display:grid;",
+            ".risk-entry-main { display:grid;",
+            ".risk-register-panel { background:#fff;"
           ] do
         assert workspace_css =~ selector
       end
 
       # both are same-origin: no CDN, no bundler output
       assert Enum.all?(hrefs, &String.starts_with?(&1, "/"))
+    end
+
+    test "development reloads CSS in already-open LiveViews without resetting the page" do
+      config = Config.Reader.read!("config/dev.exs", env: :dev, target: :host)
+      patterns = config[:triage][TriageWeb.Endpoint][:live_reload][:patterns]
+      assert Enum.any?(patterns, &Regex.match?(&1, "priv/static/assets/css/workspace.css"))
+      assert Enum.any?(patterns, &Regex.match?(&1, "priv/static/assets/css/tailwind.css"))
+      refute Enum.any?(patterns, &Regex.match?(&1, "lib/triage_web/live/workspace_live.ex"))
     end
 
     test "the generated stylesheet is what the current sources compile to" do

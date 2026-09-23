@@ -30,26 +30,51 @@ defmodule Triage.Intel.Client do
   def nvd_url, do: @nvd_url
 
   @doc """
-  Fetch + normalize a source. `kind` selects the parser; allowlisted hosts only.
-  Returns `{:ok, rows}` (normalized plain maps) — errors are terminal and
-  never silently partial. Text fields are already sanitized.
-  """
-  def fetch(kind, transport \\ :default_transport)
+  Fetch + validate a source, returning rows *and* the validation result.
 
-  def fetch(:kev, transport) do
+  The KEV catalogue is validated as a catalogue: the feed's declared count must
+  be present and equal the entries actually parsed, every entry must parse, no
+  external id may repeat, and an empty catalogue is refused — an empty KEV feed
+  is a truncated or misrouted response, never a complete one. Missing or
+  mismatched counts fail closed as `:kev_declared_count_missing` /
+  `:kev_declared_count_mismatch`.
+
+  NVD is validated per CVE, which is a different contract: a genuinely empty
+  per-CVE response is a valid "no record" answer and is never a statement that
+  the CVE is not exploited. `totalResults`, when present, must still agree with
+  what parsed.
+
+  `complete?` is true only when the source's own completeness contract was
+  verified; callers must not certify a generation otherwise.
+  """
+  @spec fetch_generation(term(), term()) :: {:ok, map()} | {:error, term()}
+  def fetch_generation(kind, transport \\ :default_transport)
+
+  def fetch_generation(:kev, transport) do
     with {:ok, body} <- get(@kev_url, :kev, transport) do
-      parse_kev(body)
+      parse_kev_generation(body)
     end
   end
 
-  def fetch({:nvd, cve_id}, transport) do
+  def fetch_generation({:nvd, cve_id}, transport) do
     with :ok <- nvd_safe_cve(cve_id),
          {:ok, body} <- get(@nvd_url <> "?cveId=" <> URI.encode(cve_id), :nvd, transport) do
-      parse_nvd(body, cve_id)
+      parse_nvd_generation(body, cve_id)
     end
   end
 
-  def fetch(other, _transport), do: {:error, {:unknown_source, sanitize_error(other)}}
+  def fetch_generation(other, _transport),
+    do: {:error, {:unknown_source, sanitize_error(other)}}
+
+  @doc """
+  Fetch + normalize a source, returning only the validated rows.
+
+  Thin compatibility wrapper over `fetch_generation/2` for callers that need
+  rows alone; validation is identical, never weaker.
+  """
+  def fetch(kind, transport \\ :default_transport) do
+    with {:ok, %{rows: rows}} <- fetch_generation(kind, transport), do: {:ok, rows}
+  end
 
   ## Transport
 
@@ -90,26 +115,106 @@ defmodule Triage.Intel.Client do
 
   ## Parsers — all produce sanitized plain maps
 
-  defp parse_kev(body), do: parse_feed(body, &kev_row/1, :kev_parse_failed)
-
-  defp parse_nvd(body, cve_id),
-    do: parse_feed(body, &nvd_row(&1, cve_id), :nvd_parse_failed)
-
-  # Validate the whole feed before allowing a replacement. Invalid or duplicate
-  # entries must never be silently dropped into an empty or partial success.
-  defp parse_feed(body, parser, error) do
+  # KEV is a catalogue: validate the catalogue's own completeness claim before
+  # any single row is considered. `count` is CISA's declared total, and when it is
+  # absent or disagrees with what actually parsed the refresh is unverified and
+  # must fail rather than replace a good generation with a partial one.
+  defp parse_kev_generation(body) do
     case Jason.decode(body) do
-      {:ok, %{"vulnerabilities" => entries}} when is_list(entries) ->
-        rows = Enum.map(entries, parser)
+      {:ok, %{"vulnerabilities" => entries} = decoded} when is_list(entries) ->
+        rows = Enum.map(entries, &kev_row/1)
+        declared = declared_count(decoded)
 
-        if :error in rows or length(Enum.uniq_by(rows, & &1.external_id)) != length(rows),
-          do: {:error, error},
-          else: {:ok, rows}
+        cond do
+          :error in rows ->
+            {:error, :kev_parse_failed}
+
+          length(Enum.uniq_by(rows, & &1.external_id)) != length(rows) ->
+            {:error, :kev_parse_failed}
+
+          is_nil(declared) ->
+            {:error, :kev_declared_count_missing}
+
+          declared != length(rows) ->
+            {:error, :kev_declared_count_mismatch}
+
+          rows == [] ->
+            {:error, :kev_empty_feed}
+
+          true ->
+            {:ok, generation(rows, declared, decoded)}
+        end
 
       _ ->
-        {:error, error}
+        {:error, :kev_parse_failed}
     end
   end
+
+  # NVD is per CVE, so its contract differs: an empty result is a valid answer
+  # about one record, not an empty catalogue. `totalResults`, when present, must
+  # still agree with what parsed.
+  defp parse_nvd_generation(body, cve_id) do
+    case Jason.decode(body) do
+      {:ok, %{"vulnerabilities" => entries} = decoded} when is_list(entries) ->
+        rows = Enum.map(entries, &nvd_row(&1, cve_id))
+        declared = total_results(decoded)
+
+        cond do
+          :error in rows ->
+            {:error, :nvd_parse_failed}
+
+          length(Enum.uniq_by(rows, & &1.external_id)) != length(rows) ->
+            {:error, :nvd_parse_failed}
+
+          not is_nil(declared) and declared != length(rows) ->
+            {:error, :nvd_declared_count_mismatch}
+
+          true ->
+            {:ok, %{generation(rows, declared, decoded) | complete?: not is_nil(declared)}}
+        end
+
+      _ ->
+        {:error, :nvd_parse_failed}
+    end
+  end
+
+  defp generation(rows, declared, decoded) do
+    %{
+      rows: rows,
+      declared_count: declared,
+      complete?: true,
+      catalog_version: catalog_version(decoded),
+      metadata: feed_metadata(decoded)
+    }
+  end
+
+  defp declared_count(%{"count" => count}) when is_integer(count) and count >= 0, do: count
+  defp declared_count(_decoded), do: nil
+
+  defp total_results(%{"totalResults" => total}) when is_integer(total) and total >= 0, do: total
+  defp total_results(_decoded), do: nil
+
+  defp catalog_version(%{"catalogVersion" => version}) when is_binary(version),
+    do: String.slice(Sanitize.text(version) || "", 0, 40)
+
+  defp catalog_version(_decoded), do: nil
+
+  # Only the catalogue's own non-secret provenance metadata is retained, and only
+  # sanitized and bounded.
+  defp feed_metadata(decoded) do
+    for key <- ["title", "catalogVersion", "dateReleased", "count"],
+        value = decoded[key],
+        not is_nil(value),
+        into: %{} do
+      {key, sanitize_meta(value)}
+    end
+  end
+
+  defp sanitize_meta(value) when is_binary(value),
+    do: String.slice(Sanitize.text(value) || "", 0, 200)
+
+  defp sanitize_meta(value) when is_integer(value), do: value
+  defp sanitize_meta(_other), do: nil
 
   defp kev_row(%{"cveID" => id} = entry) do
     if Sanitize.valid_cve_id?(id) and

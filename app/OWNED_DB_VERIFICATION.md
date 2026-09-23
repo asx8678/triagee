@@ -48,6 +48,12 @@ A preexisting generated name is never adopted. Cleanup drops only the exact data
 
 Exit 64 means invalid mode, 65 rejected ambient execution control or an invalid `TRIAGE_OWNED_DB_PORT`, 69 missing tools, 70 unsafe generated identity, 73 preexisting database, and 74 cleanup failure. Other Mix/psql failures preserve their nonzero status.
 
+The classifier migration creates one safety-control row. The `empty` guard
+allows only that exact initial singleton (`id=1`, unpaused, revision 1, and the
+migration's initial reason). Extra rows or altered control state fail the guard;
+classifier evidence, recommendations, feedback, events and Oban jobs must all
+remain empty. The `pristine` guard still requires no user tables at all.
+
 ## Tested boundary
 
 `scripts/verify_owned_db_test.sh` uses fake `mise` and `psql` commands only. It executes invalid mode/environment paths, ambient partition/concurrency rejection, config mismatch with no create/drop, preexisting refusal with no effects, current-database mismatch with exact owned cleanup, populated-table rejection before concurrency tests, successful exact cleanup, focused target selection, and failed cleanup without force. It does not validate a real PostgreSQL connection, migrations, application tests, listener behavior, or cleanup under real sessions; the coordinator performs those integrations later. Listener ownership extensions belong in a separate coordinator-approved script/probe.

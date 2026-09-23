@@ -66,11 +66,15 @@ defmodule TriageWeb.LegacyRouteCutoverTest do
            }
   end
 
-  test "production mounts only workspace LiveViews and never forwards to the legacy test router" do
+  test "production mounts only workspace LiveViews, never the legacy test router" do
     routes = Phoenix.Router.routes(TriageWeb.Router)
     live_routes = Enum.filter(routes, &(&1.plug == Phoenix.LiveView.Plug))
 
-    assert Enum.sort(Enum.map(live_routes, & &1.path)) == ["/", "/timeline", "/workspace"]
+    assert Enum.sort(Enum.map(live_routes, & &1.path)) == [
+             "/",
+             "/timeline",
+             "/workspace"
+           ]
 
     for route <- live_routes do
       assert {TriageWeb.WorkspaceLive, _, _, _} = route.metadata.phoenix_live_view

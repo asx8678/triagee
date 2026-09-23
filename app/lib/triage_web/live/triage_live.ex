@@ -8,7 +8,7 @@ defmodule TriageWeb.TriageLive do
   presented.
 
   The page reads the work list and can record one thing: an operator decision
-  (`accepted_risk`, `not_affected` or `mitigated`, via `Triage.Decisions`). That
+  (`accepted_risk`, `not_affected` or `fixed`, via `Triage.Decisions`). That
   is the only write here. It never touches a finding, never saves a review and
   never suppresses anything, so an advisory that leaves this list by decision is
   still in Findings, still on its CVE page and still unexplained by any review.
@@ -529,7 +529,7 @@ defmodule TriageWeb.TriageLive do
       </section>
 
       <details id="triage-decision-panel" class="disclosure">
-        <summary>Record a decision — accepted risk, not affected, or mitigated</summary>
+        <summary>Record a decision — accepted risk, not affected, or fixed</summary>
         <p class="supporting">
           A decision takes an advisory out of the work list above. It is <strong>not</strong>
           resolution: the finding keeps its severity, its lifecycle events and its place in

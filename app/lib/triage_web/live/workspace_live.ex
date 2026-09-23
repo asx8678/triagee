@@ -8,15 +8,22 @@ defmodule TriageWeb.WorkspaceLive do
   import TriageWeb.ExceptionsComponents
 
   @pages ~w(findings exceptions daily overview inventory review timeline news)
-  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview)
+  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview risk_q risk_status risk_team risk_environment risk_page focus_target)
 
+  @impl true
   def mount(_params, _session, socket) do
     socket = TimelineLive.initialize(socket)
-    if connected?(socket), do: Phoenix.PubSub.subscribe(Triage.PubSub, "workspace:changes")
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Triage.PubSub, "workspace:changes")
+      Phoenix.PubSub.subscribe(Triage.PubSub, "review:classification")
+      Process.send_after(self(), :classification_tick, 2_000)
+    end
 
     {:ok,
      assign(socket,
        page_title: "Overview",
+       demo_mode: Application.get_env(:triage, :demo_mode, false),
        drafts: %{},
        stale_cves: MapSet.new(),
        draft_error: false,
@@ -45,12 +52,18 @@ defmodule TriageWeb.WorkspaceLive do
        news_headlines_error: nil,
        compact: false,
        daily_before: nil,
-       daily_data: nil
+       daily_data: nil,
+       ai_assessing: false,
+       ai_assessment: nil,
+       ai_assessment_error: nil
      )}
   end
 
+  @impl true
   def handle_params(params, uri, socket) do
+    raw_params = params
     timeline? = URI.parse(uri).path == "/timeline" or params["page"] == "timeline"
+    invalid_params = not valid_params?(raw_params)
 
     timeline_params =
       if Map.has_key?(params, "team"), do: Map.put(params, "owner", params["team"]), else: params
@@ -61,6 +74,7 @@ defmodule TriageWeb.WorkspaceLive do
       |> normalize_valid_params()
       |> normalize_timeline_params(timeline?)
       |> normalize_inspect_deep_link()
+      |> preserve_invalid_focus(raw_params, invalid_params)
 
     socket = clear_changed_selection(socket, params)
     page = if params["page"] in @pages, do: params["page"], else: "findings"
@@ -76,12 +90,25 @@ defmodule TriageWeb.WorkspaceLive do
        page_title: page_title(page),
        queue_shown:
          if(params["item"] != socket.assigns[:item], do: false, else: socket.assigns.queue_shown),
-       invalid_params: not valid_params?(params),
+       invalid_params: invalid_params,
        confirmation: nil
      )
      |> load()
      |> maybe_load_news()}
   end
+
+  defp history_scope_label("exceptions", params) do
+    Enum.map_join(
+      [{"risk_team", "All teams"}, {"risk_environment", "All environments"}],
+      " · ",
+      fn {key, fallback} ->
+        value = String.trim(params[key] || "")
+        if value == "", do: fallback, else: value
+      end
+    )
+  end
+
+  defp history_scope_label(_page, _params), do: "All teams · All environments"
 
   defp page_title(page) do
     cond do
@@ -114,6 +141,11 @@ defmodule TriageWeb.WorkspaceLive do
       params |> Map.put("page", "review") |> Map.put("item", cve) |> Map.drop(["inspect", "tab"])
 
   defp normalize_inspect_deep_link(params), do: params
+
+  defp preserve_invalid_focus(_params, %{"focus_target" => value}, true),
+    do: %{"page" => "review", "focus_target" => value}
+
+  defp preserve_invalid_focus(params, _raw_params, _invalid?), do: params
 
   defp valid_params?(params) do
     Enum.all?(Map.take(params, @keys -- ~w(weeks tview)), fn {_k, v} ->
@@ -153,6 +185,8 @@ defmodule TriageWeb.WorkspaceLive do
       if socket.assigns.invalid_params,
         do: empty_page(params),
         else: Workspace.page(page_params(params))
+
+    page = exact_target_page(page, params)
 
     history =
       if page.row,
@@ -200,6 +234,7 @@ defmodule TriageWeb.WorkspaceLive do
       search_form: search_form(params)
     )
     |> prepare_draft(page.row, page.matching)
+    |> load_classification()
     |> load_timeline()
   end
 
@@ -244,6 +279,22 @@ defmodule TriageWeb.WorkspaceLive do
       metadata: decision.metadata,
       operation_id: decision.operation_id
     }
+  end
+
+  # Scores are loaded from durable jobs, never delivered as an unbound task result.
+  # This only reads; opening a page never starts Kiro or modifies a reviewer draft.
+  defp load_classification(socket) do
+    run =
+      if socket.assigns.row && socket.assigns.page in ~w(findings review),
+        do: Triage.AiTriage.Runs.latest(socket.assigns.row.cve, socket.assigns.params)
+
+    display = Triage.AiTriage.Runs.display(run)
+
+    assign(socket,
+      ai_assessing: display.assessing,
+      ai_assessment: display.assessment,
+      ai_assessment_error: display.error
+    )
   end
 
   defp empty_page(params) do
@@ -323,23 +374,18 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   defp prepare_draft(socket, row, _matching) do
-    # A fresh draft is neutral (I05/D09): no preselected action, no prewritten
-    # conclusion and no automatically selected write targets. The reviewer
-    # chooses each explicitly; fingerprints are captured when a target is
-    # selected, and a saved draft still restores its original selection.
-    draft =
+    # Demo defaults are only a fresh preview. User edits, deselection and saved
+    # drafts are never overwritten, and opening the page never records a decision.
+    demo? = socket.assigns.demo_mode and socket.assigns.can_review
+
+    existing =
       Map.get(socket.assigns.drafts, row.cve) ||
-        stored_draft(socket.assigns.current_principal, row.cve) ||
-        %{
-          fields: %{"action" => "", "owner" => "", "reason" => "", "due_on" => ""},
-          targets: [],
-          versions: %{},
-          operation: Ecto.UUID.generate(),
-          revision: nil,
-          saved: false,
-          dirty: false,
-          stale: false
-        }
+        stored_draft(socket.assigns.current_principal, row.cve)
+
+    draft =
+      if is_nil(existing) or (demo? and not existing.dirty and not existing.saved),
+        do: fresh_draft(row, demo?),
+        else: existing
 
     stale = stale_draft?(draft, row.cve)
 
@@ -356,6 +402,26 @@ defmodule TriageWeb.WorkspaceLive do
       decision_form: to_form(draft.fields, as: :decision),
       hidden_targets: draft.targets -- visible_ids
     )
+  end
+
+  defp fresh_draft(row, demo?) do
+    targets = if demo?, do: Enum.filter(row.scopes, & &1.active?), else: []
+
+    %{
+      fields: %{
+        "action" => if(demo?, do: "accepted_risk", else: ""),
+        "owner" => "",
+        "reason" => "",
+        "due_on" => if(demo?, do: Date.to_iso8601(Commit.default_due_on()), else: "")
+      },
+      targets: Enum.map(targets, & &1.id),
+      versions: Map.new(targets, &{&1.id, &1.fingerprint}),
+      operation: Ecto.UUID.generate(),
+      revision: nil,
+      saved: false,
+      dirty: false,
+      stale: false
+    }
   end
 
   defp stale_draft?(%{dirty: false}, _cve), do: false
@@ -386,6 +452,7 @@ defmodule TriageWeb.WorkspaceLive do
     end
   end
 
+  @impl true
   def handle_event(event, _, %{assigns: %{pending_operation: pending}} = socket)
       when not is_nil(pending) and
              event in ["draft", "target", "save", "reconcile", "cancel-decision"] do
@@ -478,6 +545,26 @@ defmodule TriageWeb.WorkspaceLive do
          )
      )}
   end
+
+  def handle_event(
+        "risk-filter",
+        %{"risk_filters" => params},
+        %{assigns: %{page: "exceptions"}} = socket
+      )
+      when is_map(params) do
+    filters = Map.take(params, ~w(risk_q risk_team risk_environment))
+
+    if Enum.all?(filters, fn {_key, value} -> is_binary(value) and byte_size(value) <= 2000 end) do
+      {:noreply,
+       push_patch(socket,
+         to: workspace_path(socket.assigns.params, Map.put(filters, "risk_page", nil))
+       )}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("risk-filter", _params, socket), do: {:noreply, socket}
 
   def handle_event("search", %{"search" => params}, socket) do
     {:noreply,
@@ -581,13 +668,19 @@ defmodule TriageWeb.WorkspaceLive do
         persist: false
       )
 
-    # The authenticated commit injects the real actor from the principal
-    # server-side (I03); the pre-validation mirrors that so work actions are
-    # judged on their required owner/date/justification merits alone.
+    # The authenticated commit injects the real actor server-side. Historical
+    # work requests remain supported by the domain, but Review offers only
+    # the three explicit actions below.
     changeset =
       Commit.form(Map.put(socket.assigns.draft.fields, "actor", "authenticated"))
 
     cond do
+      socket.assigns.draft.fields["action"] not in Commit.review_actions() ->
+        {:noreply,
+         assign(socket,
+           error: "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
+         )}
+
       socket.assigns.draft_error ->
         {:noreply, socket}
 
@@ -766,6 +859,7 @@ defmodule TriageWeb.WorkspaceLive do
   def handle_event("dismiss-action-toast", _, socket),
     do: {:noreply, assign(socket, action_toast: nil)}
 
+  @impl true
   def handle_event("daily-prev", %{"before" => cursor}, socket) do
     {:noreply,
      socket
@@ -775,6 +869,47 @@ defmodule TriageWeb.WorkspaceLive do
 
   def handle_event("daily-latest", _, socket),
     do: {:noreply, socket |> assign(:daily_before, nil) |> load()}
+
+  def handle_event("classify-now", _, %{assigns: %{row: row, can_review: true}} = socket)
+      when not is_nil(row) do
+    case Triage.AiTriage.Runs.request(
+           row.cve,
+           socket.assigns.params,
+           socket.assigns.current_principal
+         ) do
+      {:ok, _run} ->
+        {:noreply, load_classification(socket)}
+
+      {:error, reason} ->
+        message =
+          case reason do
+            :analysis_disabled ->
+              "Kiro classification is disabled. Configure TRIAGE_ANALYSIS_ENABLED and TRIAGE_KIRO_CLI, then restart."
+
+            :not_configured ->
+              "Kiro is not configured. Set TRIAGE_KIRO_CLI to your authenticated kiro-cli executable."
+
+            :prompt_too_large ->
+              "Full evidence exceeds the input limit. Narrow the team/environment scope; no evidence was dropped."
+
+            _ ->
+              "Classification could not start. Refresh the evidence and check your review permission."
+          end
+
+        {:noreply, assign(socket, ai_assessment_error: message)}
+    end
+  end
+
+  def handle_event("classify-now", _, socket),
+    do:
+      {:noreply,
+       assign(socket, ai_assessment_error: "Reviewer permission is required to classify.")}
+
+  # Existing clients use the same guarded, durable path after a code reload.
+  def handle_event("ai-analyze", params, socket), do: handle_event("classify-now", params, socket)
+
+  def handle_event("ai-dismiss", _, socket),
+    do: {:noreply, assign(socket, ai_assessment: nil, ai_assessment_error: nil)}
 
   def handle_event(_, _, socket), do: {:noreply, socket}
 
@@ -872,8 +1007,27 @@ defmodule TriageWeb.WorkspaceLive do
         {"severity", ~w(CRITICAL HIGH MEDIUM LOW)}
       ],
       fn {key, allowed} -> params[key] in [nil, ""] or params[key] in allowed end
-    )
+    ) and valid_focus_target?(params["focus_target"])
   end
+
+  defp valid_focus_target?(nil), do: true
+  defp valid_focus_target?(""), do: true
+
+  defp valid_focus_target?(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {id, ""} when id > 0 -> true
+      _ -> false
+    end
+  end
+
+  defp valid_focus_target?(_value), do: false
+
+  defp exact_target_page(page, %{"focus_target" => value}) when value != "" do
+    target? = page.row && Enum.any?(page.row.scopes, &(to_string(&1.id) == value))
+    if target?, do: page, else: %{page | row: nil, item: nil}
+  end
+
+  defp exact_target_page(page, _params), do: page
 
   defp clear_changed_selection(socket, params) do
     previous = Map.get(socket.assigns, :params, %{}) |> Map.take(~w(team environment))
@@ -887,6 +1041,25 @@ defmodule TriageWeb.WorkspaceLive do
     else
       socket
     end
+  end
+
+  # Ignore legacy/unbound result messages. Current notifications only trigger
+  # a fresh read of the durable, evidence-bound classification.
+  @impl true
+  def handle_info({:ai_assessment, _cve, _result}, socket), do: {:noreply, socket}
+
+  def handle_info({:classification_changed, cve}, socket) do
+    if socket.assigns.row && socket.assigns.row.cve == cve,
+      do: {:noreply, load_classification(socket)},
+      else: {:noreply, socket}
+  end
+
+  def handle_info(:classification_tick, socket) do
+    Process.send_after(self(), :classification_tick, 2_000)
+
+    if socket.assigns.ai_assessing,
+      do: {:noreply, load_classification(socket)},
+      else: {:noreply, socket}
   end
 
   def handle_info({:workspace_changed, cve}, socket) do
@@ -904,7 +1077,7 @@ defmodule TriageWeb.WorkspaceLive do
         )
 
       socket = if socket.assigns.item == cve, do: assign(socket, draft: draft), else: socket
-      {:noreply, socket}
+      {:noreply, load_classification(socket)}
     else
       drafts =
         if draft && draft.saved,
@@ -921,7 +1094,8 @@ defmodule TriageWeb.WorkspaceLive do
       else: {:noreply, socket}
   end
 
-  defp action_message(cve, %{"action" => "fixed"}), do: "#{cve} marked as fixed"
+  defp action_message(cve, %{"action" => "fixed"}),
+    do: "#{cve} reported fixed · deployment verification still needed"
 
   defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}),
     do: "#{cve} whitelisted until #{date}"
@@ -979,6 +1153,13 @@ defmodule TriageWeb.WorkspaceLive do
         assign(socket,
           confirmation: nil,
           error: "Choose today or a future date (UTC). Your draft is unchanged."
+        )
+
+      {:error, {:dismissal_basis_invalid, _id, state}} ->
+        assign(socket,
+          confirmation: nil,
+          error:
+            "Exposure evidence is #{state} for a selected target; review the evidence before accepting risk. Your draft is unchanged."
         )
 
       {:error, _} ->
@@ -1100,6 +1281,7 @@ defmodule TriageWeb.WorkspaceLive do
     |> start_async(:news_headlines, fn -> Triage.SecurityNews.headlines() end)
   end
 
+  @impl true
   def handle_async(:news_cves, {:ok, {:ok, result}}, socket),
     do: {:noreply, assign(socket, news_cves: result, news_cves_loading: false)}
 
@@ -1131,6 +1313,7 @@ defmodule TriageWeb.WorkspaceLive do
   defp news_error({:ok, {:error, message}}) when is_binary(message), do: message
   defp news_error(_), do: "Source could not be refreshed. Please try again."
 
+  @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope} workspace>
@@ -1183,7 +1366,7 @@ defmodule TriageWeb.WorkspaceLive do
           <span class="scope-label">Public intelligence</span><span>Global CVE news · Independent of your inventory</span>
         </div>
         <div :if={@page in ~w(exceptions daily)} id="workspace-history-scope" class="scopebar">
-          <span class="scope-label">History</span><span>All teams · All environments</span>
+          <span class="scope-label">History</span><span>{history_scope_label(@page, @params)}</span>
           <span class="dataset"><span class="tag">{if @page == "exceptions",
             do: "Risk decision history",
             else: "Detections & actions"}</span></span>
@@ -1223,6 +1406,19 @@ defmodule TriageWeb.WorkspaceLive do
                 else: workspace_path(@params, %{"team" => nil, "environment" => nil, "offset" => nil})
             }
           >Reset scope</.link>
+          <.link
+            :if={@demo_mode}
+            id="demo-mode"
+            class="tag"
+            title="Demo defaults: active deployments in the current scope and Whitelist temporarily are preselected. Your reason and confirmation are still required."
+            patch={
+              workspace_path(%{}, %{
+                "page" => "review",
+                "team" => "demo-payments",
+                "item" => "CVE-2099-9101"
+              })
+            }
+          >Demo mode · examples</.link>
           <button type="button" class="freshness quiet" phx-click="settings">Coverage unverified</button>
         </.form>
         <main
@@ -1342,6 +1538,10 @@ defmodule TriageWeb.WorkspaceLive do
             draft_error={@draft_error}
             pending_operation={@pending_operation}
             history={@row_history}
+            ai_configured={Triage.AiTriage.configured?()}
+            ai_assessing={@ai_assessing}
+            ai_assessment={@ai_assessment}
+            ai_assessment_error={@ai_assessment_error}
           />
           <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
           <TriageWeb.DailyComponents.panel

@@ -50,7 +50,15 @@ defmodule TriageWeb.SessionHTMLTest do
       |> LazyHTML.query("link[rel=stylesheet]")
       |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
 
-    assert hrefs == ["/assets/css/tailwind.css", "/assets/css/workspace.css"]
+    assert ["/assets/css/tailwind.css", theme_href] = hrefs
+    theme_uri = URI.parse(theme_href)
+    assert theme_uri.path == "/assets/css/workspace.css"
+
+    version =
+      :crypto.hash(:sha256, File.read!("priv/static/assets/css/workspace.css"))
+      |> Base.encode16(case: :lower)
+
+    assert URI.decode_query(theme_uri.query) == %{"v" => version}
     document
   end
 end

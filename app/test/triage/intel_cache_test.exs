@@ -208,7 +208,7 @@ defmodule Triage.IntelCacheTest do
   end
 
   test "kev_status reports the whole-source count and the latest refresh receipt" do
-    assert Intel.kev_status() == %{source: "kev", rows: 0, receipt: nil}
+    assert Intel.kev_status() == %{source: "kev", rows: 0, receipt: nil, generation: nil}
 
     {:ok, 2} =
       Intel.replace_advisories("kev", [
@@ -225,6 +225,10 @@ defmodule Triage.IntelCacheTest do
     assert status.rows == 2
     assert status.receipt.succeeded == false
     assert status.receipt.message == "simulated outage"
+
+    # The low-level compatibility store is never certified as a complete refresh.
+    assert status.generation.complete == false
+    assert status.generation.row_count == 2
 
     # A failed receipt does not erase or invalidate retained rows.
     assert Intel.kev_index(["CVE-2026-8001"]) |> Map.has_key?("CVE-2026-8001")

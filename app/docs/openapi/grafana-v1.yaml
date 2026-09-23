@@ -1,0 +1,412 @@
+openapi: 3.1.0
+info:
+  title: Triage read-only reporting API
+  version: 1.0.0
+  description: >-
+    Current recorded CVE and target state for server-side Grafana datasources.
+    Risk acceptance is not remediation, and evaluated_at is not a scan timestamp.
+servers:
+  - url: https://triage.example.invalid
+    description: Replace with the approved private TLS proxy URL.
+security:
+  - reportingBearer: []
+tags:
+  - name: Reporting
+paths:
+  /api/v1/summary:
+    get:
+      tags: [Reporting]
+      operationId: getReportingSummary
+      summary: Current authorized CVE and target totals
+      parameters:
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Severity'
+      responses:
+        '200':
+          description: Current per-response summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/cves:
+    get:
+      tags: [Reporting]
+      operationId: listReportingCves
+      summary: Page active CVEs in deterministic identifier order
+      parameters:
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Severity'
+        - $ref: '#/components/parameters/Cve'
+        - $ref: '#/components/parameters/ActiveTrue'
+        - $ref: '#/components/parameters/WhitelistCoverage'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One bounded CVE page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CveListEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/cves/{cve}:
+    get:
+      tags: [Reporting]
+      operationId: getReportingCve
+      summary: Get one active CVE aggregate in authorized scope
+      parameters:
+        - $ref: '#/components/parameters/CvePath'
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+      responses:
+        '200':
+          description: CVE aggregate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CveEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/targets:
+    get:
+      tags: [Reporting]
+      operationId: listReportingTargets
+      summary: Page exact CVE and placement pairs
+      parameters:
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Severity'
+        - $ref: '#/components/parameters/Cve'
+        - $ref: '#/components/parameters/Active'
+        - $ref: '#/components/parameters/Whitelisted'
+        - $ref: '#/components/parameters/NeedsDecision'
+        - $ref: '#/components/parameters/NeedsAttention'
+        - $ref: '#/components/parameters/ExpiresWithinDays'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One bounded target page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetListEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/targets/{placement_id}/packages:
+    get:
+      tags: [Reporting]
+      operationId: listReportingTargetPackages
+      summary: Page scanner package evidence for one exact CVE and placement
+      parameters:
+        - $ref: '#/components/parameters/PlacementId'
+        - $ref: '#/components/parameters/RequiredCve'
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One bounded package-evidence page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageListEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/options:
+    get:
+      tags: [Reporting]
+      operationId: listReportingOptions
+      summary: Page authorized team and environment pairs
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Authorized option pairs and fixed enums
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionsEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+components:
+  securitySchemes:
+    reportingBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque trg_ token
+  parameters:
+    Team:
+      name: team
+      in: query
+      schema: { type: string, maxLength: 120 }
+    Environment:
+      name: environment
+      in: query
+      schema: { type: string, maxLength: 120 }
+    Search:
+      name: q
+      in: query
+      schema: { type: string, maxLength: 200 }
+    Severity:
+      name: severity
+      in: query
+      schema: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
+    Cve:
+      name: cve
+      in: query
+      schema: { type: string, pattern: '^CVE-[0-9]{4}-[0-9]{4,}$', maxLength: 40 }
+    RequiredCve:
+      name: cve
+      in: query
+      required: true
+      schema: { type: string, pattern: '^CVE-[0-9]{4}-[0-9]{4,}$', maxLength: 40 }
+    CvePath:
+      name: cve
+      in: path
+      required: true
+      schema: { type: string, pattern: '^CVE-[0-9]{4}-[0-9]{4,}$', maxLength: 40 }
+    PlacementId:
+      name: placement_id
+      in: path
+      required: true
+      description: PostgreSQL bigint serialized as a decimal string.
+      schema: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+    ActiveTrue:
+      name: active
+      in: query
+      description: CVE lists support active=true only.
+      schema: { type: boolean, default: true, enum: [true] }
+    Active:
+      name: active
+      in: query
+      schema: { type: boolean, default: true }
+    Whitelisted:
+      name: whitelisted
+      in: query
+      schema: { type: boolean }
+    NeedsDecision:
+      name: needs_decision
+      in: query
+      schema: { type: boolean }
+    NeedsAttention:
+      name: needs_attention
+      in: query
+      schema: { type: boolean }
+    ExpiresWithinDays:
+      name: expires_within_days
+      in: query
+      description: Valid only together with whitelisted=true.
+      schema: { type: integer, minimum: 1, maximum: 90 }
+    WhitelistCoverage:
+      name: whitelist_coverage
+      in: query
+      schema: { type: string, enum: [none, partial, full, not_applicable] }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Signed cursor bound to endpoint, normalized filters, token and grants.
+      schema: { type: string, maxLength: 4096 }
+  responses:
+    BadRequest:
+      description: Invalid, contradictory, unknown or cursor parameters
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    Unauthenticated:
+      description: Missing, invalid, expired or revoked bearer token
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    Forbidden:
+      description: Requested scope is outside the token's exact pair grants
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    NotFound:
+      description: Exact record is unavailable in authorized scope
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    RateLimited:
+      description: Per-token request limit exceeded
+      headers:
+        Retry-After: { schema: { type: integer, minimum: 1, maximum: 60 } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    Unavailable:
+      description: API disabled or reporting storage unavailable
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, detail]
+          properties:
+            code: { type: string }
+            detail: { type: string }
+    Meta:
+      type: object
+      required: [schema_version, evaluated_at, consistency, source_coverage, filters, limitations]
+      properties:
+        schema_version: { const: '1.0' }
+        evaluated_at: { type: string, format: date-time }
+        consistency: { const: per_response }
+        source_coverage: { const: unknown }
+        filters: { type: object, additionalProperties: true }
+        counting_units: { type: object, additionalProperties: { type: string } }
+        policy: { type: object, additionalProperties: true }
+        limitations: { type: array, items: { type: string } }
+    Pagination:
+      type: object
+      required: [total, next_cursor]
+      properties:
+        total: { type: [integer, 'null'], minimum: 0 }
+        next_cursor: { type: [string, 'null'] }
+    CveRow:
+      type: object
+      required: [cve, active_targets, whitelisted_targets, needs_decision_targets, needs_attention_targets, whitelist_coverage, detail_path]
+      properties:
+        cve: { type: string }
+        severity: { type: [string, 'null'] }
+        priority: { type: [string, 'null'] }
+        first_seen: { type: [string, 'null'], format: date-time }
+        last_seen: { type: [string, 'null'], format: date-time }
+        active_targets: { type: integer, minimum: 0 }
+        whitelisted_targets: { type: integer, minimum: 0 }
+        needs_decision_targets: { type: integer, minimum: 0 }
+        needs_attention_targets: { type: integer, minimum: 0 }
+        whitelist_coverage: { type: string, enum: [none, partial, full, not_applicable] }
+        detail_path: { type: string }
+        targets_path: { type: string }
+    TargetRow:
+      type: object
+      required: [cve, placement_id, team, active, coverage_state, needs_decision, needs_attention, whitelisted, package_count, detail_path]
+      properties:
+        cve: { type: string }
+        placement_id: { type: string, pattern: '^[1-9][0-9]*$' }
+        team: { type: string }
+        environment: { type: [string, 'null'] }
+        namespace: { type: [string, 'null'] }
+        image_digest: { type: [string, 'null'] }
+        image_repository: { type: [string, 'null'] }
+        image_tag: { type: [string, 'null'] }
+        severity: { type: string }
+        review_priority: { type: [integer, 'null'] }
+        active: { type: boolean }
+        exposure: { type: string }
+        exposure_state: { type: string }
+        decision_type: { type: [string, 'null'] }
+        decision_id: { type: [string, 'null'] }
+        coverage_state: { type: string }
+        needs_decision: { type: boolean }
+        needs_attention: { type: boolean }
+        attention_reason: { type: [string, 'null'] }
+        whitelisted: { type: boolean }
+        expires_at: { type: [string, 'null'], format: date-time }
+        expiry_boundary: { type: [string, 'null'] }
+        first_observed_at: { type: [string, 'null'], format: date-time }
+        last_observed_at: { type: [string, 'null'], format: date-time }
+        package_count: { type: integer, minimum: 0 }
+        detail_path: { type: string }
+    PackageRow:
+      type: object
+      required: [id, package_name, severity, suppressed]
+      properties:
+        id: { type: string }
+        package_name: { type: string }
+        package_version: { type: [string, 'null'] }
+        severity: { type: [string, 'null'] }
+        fix: { type: [string, 'null'] }
+        suppressed: { type: boolean }
+        first_seen: { type: [string, 'null'], format: date-time }
+        last_seen: { type: [string, 'null'], format: date-time }
+        resolved_at: { type: [string, 'null'], format: date-time }
+    SummaryEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [active_cves, active_targets, whitelisted_targets, needs_decision_cves, breakdown_truncated]
+          additionalProperties: true
+          properties:
+            active_cves: { type: integer, minimum: 0 }
+            active_targets: { type: integer, minimum: 0 }
+            whitelisted_targets: { type: integer, minimum: 0 }
+            needs_decision_cves: { type: integer, minimum: 0 }
+            breakdown_truncated: { type: object, additionalProperties: { type: boolean } }
+            by_severity: { type: array, items: { type: object, additionalProperties: true } }
+            by_team: { type: array, maxItems: 100, items: { type: object, additionalProperties: true } }
+            by_environment: { type: array, maxItems: 100, items: { type: object, additionalProperties: true } }
+        meta: { $ref: '#/components/schemas/Meta' }
+    CveListEnvelope:
+      type: object
+      required: [data, meta, pagination]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/CveRow' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+    CveEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/CveRow' }
+        meta: { $ref: '#/components/schemas/Meta' }
+    TargetListEnvelope:
+      type: object
+      required: [data, meta, pagination]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/TargetRow' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+    PackageListEnvelope:
+      type: object
+      required: [data, meta, pagination]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/PackageRow' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+    OptionsEnvelope:
+      type: object
+      required: [data, meta, pagination]
+      properties:
+        data:
+          type: object
+          required: [pairs, teams, environments, severities, whitelist_coverage]
+          properties:
+            pairs: { type: array, items: { type: object, required: [team, environment], properties: { team: { type: string }, environment: { type: string } } } }
+            teams: { type: array, items: { type: string } }
+            environments: { type: array, items: { type: string } }
+            severities: { type: array, items: { type: string } }
+            whitelist_coverage: { type: array, items: { type: string } }
+        meta: { $ref: '#/components/schemas/Meta' }
+        pagination: { $ref: '#/components/schemas/Pagination' }

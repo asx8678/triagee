@@ -59,7 +59,7 @@ The bundle was authored against `33bc06f`. Five commits landed between baseline 
 
 | Check | Result | Notes |
 |---|---|---|
-| `mix test` (full suite, clean runs) | **1195 passed, 2 skipped, 0 failed** (multiple consecutive clean executions) | Earlier "failure" readings were traced to my own tooling stacking concurrent suite runs on the shared test database — not application defects. One intermittent single-test flake remains (~1–2% of runs, different test each time; passes on every retry) — see open item 1 |
+| `mix test` (full suite, clean runs) | **1210 passed, 3 skipped, 0 failed** (was 1195/2 before the daily feed + AI triage additions; 15 new tests, all green across consecutive runs) | Earlier "failure" readings were traced to my own tooling stacking concurrent suite runs on the shared test database — not application defects. One intermittent single-test flake remains (~1–2% of runs, different test each time; passes on every retry) — see open item 1 |
 | `mix compile --warnings-as-errors` | PASS | |
 | `mix format --check-formatted`, `mix credo --strict` | PASS | |
 | Module-solo: `workspace_test` 17/17; five affected LiveView suites 57/57 | PASS | |
@@ -69,6 +69,12 @@ The bundle was authored against `33bc06f`. Five commits landed between baseline 
 1. **Intermittent single-test failure under full-suite load (~1–2% of runs), moving between commit-path tests** (observed across different tests on different runs; every affected test passes in isolation and on retry). Mechanism consistent with the repo's documented NOWAIT table-lock/pool sensitivity (`app/docs/WORKSPACE.md`), slightly amplified by T02/T03 test flows performing explicit target selection (an extra draft-persist transaction per test). **Next step (T01 remainder):** instrument `WorkspaceLive.commit/1`'s catch-all error branch to log the actual reason, and run the suite under a fixed seed loop to capture it. Not a T02/T03 correctness defect.
 2. **Bundle fixture adapter (T01 remainder):** map `qa/semantic-fixtures.json` into an owned-database fixture adapter; not yet started.
 3. The bundle's remaining acceptance screenshots/browser checks are pending until T03/T04 exist (no point screenshotting the old navigation).
+
+## Extra (user-requested) — Daily CVE feed & AI triage (implemented)
+
+- **Daily feed page** (`/?page=daily`, nav item "Daily"): every day with CVE appearances, newest first — date, the CVEs that appeared that day with their recorded descriptions, severity badges, and affected packages. Same-CVE packages collapse to one entry. "Load earlier days" pages backwards via a validated date cursor. Read-only; only `appeared` lifecycle events feed it; a malformed cursor renders the honest empty state.
+- **AI triage** (`kiro-cli` integration): a reviewer can click **"Analyze this CVE"** in the shared detail. A detached task sends the server-captured evidence (placement, exposure, package/severity/fix/description) to kiro-cli via a Port (argv prompt — no shell, so untrusted descriptions cannot inject commands), bounded output, 30s deadline, explicit process-tree teardown, mirroring the proven ReviewIntegrations wrapper contract. The response must be JSON with a **danger score 1-100**, one of four recommendations, and a rationale; anything malformed is rejected with a bounded error (never a fallback score). Verified live: kiro returned score 92/"critical"/"remediate" for an exposed production RCE.
+- **No auto-whitelisting (D11/I06/spec 05):** the panel is labeled "Suggestion only — not an approval"; kiro may *recommend* `suggest_risk_acceptance` for clearly inapplicable CVEs, but the reviewer still selects targets, fills the action form, and confirms explicitly. The AI result never reaches the commit boundary; role checks gate the analyze event.
 
 ## Next dependency-ready tasks
 

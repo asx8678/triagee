@@ -209,7 +209,7 @@ defmodule Triage.LegacyFixtures do
 
       seed_decision!(%{
         cve: "CVE-2025-1001",
-        decision: "mitigated",
+        decision: "not_affected",
         reason: "Synthetic demo: temporary ingress rule, expired with the old ingress.",
         actor: "local-operator",
         decided_at: DateTime.add(now, -60, :day),

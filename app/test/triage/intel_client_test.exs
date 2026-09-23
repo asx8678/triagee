@@ -4,7 +4,20 @@ defmodule Triage.IntelClientTest do
   alias Triage.Intel.Client
 
   defp transport(body), do: %{req: fn _url -> {:ok, %{status: 200, body: body}} end}
-  defp kev_body(entries), do: Jason.encode!(%{"vulnerabilities" => entries})
+
+  # The real KEV catalogue declares its own total; tests build payloads the same
+  # way, so the declared/actual agreement is exercised rather than bypassed.
+  defp kev_body(entries), do: kev_body(entries, length(entries))
+
+  defp kev_body(entries, declared) do
+    Jason.encode!(%{
+      "vulnerabilities" => entries,
+      "count" => declared,
+      "catalogVersion" => "test-1",
+      "dateReleased" => "2026-09-12T00:00:00.000Z",
+      "title" => "CISA Known Exploited Vulnerabilities Catalog"
+    })
+  end
 
   test "the whole KEV feed is cached, never a prefix of it" do
     # A truncated cache makes "no cached KEV entry" appear for advisories that are
@@ -178,13 +191,58 @@ defmodule Triage.IntelClientTest do
              Client.fetch({:nvd, "CVE-2024-3094"}, transport(kev_body([minimal])))
   end
 
-  test "genuine empty feeds remain successful for both documented transport shapes" do
+  test "an empty NVD response is a real answer; an empty KEV catalogue is refused" do
     body = kev_body([])
 
-    for request <- [:kev, {:nvd, "CVE-2024-3094"}],
-        transport <- [transport(body), %{req: fn _url -> {:ok, body} end}] do
-      assert Client.fetch(request, transport) == {:ok, []}
+    # NVD is per CVE: no record for this CVE is a valid answer about one record.
+    for transport <- [transport(body), %{req: fn _url -> {:ok, body} end}] do
+      assert Client.fetch({:nvd, "CVE-2024-3094"}, transport) == {:ok, []}
     end
+
+    # The KEV catalogue is never empty: an empty feed is a truncated or misrouted
+    # response and must never replace a good generation.
+    for transport <- [transport(body), %{req: fn _url -> {:ok, body} end}] do
+      assert Client.fetch(:kev, transport) == {:error, :kev_empty_feed}
+    end
+  end
+
+  test "the KEV catalogue must declare its own count and match it" do
+    entries = [%{"cveID" => "CVE-2026-1001", "dateAdded" => "2026-01-02"}]
+
+    # No declared count: unverified, never reported as complete.
+    assert Client.fetch(:kev, transport(Jason.encode!(%{"vulnerabilities" => entries}))) ==
+             {:error, :kev_declared_count_missing}
+
+    # A declared count disagreeing with the parsed entries is refused whole.
+    assert Client.fetch(:kev, transport(kev_body(entries, 100))) ==
+             {:error, :kev_declared_count_mismatch}
+
+    # Agreement: accepted, with the catalogue metadata carried alongside the rows.
+    assert {:ok, %{rows: [row], declared_count: 1, complete?: true} = parsed} =
+             Client.fetch_generation(:kev, transport(kev_body(entries)))
+
+    assert row.external_id == "CVE-2026-1001"
+    assert parsed.catalog_version == "test-1"
+    assert parsed.metadata["count"] == 1
+    assert parsed.metadata["title"] == "CISA Known Exploited Vulnerabilities Catalog"
+
+    # NVD carries the same count contract per CVE when totalResults is present.
+    nvd_entry = %{
+      "cve" => %{
+        "id" => "CVE-2024-3094",
+        "descriptions" => [%{"lang" => "en", "value" => "described"}]
+      }
+    }
+
+    nvd_body = fn total ->
+      Jason.encode!(%{"vulnerabilities" => [nvd_entry], "totalResults" => total})
+    end
+
+    assert {:ok, %{complete?: true}} =
+             Client.fetch_generation({:nvd, "CVE-2024-3094"}, transport(nvd_body.(1)))
+
+    assert Client.fetch({:nvd, "CVE-2024-3094"}, transport(nvd_body.(5))) ==
+             {:error, :nvd_declared_count_mismatch}
   end
 
   test "a raised or exiting transport is a controlled failure" do

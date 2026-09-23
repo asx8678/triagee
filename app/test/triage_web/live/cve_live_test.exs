@@ -114,7 +114,13 @@ defmodule TriageWeb.CveLiveTest do
     active = placement!(image, "alpha", "staging")
     finding!(image, "CVE-2099-700001", severity: "HIGH")
 
-    {:ok, _} = Exposure.record(retired.id, "internet_exposed", "operator", at(0))
+    {:ok, _} =
+      Exposure.record(
+        retired.id,
+        "internet_exposed",
+        "operator",
+        DateTime.utc_now() |> DateTime.truncate(:second)
+      )
 
     {:ok, view, _html} = live(conn, ~p"/cves/CVE-2099-700001")
 

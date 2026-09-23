@@ -1,7 +1,7 @@
 defmodule Triage.Workspace do
   @moduledoc "Scoped operational read model. CVE × immutable placement is a target; packages remain evidence, not extra placements."
   import Ecto.Query, except: [select: 2]
-  alias Triage.{Decisions, Exposure, Intel, ReferenceData, Repo, Risk}
+  alias Triage.{Decisions, Evidence, Exposure, Intel, ReferenceData, Repo, Risk}
   alias Triage.Inventory.{Finding, Image, ImagePlacement}
 
   @doc """
@@ -42,7 +42,7 @@ defmodule Triage.Workspace do
       |> Enum.reject(&ReferenceData.reference_image?(&1.image))
 
     cves = Enum.map(items, & &1.finding.cve) |> Enum.uniq()
-    exposure = Exposure.current_by_placement(Enum.map(items, & &1.placement.id), now)
+    exposure = Exposure.current_evidence(Enum.map(items, & &1.placement.id), now)
     decisions = Decisions.latest_by_scope(cves, now)
     kev = Intel.kev_index(cves)
 
@@ -57,7 +57,8 @@ defmodule Triage.Workspace do
       # hash includes placement.active, so retirement also invalidates stale
       # draft and retry bindings like any other evidence change.
       operational = active != [] and first.placement.active
-      exposed = Map.get(exposure, id, "unknown")
+      exposure_evidence = Map.get(exposure, id)
+      exposed = if exposure_evidence, do: exposure_evidence.exposure, else: "unknown"
 
       risks =
         Enum.map(
@@ -91,14 +92,36 @@ defmodule Triage.Workspace do
            )}
         )
 
+      packet =
+        Evidence.Packet.build(%{
+          cve: cve,
+          placement: first.placement,
+          image_digest: first.image.digest,
+          findings: findings,
+          exposure: Evidence.Packet.exposure_material(exposure_evidence),
+          intel: Evidence.Packet.intel_material(Map.get(kev, cve)),
+          captured_at: now,
+          provenance: %{
+            "exposure" => Evidence.Packet.exposure_provenance(exposure_evidence),
+            "intel" => Evidence.Packet.intel_provenance(Map.get(kev, cve))
+          },
+          blockers: Evidence.Packet.live_blockers()
+        })
+
       decision = Decisions.covering_decision(decisions, cve, id)
 
       # A retired placement is history: its recorded decision stays visible as
       # coverage of that historical scope even though retirement itself changed
-      # the evidence hash. Operational targets still require an exact binding.
-      covered =
-        decision != nil and
-          (not operational or decision.metadata["evidence_hash"] in [nil, evidence_hash])
+      # the evidence. Operational targets require a v2 packet binding;
+      # pre-packet (v1 or nil) dismissals are never promoted to "covered".
+      coverage =
+        Evidence.coverage_state(decision,
+          packet_hash: packet.hash,
+          legacy_hash: evidence_hash,
+          active?: operational
+        )
+
+      covered = Evidence.covered?(coverage)
 
       %{
         id: id,
@@ -108,8 +131,11 @@ defmodule Triage.Workspace do
         findings: findings,
         active?: operational,
         exposure: exposed,
+        exposure_state: if(exposure_evidence, do: exposure_evidence.state, else: :none),
         risk: Risk.aggregate(risks),
         evidence_hash: evidence_hash,
+        packet_hash: packet.hash,
+        coverage_state: coverage,
         decision: decision,
         covered?: covered,
         needs_decision?: operational and not covered,
@@ -187,10 +213,6 @@ defmodule Triage.Workspace do
 
   defp matches?(target, "accepted"),
     do: target.active? and target.covered? and target.decision.decision == "accepted_risk"
-
-  defp matches?(target, "progress"),
-    do:
-      target.active? and target.covered? and target.decision.decision in Decisions.work_actions()
 
   defp matches?(target, _view), do: target.active?
 

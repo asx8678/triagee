@@ -38,15 +38,26 @@ defmodule Triage.ReviewActionsTest do
     assert d.expires_at == nil
   end
 
-  test "whitelist permits empty and short comments and defaults three calendar months", c do
+  test "whitelist requires a real rationale and defaults three calendar months", c do
     assert Commit.default_due_on(~D[2026-11-30]) == ~D[2027-02-28]
     assert Commit.default_due_on(~D[2027-11-30]) == ~D[2028-02-29]
-    assert {:ok, [d]} = save(c, "accepted_risk", %{"reason" => ""})
-    assert d.reason == ""
+
+    # A13: empty, whitespace and too-short rationales are rejected — an
+    # acceptance without a justification is a suppression attempt, not a
+    # decision. This deliberately corrects the earlier permits-empty-and-
+    # short-comments assertions.
+    for reason <- ["", "   ", "x"] do
+      assert {:error, %Ecto.Changeset{}} = save(c, "accepted_risk", %{"reason" => reason})
+    end
+
+    assert Decisions.history_for_cve(c.cve) == []
+
+    assert {:ok, [d]} =
+             save(c, "accepted_risk", %{"reason" => "Accepted until the next hardening pass"})
+
+    assert d.reason == "Accepted until the next hardening pass"
     assert d.due_on == Commit.default_due_on()
     assert Workspace.select(Workspace.targets(%{}, d.expires_at), "needs") != []
-    assert {:ok, [d]} = save(c, "accepted_risk", %{"reason" => "x"})
-    assert d.reason == "x"
   end
 
   test "unconfigured ticket creation does not save a decision", c do

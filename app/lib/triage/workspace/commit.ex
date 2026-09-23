@@ -6,9 +6,17 @@ defmodule Triage.Workspace.Commit do
   alias Triage.Workspace.TicketOperation
 
   @actions ~w(request_remediation investigate accepted_risk request_verification fixed create_ticket)
+
   # All tables read by Workspace.targets/2. DML participates even for new scopes.
-  @tables "advisory_decisions, exposure_evidences, findings, image_placements, images, intel_advisories"
+  # The two generation tables joined this list in W01b: which advisories are
+  # visible (and therefore whether a CVE counts as known-exploited) is decided by
+  # the current-generation pointer, so a pointer move during a commit would
+  # otherwise change the very fingerprint the commit just validated.
+  @tables "advisory_decisions, exposure_evidences, findings, image_placements, images, intel_advisories, intel_current_generations, intel_generations"
   def actions, do: @actions
+
+  @doc "The three actions offered by Review; legacy work requests remain readable."
+  def review_actions, do: ~w(fixed accepted_risk create_ticket)
 
   def default_due_on(today \\ Date.utc_today()) do
     month = today.month + 3
@@ -39,14 +47,18 @@ defmodule Triage.Workspace.Commit do
     |> Ecto.Changeset.update_change(:actor, &String.trim/1)
     |> Ecto.Changeset.update_change(:reason, &String.trim/1)
     |> Ecto.Changeset.validate_required(
-      if attrs["action"] in ["fixed", "create_ticket", "accepted_risk"],
-        do: [:action],
-        else: Map.keys(types)
+      cond do
+        attrs["action"] in ["fixed", "create_ticket"] -> [:action]
+        # A risk acceptance without a nonblank rationale is a suppression
+        # attempt, not a decision (A13).
+        attrs["action"] == "accepted_risk" -> [:action, :reason]
+        true -> Map.keys(types)
+      end
     )
     |> Ecto.Changeset.validate_inclusion(:action, @actions)
     |> Ecto.Changeset.validate_length(:owner, min: 1, max: 120)
     |> Ecto.Changeset.validate_length(:actor, min: 1, max: 120)
-    |> Ecto.Changeset.validate_length(:reason, max: 2000)
+    |> Ecto.Changeset.validate_length(:reason, min: 3, max: 2000)
   end
 
   @doc "Legacy trusted domain/CLI API. Self-declared, never an authenticated web entry point."
@@ -219,6 +231,7 @@ defmodule Triage.Workspace.Commit do
   defp commit!(cve, ids, versions, operation, fields, request_hash, identity, ticket_url) do
     validate_due_date!(fields)
     current = current_targets!(cve, ids, versions)
+    validate_dismissal_basis!(fields.action, current)
     expires_at = expires_at(fields)
 
     Enum.map(current, fn target ->
@@ -244,6 +257,7 @@ defmodule Triage.Workspace.Commit do
           "expiry_boundary" => "exclusive",
           "request_hash" => request_hash,
           "evidence_hash" => target.evidence_hash,
+          "packet_hash" => Map.get(target, :packet_hash),
           "policy_version" => Triage.Risk.policy_version(),
           "observed_evidence" => %{
             "exposure" => target.exposure,
@@ -290,6 +304,27 @@ defmodule Triage.Workspace.Commit do
         {:error, error} -> Repo.rollback(error)
       end
     end)
+  end
+
+  # A dismissal claim is only meaningful on evidence that can carry it. Expired,
+  # future-dated or conflicting exposure evidence may not be used to accept a
+  # risk (A08's "no dismissal support"); absent exposure evidence remains
+  # acceptable, because that declares an acceptance on unknown exposure rather
+  # than on evidence that was never valid.
+  defp validate_dismissal_basis!(action, targets) do
+    if Triage.Evidence.dismissal?(action) do
+      invalid =
+        targets
+        |> Enum.map(&{&1.id, Map.get(&1, :exposure_state)})
+        |> Enum.filter(fn {_id, state} -> state in [:expired, :future_dated, :conflicting] end)
+
+      case invalid do
+        [] -> :ok
+        [{id, state} | _] -> Repo.rollback({:dismissal_basis_invalid, id, state})
+      end
+    else
+      :ok
+    end
   end
 
   defp validate_due_date!(fields) do

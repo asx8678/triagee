@@ -79,9 +79,16 @@ case System.argv() do
             )
 
           Enum.each(tables, fn [table] ->
-            %Postgrex.Result{rows: [[exists?]]} =
-              Postgrex.query!(pid, "SELECT EXISTS (SELECT 1 FROM #{table})", [])
+            # Only the exact migration-created safety singleton may exist.
+            # Extra rows or any pause/revision/reason change remain populated.
+            query =
+              if table == "public.classifier_controls" do
+                "SELECT NOT (count(*) = 1 AND bool_and(id = 1 AND paused = false AND revision = 1 AND reason = 'Initial state; runtime remains default-off')) FROM #{table}"
+              else
+                "SELECT EXISTS (SELECT 1 FROM #{table})"
+              end
 
+            %Postgrex.Result{rows: [[exists?]]} = Postgrex.query!(pid, query, [])
             if exists?, do: raise("owned database is populated: #{table}")
           end)
         end

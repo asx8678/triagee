@@ -7,7 +7,11 @@
     <.live_title default="Overview" suffix=" · Triage" phx-no-format>{assigns[:page_title]}</.live_title>
     <%!-- Only the workspace theme is loaded; retired UI styling must not leak in. --%>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/tailwind.css"} />
-    <link phx-track-static rel="stylesheet" href={~p"/assets/css/workspace.css"} />
+    <link
+      phx-track-static
+      rel="stylesheet"
+      href={~p"/assets/css/workspace.css?v=#{workspace_css_version()}"}
+    />
     <%!-- Same-origin Phoenix client distributions, generated from the
            mix.lock-pinned deps by `mix assets.setup` (see README.md "Assets").
            Deferred scripts execute in document order: phoenix.js defines the

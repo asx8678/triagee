@@ -4,13 +4,37 @@ defmodule TriageWeb.WorkspaceComponents do
   alias Triage.{Decisions, Workspace}
   alias TriageWeb.WorkspaceLive, as: Routes
 
-  # Work actions (Decisions.work_actions/0) record a request with an owner,
-  # a follow-up date and a required justification; they never change or
-  # suppress findings.
-  defp work_details_missing?(fields),
-    do:
-      fields["owner"] in ["", nil] or fields["due_on"] in ["", nil] or
-        fields["reason"] in ["", nil]
+  alias Triage.Workspace.Commit
+
+  defp decision_blocker(%{draft: nil}), do: nil
+
+  defp decision_blocker(assigns) do
+    cond do
+      not assigns.can_review ->
+        "Reviewer access is required to make a decision."
+
+      not is_nil(assigns.pending_operation) ->
+        "A ticket operation is already pending. Wait for its result."
+
+      assigns.draft_error ->
+        "The draft could not be saved. Keep this tab open and retry."
+
+      assigns.draft.stale ->
+        "Evidence changed. Reload current evidence before continuing."
+
+      assigns.hidden_targets != [] ->
+        "Selected deployments are hidden. Restore the original scope to continue."
+
+      assigns.draft.fields["action"] not in Commit.review_actions() ->
+        "Choose one of the three actions in the Decision panel."
+
+      assigns.draft.targets == [] ->
+        "Select at least one deployment to enable this action."
+
+      true ->
+        nil
+    end
+  end
 
   attr :metrics, :map, required: true
   attr :teams, :list, required: true
@@ -334,8 +358,14 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :draft_error, :boolean, default: false
   attr :pending_operation, :any, default: nil
   attr :history, :list, default: []
+  attr :ai_configured, :boolean, default: false
+  attr :ai_assessing, :boolean, default: false
+  attr :ai_assessment, :map, default: nil
+  attr :ai_assessment_error, :string, default: nil
 
   def review(assigns) do
+    assigns = assign(assigns, :decision_blocker, decision_blocker(assigns))
+
     ~H"""
     <div class="review-topbar">
       <div class="review-tools">
@@ -346,7 +376,7 @@ defmodule TriageWeb.WorkspaceComponents do
                 {"needs", "Needs decision"},
                 {"progress", "In progress"},
                 {"accepted", "Whitelisted"},
-                {"fixed", "Fixed"}
+                {"fixed", "Reported fixed"}
               ]
             }
             patch={Routes.workspace_path(@params, %{"mode" => mode, "offset" => nil})}
@@ -398,17 +428,64 @@ defmodule TriageWeb.WorkspaceComponents do
           fixed_scopes?(@row.scopes) && "fixed-heading",
           whitelist_state(@row) == "Whitelisted" && "whitelisted-heading"
         ]}>
-          <strong :if={fixed_scopes?(@row.scopes)} class="fixed-banner">FIXED</strong>
+          <strong :if={fixed_scopes?(@row.scopes)} class="fixed-banner">REPORTED FIXED</strong>
           <strong :if={whitelist_state(@row) == "Whitelisted"} class="whitelisted-banner">WHITELISTED</strong>
-          <div class="between">
-            <div>
+          <div class="review-heading-content">
+            <div class="review-summary">
               <div class="row">
                 <h2>{@row.cve}</h2><.severity value={@row.severity} />
               </div><p class="subtitle">
                 {@row.packages} · {length(@row.scopes)} scopes in view · coverage unverified
               </p>
-            </div><div>
               <.saved_status scopes={@row.scopes} />
+            </div>
+            <div class="review-actions" role="group" aria-label="Decision actions">
+              <div class="row wrap">
+                <button
+                  id="cancel-decision"
+                  disabled={not @can_review or not is_nil(@pending_operation) or not @draft.dirty}
+                  type="button"
+                  phx-click="cancel-decision"
+                >Discard draft</button>
+                <button
+                  id="save-decision"
+                  class="primary"
+                  type="submit"
+                  form="workspace-decision"
+                  phx-disable-with="Working…"
+                  disabled={not is_nil(@decision_blocker)}
+                  aria-describedby={if @decision_blocker, do: "decision-action-help"}
+                  title={@decision_blocker}
+                >{case @draft.fields["action"] do
+                  "fixed" -> "Mark as fixed"
+                  "accepted_risk" -> "Whitelist now"
+                  "create_ticket" -> "Create Azure DevOps ticket"
+                  _ -> "Select an action"
+                end}</button>
+              </div>
+              <p
+                :if={@decision_blocker}
+                id="decision-action-help"
+                class="decision-action-help"
+                role="status"
+              >
+                {@decision_blocker}
+                <a
+                  :if={
+                    @can_review and @draft.targets == [] and
+                      @draft.fields["action"] in Commit.review_actions()
+                  }
+                  href="#review-deployments"
+                >Select deployments</a>
+              </p>
+              <span id="draft-state" class="save-state">{if @draft.saved,
+                do: "Decision saved",
+                else:
+                  if(@draft_error,
+                    do: "Draft NOT saved · keep this tab open",
+                    else:
+                      if(@draft.dirty, do: "Draft saved to your account", else: "No unsaved changes")
+                  )}</span>
             </div>
           </div>
         </header>
@@ -419,7 +496,84 @@ defmodule TriageWeb.WorkspaceComponents do
           phx-submit="save"
           class="review-content"
         >
+          <div class="decision-column">
+            <p :if={not @can_review} id="viewer-read-only">
+              Read-only viewer. A reviewer or administrator must make decisions.
+            </p>
+            <div class="decision-head">
+              <h3>Decision</h3><a href="#review-deployments" class="small">{length(@draft.targets)} deployments selected</a>
+            </div>
+            <p class="form-note" id="why-now">Why now: {why_now(@row)}</p>
+            <p
+              :if={@can_review and @draft.targets == []}
+              id="decision-no-targets"
+              class="form-error"
+              role="status"
+            >
+              <a href="#review-deployments">Select at least one deployment</a> to continue.
+            </p>
+            <p :if={@error} id="decision-error" role="alert" class="form-error">{@error}</p>
+            <.input
+              field={@form[:action]}
+              disabled={not @can_review}
+              type="select"
+              label="Next action"
+              options={[
+                {"Choose an action…", ""},
+                {"Mark as fixed", "fixed"},
+                {"Whitelist temporarily", "accepted_risk"},
+                {"Create Azure DevOps ticket", "create_ticket"}
+              ]}
+            />
+            <.input
+              :if={@draft.fields["action"] == "accepted_risk"}
+              field={@form[:due_on]}
+              disabled={not @can_review}
+              type="date"
+              label="Whitelist through (UTC)"
+              aria-describedby="whitelist-expiry-help"
+            />
+            <.input
+              :if={@draft.fields["action"] == "accepted_risk"}
+              field={@form[:reason]}
+              disabled={not @can_review}
+              type="textarea"
+              label="Reason for accepting the risk (required)"
+              maxlength="2000"
+            />
+            <p :if={@draft.fields["action"] == "fixed"} class="form-note">
+              Marks selected scopes Fixed with today's date. No comment required.
+            </p>
+            <p
+              :if={@draft.fields["action"] == "accepted_risk"}
+              id="whitelist-expiry-help"
+              class="form-note"
+            >
+              Risk is accepted through the selected date, until midnight UTC at the start of the next day.
+              Then these deployments return to Needs decision unless a newer decision applies.
+              Defaults to three months from today.
+            </p>
+            <p :if={@draft.fields["action"] == "create_ticket"} class="form-note">
+              Creates an Azure DevOps ticket with CVE and selected deployment evidence. Requires server configuration.
+            </p>
+            <div class="decision-actions">
+              <button
+                :if={@can_review && (@error || @draft.stale)}
+                id="reload-evidence"
+                type="button"
+                phx-click="reconcile"
+              >Reload current evidence</button>
+            </div>
+          </div>
           <div class="evidence-column">
+            <.ai_triage_panel
+              cve={@row.cve}
+              can_review={@can_review}
+              configured={@ai_configured}
+              assessing={@ai_assessing}
+              assessment={@ai_assessment}
+              error={@ai_assessment_error}
+            />
             <div class="block-title">
               <h3>Summary</h3>
             </div>
@@ -428,13 +582,19 @@ defmodule TriageWeb.WorkspaceComponents do
               <dt>Scanner-reported fix</dt><dd>{reported_fixes(@row)}</dd>
             </dl>
             <p class="form-note">A reported fix is not proof it has been deployed.</p>
-            <div class="block-title">
+            <div id="review-deployments" class="block-title" tabindex="-1">
               <h3>Affected deployments</h3><span>{length(@draft.targets)} selected</span>
             </div>
             <p :if={@hidden_targets != []} class="form-error">
               {length(@hidden_targets)} selected targets are hidden by this scope. Restore the original scope; selection has not changed.
             </p>
-            <.scope_table targets={@row.scopes} selected={@draft.targets} selectable={@can_review} />
+            <.scope_table
+              targets={@row.scopes}
+              selected={@draft.targets}
+              selectable={@can_review}
+              focus_target={@params["focus_target"]}
+              row_id_prefix="review-target"
+            />
             <p class="coverage-note">
               Select the deployments this decision applies to. Production and staging are separate targets.
             </p>
@@ -464,144 +624,7 @@ defmodule TriageWeb.WorkspaceComponents do
               <.history_entries history={@history} />
             </details>
           </div>
-          <div class="decision-column">
-            <p :if={not @can_review} id="viewer-read-only">
-              Read-only viewer. A reviewer or administrator must make decisions.
-            </p>
-            <div class="decision-head">
-              <h3>Decision</h3><span class="muted small">{length(@draft.targets)} selected</span>
-            </div>
-            <p class="form-note" id="why-now">Why now: {why_now(@row)}</p>
-            <p
-              :if={@can_review and @draft.targets == []}
-              id="decision-no-targets"
-              class="form-error"
-              role="status"
-            >
-              Select at least one deployment to continue.
-            </p>
-            <p :if={@error} id="decision-error" role="alert" class="form-error">{@error}</p>
-            <.input
-              field={@form[:action]}
-              disabled={not @can_review}
-              type="select"
-              label="Next action"
-              options={[
-                {"Choose an action…", ""},
-                {"Mark as fixed", "fixed"},
-                {"Whitelist temporarily", "accepted_risk"},
-                {"Create Azure DevOps ticket", "create_ticket"},
-                {"Request investigation", "investigate"},
-                {"Request remediation", "request_remediation"},
-                {"Request verification", "request_verification"}
-              ]}
-            />
-            <.input
-              :if={@draft.fields["action"] == "accepted_risk"}
-              field={@form[:due_on]}
-              disabled={not @can_review}
-              type="date"
-              label="Whitelist through (UTC)"
-              aria-describedby="whitelist-expiry-help"
-            />
-            <.input
-              :if={@draft.fields["action"] == "accepted_risk"}
-              field={@form[:reason]}
-              disabled={not @can_review}
-              type="textarea"
-              label="Reason for accepting the risk (optional)"
-              maxlength="2000"
-            />
-            <p :if={@draft.fields["action"] == "fixed"} class="form-note">
-              Marks selected scopes Fixed with today's date. No comment required.
-            </p>
-            <p
-              :if={@draft.fields["action"] == "accepted_risk"}
-              id="whitelist-expiry-help"
-              class="form-note"
-            >
-              Risk is accepted through the selected date, until midnight UTC at the start of the next day.
-              Then these deployments return to Needs decision unless a newer decision applies.
-              Defaults to three months from today.
-            </p>
-            <p :if={@draft.fields["action"] == "create_ticket"} class="form-note">
-              Creates an Azure DevOps ticket with CVE and selected deployment evidence. Requires server configuration.
-            </p>
-            <.input
-              :if={@draft.fields["action"] in Decisions.work_actions()}
-              field={@form[:owner]}
-              disabled={not @can_review}
-              type="text"
-              label="Responsible owner"
-            />
-            <.input
-              :if={@draft.fields["action"] in Decisions.work_actions()}
-              field={@form[:due_on]}
-              disabled={not @can_review}
-              type="date"
-              label="Follow-up by (UTC)"
-            />
-            <.input
-              :if={@draft.fields["action"] in Decisions.work_actions()}
-              field={@form[:reason]}
-              disabled={not @can_review}
-              type="textarea"
-              label="Justification (required)"
-              maxlength="2000"
-            />
-            <p :if={@draft.fields["action"] in Decisions.work_actions()} class="form-note">
-              Records a work request for the selected scopes with an owner, a follow-up date and a justification. It does not change or suppress the findings.
-            </p>
-            <div class="decision-actions">
-              <button
-                :if={@can_review && (@error || @draft.stale)}
-                id="reload-evidence"
-                type="button"
-                phx-click="reconcile"
-              >Reload current evidence</button>
-            </div>
-          </div>
         </.form>
-        <footer class="review-footer">
-          <span id="draft-state" class="save-state">{if @draft.saved,
-            do: "Decision saved",
-            else:
-              if(@draft_error,
-                do: "Draft NOT saved · keep this tab open",
-                else: if(@draft.dirty, do: "Draft saved to your account", else: "No unsaved changes")
-              )}</span><div class="row wrap">
-            <button
-              id="cancel-decision"
-              disabled={not @can_review or not is_nil(@pending_operation) or not @draft.dirty}
-              type="button"
-              phx-click="cancel-decision"
-            >Discard draft</button>
-            <button
-              id="save-decision"
-              class="primary"
-              type="submit"
-              form="workspace-decision"
-              phx-disable-with="Working…"
-              disabled={
-                not @can_review or @draft.targets == [] or not is_nil(@pending_operation) or
-                  @draft_error or @draft.stale or
-                  @hidden_targets != [] or
-                  @draft.fields["action"] not in (~w(fixed accepted_risk create_ticket) ++
-                                                    Decisions.work_actions()) or
-                  (@draft.fields["action"] in Decisions.work_actions() and
-                     work_details_missing?(@draft.fields))
-              }
-            >{case @draft.fields["action"] do
-              "fixed" -> "Mark as fixed"
-              "accepted_risk" -> "Whitelist now"
-              "create_ticket" -> "Create Azure DevOps ticket"
-              "investigate" -> "Request investigation"
-              "request_remediation" -> "Request remediation"
-              "request_verification" -> "Request verification"
-              _ -> "Select an action"
-            end}</button>
-          </div>
-        </footer>
       </section>
       <section :if={is_nil(@row)} class="panel review-workspace">
         <div class="empty">
@@ -628,6 +651,8 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :targets, :list, required: true
   attr :selected, :list, default: []
   attr :selectable, :boolean, default: false
+  attr :focus_target, :string, default: nil
+  attr :row_id_prefix, :string, default: nil
 
   def scope_table(assigns) do
     ~H"""
@@ -640,7 +665,14 @@ defmodule TriageWeb.WorkspaceComponents do
             </th>
           </tr>
         </thead><tbody>
-          <tr :for={scope <- @targets} data-target-id={scope.id}>
+          <tr
+            :for={scope <- @targets}
+            id={@row_id_prefix && "#{@row_id_prefix}-#{scope.id}"}
+            data-target-id={scope.id}
+            class={to_string(scope.id) == @focus_target && "focused-target"}
+            aria-current={if to_string(scope.id) == @focus_target, do: "true"}
+            tabindex={if to_string(scope.id) == @focus_target, do: "-1"}
+          >
             <td :if={@selectable}>
               <label><input
                 type="checkbox"
@@ -889,7 +921,7 @@ defmodule TriageWeb.WorkspaceComponents do
 
     label =
       case state do
-        "fixed" -> "Fixed"
+        "fixed" -> "Reported fix (unverified)"
         "accepted_risk" -> "Whitelisted"
         "create_ticket" -> "In progress — ticket created"
         "needs" -> "Needs decision"
@@ -952,6 +984,139 @@ defmodule TriageWeb.WorkspaceComponents do
 
   # T03: source-backed "Why now" from the deterministic risk policy. The
   # strongest classified target's reason leads; no opaque score is invented.
+  @doc "Inline Kiro classification. Scores are model assessments, not authorization."
+  attr :cve, :string, required: true
+  attr :can_review, :boolean, default: false
+  attr :configured, :boolean, default: false
+  attr :assessing, :boolean, default: false
+  attr :assessment, :map, default: nil
+  attr :error, :string, default: nil
+
+  def ai_triage_panel(assigns) do
+    ~H"""
+    <section
+      id="ai-triage"
+      class="review-classification"
+      aria-label="Kiro classification"
+      aria-busy={to_string(@assessing)}
+    >
+      <div class="classification-heading">
+        <button
+          id="classify-now"
+          type="button"
+          phx-click="classify-now"
+          class="ai-analyze-btn"
+          disabled={not @configured or not @can_review or @assessing}
+        >
+          <.icon name="hero-arrow-path" class="size-4" />
+          {if @assessing, do: "Classifying…", else: "Classify now"}
+        </button>
+      </div>
+      <p class="classification-scope">{@cve} · All deployments in the current Review scope</p>
+      <p :if={not @can_review} class="form-note">
+        Reviewer access is required to start classification.
+      </p>
+      <details :if={not @configured} id="classification-setup" class="classification-setup">
+        <summary>Connect Kiro to enable classification</summary>
+        <p>
+          Set <code>TRIAGE_ANALYSIS_ENABLED=true</code>
+          and <code>TRIAGE_KIRO_CLI</code>
+          to your authenticated Kiro executable, then restart Phoenix. No model API key is required by this app.
+        </p>
+      </details>
+      <div :if={@assessing} class="ai-assessing" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        Kiro is classifying the evidence. You can leave this page; the result is saved.
+      </div>
+      <div :if={@error} class="ai-error form-error" role="alert">{@error}</div>
+      <div :if={is_nil(@assessment) and not @assessing} class="classification-empty">
+        <span>No current classification</span><p>
+          Run Kiro to get scored guidance before making your decision.
+        </p>
+      </div>
+      <div :if={@assessment} class="ai-result" id="classification-result">
+        <div class="classification-scores">
+          <div class="classification-score-card" id="classification-risk">
+            <span class="classification-score-label">Risk score</span>
+            <div class="classification-score-number">
+              <strong class={"level-" <> @assessment["danger_level"]}>{@assessment["danger_score"]}</strong><span>/100</span>
+            </div>
+            <meter
+              min="0"
+              max="100"
+              low="40"
+              high="70"
+              optimum="0"
+              value={@assessment["danger_score"]}
+              aria-label="Kiro risk score"
+            />
+            <span class="classification-score-help">{String.capitalize(@assessment["danger_level"])} · higher is riskier</span>
+          </div>
+          <div class="classification-score-card" id="classification-whitelist">
+            <span class="classification-score-label">Whitelist suitability</span>
+            <div class="classification-score-number">
+              <strong>{if is_integer(@assessment["whitelist_score"]),
+                do: @assessment["whitelist_score"],
+                else: "—"}</strong><span :if={is_integer(@assessment["whitelist_score"])}>/100</span>
+            </div>
+            <meter
+              :if={is_integer(@assessment["whitelist_score"])}
+              min="0"
+              max="100"
+              low="40"
+              high="70"
+              optimum="100"
+              value={@assessment["whitelist_score"]}
+              aria-label="Kiro whitelist suitability"
+            />
+            <span class="classification-score-help">{if is_integer(@assessment["whitelist_score"]),
+              do: "Higher means stronger support",
+              else: "Blocked · verification required"}</span>
+          </div>
+        </div>
+        <p class="classification-recommendation">
+          {ai_recommendation_label(@assessment["recommendation"])}
+        </p>
+        <p class="classification-rationale">
+          {String.slice(@assessment["rationale"], 0, 360)}<span :if={
+            String.length(@assessment["rationale"]) > 360
+          }>…</span>
+        </p>
+        <details :if={String.length(@assessment["rationale"]) > 360} class="classification-reasoning">
+          <summary>Read full Kiro reasoning</summary>
+          <p class="classification-rationale">{@assessment["rationale"]}</p>
+        </details>
+        <div :if={@assessment["guard_reasons"] != []} id="classification-guards" class="inline-notice">
+          <p :for={reason <- @assessment["guard_reasons"]}>{reason}</p>
+          <small>Kiro's original suitability score: {@assessment["raw_whitelist_score"]}/100. It is not accepted as a whitelist recommendation.</small>
+        </div>
+        <p class="classification-timestamp">
+          Scored by Kiro ·
+          <time datetime={@assessment["assessed_at"]}>{@assessment["assessed_at"]}</time>
+        </p>
+      </div>
+      <details class="classification-disclosure">
+        <summary>What is sent to Kiro?</summary>
+        <p>
+          The CVE's complete stored findings and descriptions, packages, fixes, images, deployments, exposure, intelligence and existing decisions in this scope. No draft, login token or application credentials. Kiro has no action tools.
+        </p>
+      </details>
+      <p class="classification-footnote">
+        AI guidance, not a probability or approval. Classification does not approve, whitelist, or commit anything.
+      </p>
+    </section>
+    """
+  end
+
+  defp ai_recommendation_label("investigate"), do: "Investigate this CVE"
+  defp ai_recommendation_label("remediate"), do: "Remediate (schedule a fix)"
+
+  defp ai_recommendation_label("suggest_risk_acceptance"),
+    do: "Whitelist candidate (review before accepting)"
+
+  defp ai_recommendation_label("request_verification"), do: "Request verification"
+  defp ai_recommendation_label(_), do: "Investigate this CVE"
+
   defp why_now(row) do
     cond do
       row.risk && row.risk.reasons != [] -> hd(row.risk.reasons)
@@ -967,7 +1132,7 @@ defmodule TriageWeb.WorkspaceComponents do
         "Ticket created · track existing work"
 
       fixed_scopes?(row.scopes) ->
-        "Reported fixed · verify deployment"
+        "Reported fix · verification needed, not a verified deployment"
 
       whitelist_state(row) in ["Whitelisted", "Partially whitelisted"] ->
         "Risk accepted · review at expiry"
