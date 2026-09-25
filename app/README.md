@@ -18,6 +18,13 @@ Demo placements are simulated and public CVE reference data is not evidence that
 any real deployment is affected. No background collection or automatic approvals
 are enabled. AI advice and Azure ticket creation are opt-in and human-triggered.
 
+## Portable Linux/macOS executable
+
+Use [Burrito packaging](docs/BURRITO.md) to build or download a standalone
+executable for Intel/AMD or ARM machines. No Elixir or Docker is needed on the
+destination. PostgreSQL remains a separate prerequisite; migrations, account
+provisioning, TLS, and backups are still explicit operator responsibilities.
+
 ## Setup and run
 
 Requirements: `mise`, the pinned Elixir/OTP versions in `.mise.toml`, and local

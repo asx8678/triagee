@@ -1,0 +1,90 @@
+name: burrito
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '27.3.4.17'
+          elixir-version: '1.20.4'
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: '0.16.0'
+      - run: brew install xz
+      - run: sh scripts/build_burrito.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: burrito-bundles
+          path: app/dist/triage-*.tar.gz*
+          if-no-files-found: error
+
+  native-smoke:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux_x86_64
+          - runner: ubuntu-24.04-arm
+            target: linux_arm64
+          - runner: macos-15-intel
+            target: macos_x86_64
+          - runner: macos-15
+            target: macos_arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: burrito-bundles
+      - name: Check archive and executable without Elixir or a database
+        shell: bash
+        run: |
+          shasum -a 256 -c triage-${{ matrix.target }}.tar.gz.sha256
+          tar -xzf triage-${{ matrix.target }}.tar.gz
+          cd triage-${{ matrix.target }}
+          ./triage --help | grep 'Usage:'
+          ./triage --version | grep '^Triage '
+          test "$(./triage secret | tr -d '\n' | wc -c | tr -d ' ')" = 88
+          if ./triage invalid-command; then exit 1; else test "$?" = 64; fi
+
+  database-smoke:
+    needs: build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          working_directory: app
+      - uses: actions/download-artifact@v4
+        with:
+          name: burrito-bundles
+          path: app/dist
+      - run: mise x -- mix deps.get
+      - run: cd dist && shasum -a 256 -c triage-linux_x86_64.tar.gz.sha256
+      - run: tar -xzf dist/triage-linux_x86_64.tar.gz -C dist
+      - run: ./scripts/verify_owned_db.sh burrito "$PWD/dist/triage-linux_x86_64/triage"

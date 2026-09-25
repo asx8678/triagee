@@ -1,11 +1,16 @@
 #!/bin/sh
 set -eu
 
-usage() { echo "usage: $0 {target|suite|ci|precommit|concurrency|workspace|workspace_browser|all} | focused test/FILE.exs ..." >&2; exit 64; }
+usage() { echo "usage: $0 {target|suite|ci|precommit|concurrency|workspace|workspace_browser|all} | focused test/FILE.exs ... | burrito /absolute/binary" >&2; exit 64; }
 [ "$#" -ge 1 ] || usage
 mode=$1
 shift
 case "$mode" in
+  burrito)
+    [ "$#" -eq 1 ] || usage
+    case "$1" in /*) ;; *) usage ;; esac
+    [ -f "$1" ] && [ -x "$1" ] || { echo 'burrito binary must exist and be executable' >&2; exit 65; }
+    ;;
   focused)
     [ "$#" -ge 1 ] || usage
     for test_path in "$@"; do
@@ -100,6 +105,10 @@ run_precommit() { verify identity; run precommit mise x -- mix precommit; }
 run_suite() { run_migrations; run full-suite mise x -- mix test; }
 run_focused() { run_migrations; run focused-tests mise x -- mix test "$@"; }
 run_ci() { verify identity; run ci mise x -- mix ci; }
+run_burrito() {
+  verify identity
+  run burrito-smoke sh scripts/burrito_smoke.sh "$1" "$db"
+}
 run_concurrency() {
   run_migrations; verify empty
   export TRIAGE_IMPORT_CONCURRENCY_DB="$db"
@@ -117,5 +126,5 @@ run_workspace_browser() {
   run workspace-browser mise x -- mix run --no-start scripts/workspace_browser.exs "$db"
 }
 
-case "$mode" in focused) run_focused "$@";; suite) run_suite;; ci) run_ci;; workspace) run_workspace;; workspace_browser) run_workspace_browser;; target) run_target;; precommit) run_precommit;; concurrency) run_concurrency;; all) run_target; run_precommit; run_concurrency;; esac
+case "$mode" in burrito) run_burrito "$@";; focused) run_focused "$@";; suite) run_suite;; ci) run_ci;; workspace) run_workspace;; workspace_browser) run_workspace_browser;; target) run_target;; precommit) run_precommit;; concurrency) run_concurrency;; all) run_target; run_precommit; run_concurrency;; esac
 echo "verify-owned-db: mode=$mode completed"

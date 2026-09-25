@@ -7,6 +7,21 @@ defmodule Triage.Application do
 
   @impl true
   def start(_type, _args) do
+    command =
+      if Burrito.Util.running_standalone?(),
+        do: Triage.Portable.command(Burrito.Util.Args.argv()),
+        else: :start
+
+    if command == :start do
+      start_services()
+    else
+      # Administrative commands must never start the web endpoint, schedulers,
+      # or optional integrations. Dependencies are already started by OTP.
+      System.halt(Triage.Portable.run(command))
+    end
+  end
+
+  defp start_services do
     children =
       [
         TriageWeb.Telemetry,

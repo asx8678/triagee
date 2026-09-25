@@ -1,5 +1,19 @@
 import Config
 
+# Burrito's wrapper passes its arguments as OTP plain arguments. Help, version,
+# secret generation and invalid commands must work before a database is set up.
+# Ordinary Mix/OTP releases retain their existing mandatory production config.
+portable_args =
+  if System.get_env("__BURRITO") do
+    # Match the wrapper's internal CLI prefix (upstream Burrito PR #230), not
+    # user arguments. Keep this in sync with Burrito.Util.Args.get_arguments/0.
+    case Enum.map(:init.get_plain_arguments(), &to_string/1) do
+      ["--no-halt", "--" | args] -> args
+      ["--" | args] -> args
+      args -> args
+    end
+  end
+
 # Presentation convenience only: never approves a decision or enables AI/Azure.
 demo_mode =
   case System.get_env("TRIAGE_DEMO_MODE", if(config_env() == :dev, do: "true", else: "false")) do
@@ -48,8 +62,15 @@ port =
     raise "PORT must be a decimal integer from 0 through 65535"
   end
 
-if System.get_env("PHX_SERVER") do
-  config :triage, TriageWeb.Endpoint, server: true
+cond do
+  portable_args != nil ->
+    config :triage, TriageWeb.Endpoint, server: portable_args in [[], ["start"]]
+
+  System.get_env("PHX_SERVER") ->
+    config :triage, TriageWeb.Endpoint, server: true
+
+  true ->
+    :ok
 end
 
 config :triage, TriageWeb.Endpoint, http: [ip: bind_ip, port: port]
@@ -66,7 +87,7 @@ if config_env() == :dev do
     ]
 end
 
-if config_env() == :prod do
+if config_env() == :prod and portable_args in [nil, [], ["start"], ["migrate"], ["account"]] do
   database_url =
     case System.get_env("DATABASE_URL") do
       value when is_binary(value) and value != "" ->

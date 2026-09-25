@@ -10,6 +10,8 @@ defmodule Triage.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      default_release: :triage,
+      releases: releases(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
       # Mix and ExUnit must be in the PLT: without them every `Mix.raise/1`,
@@ -59,6 +61,10 @@ defmodule Triage.MixProject do
       {:dns_cluster, "~> 0.3.0"},
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5"},
+      # Temporary immutable pin for upstream PR #230: released 1.6.0 lets the
+      # Elixir CLI consume app arguments and halt Phoenix (upstream issue #229).
+      {:burrito,
+       github: "burrito-elixir/burrito", ref: "f2d437041418abb9073a6d7588d22835a04ee7cb", depth: 1},
       {:oban, "~> 2.19.0"},
 
       # Compiles assets/css/tailwind.css into the served stylesheet. A build
@@ -87,6 +93,28 @@ defmodule Triage.MixProject do
       else: ["ecto.create --quiet", "ecto.migrate --quiet", "assets.setup", "test"]
   end
 
+  # Keep the ordinary OTP/Docker release as the default. Burrito is opt-in.
+  defp releases do
+    [
+      triage: [],
+      triage_burrito: [
+        steps: [:assemble, &Burrito.wrap/1],
+        burrito: [
+          targets: [
+            linux_x86_64: [os: :linux, cpu: :x86_64],
+            linux_arm64: [os: :linux, cpu: :aarch64],
+            macos_x86_64: [os: :darwin, cpu: :x86_64],
+            macos_arm64: [os: :darwin, cpu: :aarch64]
+          ]
+        ]
+      ]
+    ]
+  end
+
+  defp require_production(_args) do
+    unless Mix.env() == :prod, do: Mix.raise("Build Burrito with MIX_ENV=prod")
+  end
+
   defp aliases do
     # Only development convenience commands implicitly load synthetic data.
     # Test setup/reset must leave an empty inventory; SQL sandbox rollback
@@ -95,6 +123,7 @@ defmodule Triage.MixProject do
 
     [
       setup: ["deps.get", "ecto.setup"] ++ seed_tasks ++ ["assets.setup"],
+      burrito: [&require_production/1, "assets.setup", "release triage_burrito --overwrite"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.seed": ["run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"] ++ seed_tasks,

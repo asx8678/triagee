@@ -50,6 +50,13 @@ db_from_out() { sed -n 's/^verify-owned-db: generated database=//p' "$1" | head 
 run_case bad_mode "$script" nope
 [ "$CASE_STATUS" -eq 64 ] || fail "invalid mode status=$CASE_STATUS"
 no_effects "$tmp/bad_mode.log" || fail "invalid mode performed effects"
+run_case burrito_relative "$script" burrito relative/binary
+[ "$CASE_STATUS" -eq 64 ] || fail "relative Burrito path status=$CASE_STATUS"
+no_effects "$tmp/burrito_relative.log" || fail "relative Burrito path performed effects"
+run_case burrito_missing "$script" burrito "$tmp/no-such-binary"
+[ "$CASE_STATUS" -eq 65 ] || fail "missing Burrito path status=$CASE_STATUS"
+no_effects "$tmp/burrito_missing.log" || fail "missing Burrito path performed effects"
+
 run_case bad_env env MIX_ENV=dev "$script" target
 [ "$CASE_STATUS" -eq 65 ] || fail "non-test MIX_ENV status=$CASE_STATUS"
 no_effects "$tmp/bad_env.log" || fail "non-test MIX_ENV performed effects"
