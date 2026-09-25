@@ -5,7 +5,7 @@ defmodule TriageWeb.Auth do
   import Phoenix.Component, only: [assign: 3]
   alias Triage.Accounts
 
-  @read_events ~w(refresh filter timeline-case plot_width scope search risk-filter select clear-selection review-selected cancel-risk expand queue-toggle density settings close-settings close-inspector dismiss-action-toast manual-close)
+  @read_events ~w(refresh filter timeline-case daily-prev daily-latest plot_width scope search risk-filter select clear-selection review-selected cancel-risk expand queue-toggle density settings close-settings close-inspector dismiss-action-toast manual-close)
 
   def init(action), do: action
   def call(conn, action), do: apply(__MODULE__, action, [conn])

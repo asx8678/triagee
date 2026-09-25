@@ -366,6 +366,7 @@ defmodule TriageWeb.WorkspaceLive do
 
     assign(socket,
       draft: draft,
+      draft_error: draft_error?(draft),
       decision_form: to_form(if(draft, do: draft.fields, else: %{}), as: :decision),
       hidden_targets: if(draft, do: draft.targets, else: []),
       pending_operation: if(draft, do: operation_summary(draft.operation, socket), else: nil),
@@ -396,6 +397,7 @@ defmodule TriageWeb.WorkspaceLive do
     |> assign(
       drafts: Map.put(socket.assigns.drafts, row.cve, draft),
       draft: draft,
+      draft_error: draft_error?(draft),
       pending_operation:
         if(draft.saved, do: nil, else: operation_summary(draft.operation, socket)),
       ticket_evidence: nil,
@@ -418,6 +420,8 @@ defmodule TriageWeb.WorkspaceLive do
       versions: Map.new(targets, &{&1.id, &1.fingerprint}),
       operation: Ecto.UUID.generate(),
       revision: nil,
+      persisted: false,
+      persistence_error: nil,
       saved: false,
       dirty: false,
       stale: false
@@ -447,8 +451,11 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp stored_draft(principal, cve) do
     case Drafts.get(principal, cve) do
-      {:ok, draft} -> draft
-      _ -> nil
+      {:ok, draft} when is_map(draft) ->
+        Map.merge(draft, %{persisted: true, persistence_error: nil})
+
+      _ ->
+        nil
     end
   end
 
@@ -670,7 +677,9 @@ defmodule TriageWeb.WorkspaceLive do
 
     # The authenticated commit injects the real actor server-side. Historical
     # work requests remain supported by the domain, but Review offers only
-    # the three explicit actions below.
+    # the three explicit actions below. Draft storage is independent of the
+    # decision transaction: an explicit commit may succeed even when autosave
+    # conflicted, but it must not acknowledge or overwrite that newer draft.
     changeset =
       Commit.form(Map.put(socket.assigns.draft.fields, "actor", "authenticated"))
 
@@ -680,9 +689,6 @@ defmodule TriageWeb.WorkspaceLive do
          assign(socket,
            error: "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
          )}
-
-      socket.assigns.draft_error ->
-        {:noreply, socket}
 
       socket.assigns.draft.stale ->
         {:noreply,
@@ -924,11 +930,25 @@ defmodule TriageWeb.WorkspaceLive do
     draft = Map.put(draft, :dirty, not draft.saved)
     draft = if draft.saved, do: Map.put(draft, :stale, false), else: draft
 
-    {result, draft} =
+    draft =
       if Keyword.get(opts, :persist, true) do
-        persist_draft(socket, draft)
+        {result, draft} = persist_draft(socket, draft)
+
+        Map.merge(draft, %{
+          persisted: persisted?(result) and not draft.saved,
+          persistence_error: persistence_message(result, draft)
+        })
       else
-        {:ok, draft}
+        # Submit/validation/confirmation are not storage acknowledgements.
+        # Retain failures, and retain a prior acknowledgement only if the
+        # exact content is unchanged. These flags travel with this CVE's draft.
+        previous = socket.assigns.draft
+
+        Map.put(
+          draft,
+          :persisted,
+          previous.persisted and draft_content(previous) == draft_content(draft)
+        )
       end
 
     assign(socket,
@@ -936,8 +956,8 @@ defmodule TriageWeb.WorkspaceLive do
       drafts: Map.put(socket.assigns.drafts, socket.assigns.item, draft),
       decision_form: to_form(draft.fields, as: :decision),
       confirmation: nil,
-      draft_error: not persisted?(result),
-      error: persistence_message(result, draft)
+      draft_error: draft_error?(draft),
+      error: nil
     )
   end
 
@@ -961,6 +981,10 @@ defmodule TriageWeb.WorkspaceLive do
     end
   end
 
+  defp draft_content(draft), do: Map.take(draft, [:fields, :targets, :versions, :operation])
+  defp draft_error?(nil), do: false
+  defp draft_error?(draft), do: not is_nil(draft.persistence_error)
+
   defp persisted?(:ok), do: true
   defp persisted?(_other), do: false
 
@@ -968,7 +992,7 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp persistence_message({:conflict, _stored}, _draft),
     do:
-      "Draft was changed in another tab or device. Your edits are kept here; reopen this item to load the saved draft."
+      "Draft was changed in another tab or device. Your edits are kept only in this tab. Copy them before reloading to load the saved draft."
 
   defp persistence_message(_error, %{saved: true}),
     do:

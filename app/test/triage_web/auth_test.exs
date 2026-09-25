@@ -73,6 +73,32 @@ defmodule TriageWeb.AuthTest do
     assert has_element?(view, "#flash-group", "Reviewer role required")
   end
 
+  @tag authenticated: :viewer
+  test "viewer can page Timeline both ways without gaining write access", c do
+    image = Repo.get!(Triage.Inventory.Image, c.placement.image_id)
+    for n <- 1..20, do: finding!(image, "CVE-2099-#{9000 + n}")
+
+    {:ok, view, _} = live(c.conn, "/?page=daily")
+    assert has_element?(view, "#timeline-earlier")
+    refute has_element?(view, "#daily-#{c.cve}")
+    view |> element("#timeline-earlier") |> render_click()
+    refute has_element?(view, "#flash-group", "Reviewer role required")
+    assert has_element?(view, "#daily-#{c.cve}")
+    assert has_element?(view, "#timeline-latest")
+    refute has_element?(view, "#timeline-earlier")
+
+    view |> element("#timeline-latest") |> render_click()
+    refute has_element?(view, "#flash-group", "Reviewer role required")
+    assert has_element?(view, "#timeline-earlier")
+    refute has_element?(view, "#timeline-latest")
+    refute has_element?(view, "#daily-#{c.cve}")
+
+    render_hook(view, "save", %{"decision" => %{"action" => "fixed"}})
+    assert has_element?(view, "#flash-group", "Reviewer role required")
+    assert Repo.aggregate(Triage.Decisions.Decision, :count) == 0
+    assert Repo.aggregate(Triage.Workspace.Draft, :count) == 0
+  end
+
   @tag authenticated: :reviewer
   test "forged actor is ignored and audit uses the verified account", c do
     {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.cve}")

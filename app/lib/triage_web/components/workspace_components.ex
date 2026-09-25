@@ -6,6 +6,11 @@ defmodule TriageWeb.WorkspaceComponents do
 
   alias Triage.Workspace.Commit
 
+  defp draft_status(%{saved: true}), do: "Decision saved"
+  defp draft_status(%{dirty: false}), do: "No unsaved changes"
+  defp draft_status(%{persisted: true}), do: "Draft saved to your account"
+  defp draft_status(_draft), do: "Draft NOT saved · keep this tab open"
+
   defp decision_blocker(%{draft: nil}), do: nil
 
   defp decision_blocker(assigns) do
@@ -364,7 +369,13 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :ai_assessment_error, :string, default: nil
 
   def review(assigns) do
-    assigns = assign(assigns, :decision_blocker, decision_blocker(assigns))
+    assigns =
+      assigns
+      |> assign(:decision_blocker, decision_blocker(assigns))
+      |> assign(
+        :decision_error,
+        assigns.error || (assigns.draft && assigns.draft[:persistence_error])
+      )
 
     ~H"""
     <div class="review-topbar">
@@ -478,14 +489,7 @@ defmodule TriageWeb.WorkspaceComponents do
                   href="#review-deployments"
                 >Select deployments</a>
               </p>
-              <span id="draft-state" class="save-state">{if @draft.saved,
-                do: "Decision saved",
-                else:
-                  if(@draft_error,
-                    do: "Draft NOT saved · keep this tab open",
-                    else:
-                      if(@draft.dirty, do: "Draft saved to your account", else: "No unsaved changes")
-                  )}</span>
+              <span id="draft-state" class="save-state">{draft_status(@draft)}</span>
             </div>
           </div>
         </header>
@@ -512,7 +516,9 @@ defmodule TriageWeb.WorkspaceComponents do
             >
               <a href="#review-deployments">Select at least one deployment</a> to continue.
             </p>
-            <p :if={@error} id="decision-error" role="alert" class="form-error">{@error}</p>
+            <p :if={@decision_error} id="decision-error" role="alert" class="form-error">
+              {@decision_error}
+            </p>
             <.input
               field={@form[:action]}
               disabled={not @can_review}
@@ -558,7 +564,7 @@ defmodule TriageWeb.WorkspaceComponents do
             </p>
             <div class="decision-actions">
               <button
-                :if={@can_review && (@error || @draft.stale)}
+                :if={@can_review && (@decision_error || @draft.stale)}
                 id="reload-evidence"
                 type="button"
                 phx-click="reconcile"
