@@ -25,7 +25,7 @@ defmodule TriageWeb.DemoDefaultsLiveTest do
     assert has_element?(view, "#decision_action option[value=accepted_risk][selected]")
     assert has_element?(view, "#scope-target-#{c.prod.id}[checked]")
     refute has_element?(view, "#scope-target-#{c.staging.id}")
-    assert has_element?(view, "#save-decision:not([disabled])", "Whitelist now")
+    assert has_element?(view, "#save-decision:not([disabled])", "Accept risk")
     assert has_element?(view, "#draft-state", "No unsaved changes")
     assert Decisions.history_for_cve(c.cve) == []
     refute has_element?(view, "#risk-confirmation")

@@ -6,6 +6,11 @@ defmodule TriageWeb.WorkspaceComponents do
 
   alias Triage.Workspace.Commit
 
+  defp deployments(count), do: "#{count} #{if count == 1, do: "deployment", else: "deployments"}"
+
+  defp decision_label("accepted_risk"), do: "Risk accepted"
+  defp decision_label(value), do: Decisions.label(value)
+
   defp draft_status(%{saved: true}), do: "Decision saved"
   defp draft_status(%{dirty: false}), do: "No unsaved changes"
   defp draft_status(%{persisted: true}), do: "Draft saved to your account"
@@ -28,7 +33,7 @@ defmodule TriageWeb.WorkspaceComponents do
         "Evidence changed. Reload current evidence before continuing."
 
       assigns.hidden_targets != [] ->
-        "Selected deployments are hidden. Restore the original scope to continue."
+        "Selected deployments are hidden. Restore the original filters to continue."
 
       assigns.draft.fields["action"] not in Commit.review_actions() ->
         "Choose one of the three actions in the Decision panel."
@@ -67,15 +72,15 @@ defmodule TriageWeb.WorkspaceComponents do
         patch={Routes.drill(@params, "active")}
       >Browse vulnerabilities</.link>
     </header>
-    <div class="metrics" aria-label="Current scoped totals">
+    <div class="metrics" aria-label="Totals for the current deployment filters">
       <.link
         :for={
           {mode, label, sub, class} <- [
-            {"active", "Active CVEs", "Distinct vulnerabilities in this scope", ""},
+            {"active", "Active CVEs", "Distinct vulnerabilities in these deployments", ""},
             {"needs", "Needs a decision", "Unreviewed or expired decisions", ""},
             {"urgent", "Immediate priority", "Local review priority · not confirmed exploitation",
              "alert-top"},
-            {"unknown", "Unknown exposure", "Deployment scopes, not CVEs", ""}
+            {"unknown", "Unknown exposure", "Affected deployments, counted per CVE", ""}
           ]
         }
         id={"metric-#{mode}"}
@@ -89,7 +94,7 @@ defmodule TriageWeb.WorkspaceComponents do
     <details id="overview-data-note" class="data-note">
       <summary>About these numbers</summary>
       <p>
-        Counts use the latest recorded evidence, not live monitoring. Scan coverage is unverified. Unknown exposure counts deployment scopes; the other totals count distinct CVEs. Priority follows local policy and is not a claim of compromise.
+        Counts use the latest recorded evidence, not live monitoring. Scan coverage is unverified. Unknown exposure counts each affected deployment once per CVE; the other totals count distinct CVEs. Priority follows local policy and is not a claim of compromise.
       </p>
     </details>
     <div class="dashboard-grid">
@@ -127,9 +132,9 @@ defmodule TriageWeb.WorkspaceComponents do
                   >{team.metrics["needs"].value}</.link>
                 </td>
                 <td>
-                  <.link patch={Routes.drill(@params, "unknown", %{"team" => team.name})}>{team.metrics[
-                    "unknown"
-                  ].value} scopes</.link>
+                  <.link patch={Routes.drill(@params, "unknown", %{"team" => team.name})}>{deployments(
+                    team.metrics["unknown"].value
+                  )}</.link>
                 </td>
               </tr>
             </tbody>
@@ -165,7 +170,7 @@ defmodule TriageWeb.WorkspaceComponents do
           </table>
         </div>
         <p :if={@urgent == []} class="empty">
-          No immediate-priority records in this scope. This is not evidence of safety.
+          No immediate-priority records in these deployments. This is not evidence of safety.
         </p>
       </section>
     </div>
@@ -193,7 +198,7 @@ defmodule TriageWeb.WorkspaceComponents do
             :for={
               {mode, label} <- [
                 {"active", "Active"},
-                {"accepted", "Whitelisted"},
+                {"accepted", "Risk accepted"},
                 {"history", "Observation history"},
                 {"all", "All"}
               ]
@@ -290,7 +295,7 @@ defmodule TriageWeb.WorkspaceComponents do
               :for={row <- @rows}
               id={"inventory-#{row.cve}"}
               class={[
-                whitelist_state(row) == "Whitelisted" && "whitelisted-row",
+                whitelist_state(row) == "Risk accepted" && "whitelisted-row",
                 row.cve in @selected && "selected"
               ]}
             >
@@ -318,10 +323,7 @@ defmodule TriageWeb.WorkspaceComponents do
                 |> Enum.join(", ")}<span class="subline">{row.scopes
                 |> Enum.map(& &1.placement.environment)
                 |> Enum.uniq()
-                |> Enum.join(", ")} · {length(row.scopes)} {if length(row.scopes) ==
-                                                                 1,
-                                                               do: "scope",
-                                                               else: "scopes"}</span>
+                |> Enum.join(", ")} · {deployments(length(row.scopes))}</span>
               </td>
               <td class="why-now">{why_now(row)}</td>
               <td>
@@ -386,7 +388,7 @@ defmodule TriageWeb.WorkspaceComponents do
               {mode, label} <- [
                 {"needs", "Needs decision"},
                 {"progress", "In progress"},
-                {"accepted", "Whitelisted"},
+                {"accepted", "Risk accepted"},
                 {"fixed", "Reported fixed"}
               ]
             }
@@ -416,7 +418,7 @@ defmodule TriageWeb.WorkspaceComponents do
               "queue-item",
               @row && @row.cve == row.cve && "active",
               fixed_scopes?(row.scopes) && "fixed-item",
-              whitelist_state(row) == "Whitelisted" && "whitelisted-item"
+              whitelist_state(row) == "Risk accepted" && "whitelisted-item"
             ]}
             aria-current={if @row && @row.cve == row.cve, do: "true"}
             patch={Routes.workspace_path(@params, %{"item" => row.cve})}
@@ -437,16 +439,16 @@ defmodule TriageWeb.WorkspaceComponents do
         <header class={[
           "review-heading",
           fixed_scopes?(@row.scopes) && "fixed-heading",
-          whitelist_state(@row) == "Whitelisted" && "whitelisted-heading"
+          whitelist_state(@row) == "Risk accepted" && "whitelisted-heading"
         ]}>
           <strong :if={fixed_scopes?(@row.scopes)} class="fixed-banner">REPORTED FIXED</strong>
-          <strong :if={whitelist_state(@row) == "Whitelisted"} class="whitelisted-banner">WHITELISTED</strong>
+          <strong :if={whitelist_state(@row) == "Risk accepted"} class="whitelisted-banner">RISK ACCEPTED</strong>
           <div class="review-heading-content">
             <div class="review-summary">
               <div class="row">
                 <h2>{@row.cve}</h2><.severity value={@row.severity} />
               </div><p class="subtitle">
-                {@row.packages} · {length(@row.scopes)} scopes in view · coverage unverified
+                {@row.packages} · {deployments(length(@row.scopes))} in view · coverage unverified
               </p>
               <.saved_status scopes={@row.scopes} />
             </div>
@@ -469,7 +471,7 @@ defmodule TriageWeb.WorkspaceComponents do
                   title={@decision_blocker}
                 >{case @draft.fields["action"] do
                   "fixed" -> "Mark as fixed"
-                  "accepted_risk" -> "Whitelist now"
+                  "accepted_risk" -> "Accept risk"
                   "create_ticket" -> "Create Azure DevOps ticket"
                   _ -> "Select an action"
                 end}</button>
@@ -498,6 +500,7 @@ defmodule TriageWeb.WorkspaceComponents do
           id="workspace-decision"
           phx-change="draft"
           phx-submit="save"
+          phx-hook="WorkspaceValidation"
           class="review-content"
         >
           <div class="decision-column">
@@ -505,16 +508,18 @@ defmodule TriageWeb.WorkspaceComponents do
               Read-only viewer. A reviewer or administrator must make decisions.
             </p>
             <div class="decision-head">
-              <h3>Decision</h3><a href="#review-deployments" class="small">{length(@draft.targets)} deployments selected</a>
+              <h3>Decision</h3><a href="#review-deployments" class="small">{deployments(
+                length(@draft.targets)
+              )} selected</a>
             </div>
             <p class="form-note" id="why-now">Why now: {why_now(@row)}</p>
             <p
               :if={@can_review and @draft.targets == []}
               id="decision-no-targets"
-              class="form-error"
+              class="decision-guidance"
               role="status"
             >
-              <a href="#review-deployments">Select at least one deployment</a> to continue.
+              <a href="#review-deployments">Select deployments to continue</a>.
             </p>
             <p :if={@decision_error} id="decision-error" role="alert" class="form-error">
               {@decision_error}
@@ -527,7 +532,7 @@ defmodule TriageWeb.WorkspaceComponents do
               options={[
                 {"Choose an action…", ""},
                 {"Mark as fixed", "fixed"},
-                {"Whitelist temporarily", "accepted_risk"},
+                {"Accept risk temporarily", "accepted_risk"},
                 {"Create Azure DevOps ticket", "create_ticket"}
               ]}
             />
@@ -536,7 +541,7 @@ defmodule TriageWeb.WorkspaceComponents do
               field={@form[:due_on]}
               disabled={not @can_review}
               type="date"
-              label="Whitelist through (UTC)"
+              label="Accept risk through (UTC)"
               aria-describedby="whitelist-expiry-help"
             />
             <.input
@@ -545,17 +550,18 @@ defmodule TriageWeb.WorkspaceComponents do
               disabled={not @can_review}
               type="textarea"
               label="Reason for accepting the risk (required)"
+              required
               maxlength="2000"
             />
             <p :if={@draft.fields["action"] == "fixed"} class="form-note">
-              Marks selected scopes Fixed with today's date. No comment required.
+              Marks selected deployments Reported fixed with today's date. No comment required.
             </p>
             <p
               :if={@draft.fields["action"] == "accepted_risk"}
               id="whitelist-expiry-help"
               class="form-note"
             >
-              Risk is accepted through the selected date, until midnight UTC at the start of the next day.
+              Risk is accepted through the selected date (UTC). Acceptance expires at 00:00 UTC on the following day.
               Then these deployments return to Needs decision unless a newer decision applies.
               Defaults to three months from today.
             </p>
@@ -592,7 +598,7 @@ defmodule TriageWeb.WorkspaceComponents do
               <h3>Affected deployments</h3><span>{length(@draft.targets)} selected</span>
             </div>
             <p :if={@hidden_targets != []} class="form-error">
-              {length(@hidden_targets)} selected targets are hidden by this scope. Restore the original scope; selection has not changed.
+              {deployments(length(@hidden_targets))} selected but hidden by these filters. Restore the original filters; selection has not changed.
             </p>
             <.scope_table
               targets={@row.scopes}
@@ -602,7 +608,7 @@ defmodule TriageWeb.WorkspaceComponents do
               row_id_prefix="review-target"
             />
             <p class="coverage-note">
-              Select the deployments this decision applies to. Production and staging are separate targets.
+              Select the deployments this decision applies to. Production and staging are separate deployments.
             </p>
             <details>
               <summary>Why this priority?</summary><p>
@@ -635,7 +641,7 @@ defmodule TriageWeb.WorkspaceComponents do
       <section :if={is_nil(@row)} class="panel review-workspace">
         <div class="empty">
           <h2>No matching assessment</h2><p>
-            The requested advisory is outside the current scope or no work is waiting. No other target has been substituted.
+            The requested advisory is outside the current deployment filters or no work is waiting. No other deployment has been substituted.
           </p><.link patch={Routes.drill(@params, "active")}>Open active inventory</.link>
         </div>
       </section>
@@ -666,7 +672,7 @@ defmodule TriageWeb.WorkspaceComponents do
       <table class="scope-table">
         <thead>
           <tr>
-            <th :if={@selectable}>Select</th><th>Team / environment</th><th>Service / target</th><th>
+            <th :if={@selectable}>Select</th><th>Team / environment</th><th>Service / deployment</th><th>
               Exposure / state
             </th>
           </tr>
@@ -683,7 +689,7 @@ defmodule TriageWeb.WorkspaceComponents do
               <label><input
                 type="checkbox"
                 id={"scope-target-#{scope.id}"}
-                aria-label={"Select #{scope.placement.owner} #{scope.placement.environment} placement #{scope.id}"}
+                aria-label={"Select #{team_name(scope.placement.owner)} #{scope.placement.environment} deployment #{scope.id}"}
                 checked={scope.id in @selected}
                 disabled={not scope.active?}
                 phx-click="target"
@@ -693,7 +699,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <td>
               <strong>{team_name(scope.placement.owner)}</strong><br />{scope.placement.environment}
             </td><td>
-              {scope.image.repository}<br /><span class="mono">Placement {scope.id} · {scope.placement.namespace}</span>
+              {scope.image.repository}<br /><span class="mono">Deployment {scope.id} · {scope.placement.namespace}</span>
             </td><td>{exposure(scope.exposure)}<br /><small>{work_status([scope])}</small></td>
           </tr>
         </tbody>
@@ -709,6 +715,7 @@ defmodule TriageWeb.WorkspaceComponents do
     ~H"""
     <dialog
       id="risk-confirmation"
+      data-return-focus="save-decision"
       class="confirm"
       phx-hook="WorkspaceDialog"
       data-close-event="cancel-risk"
@@ -716,12 +723,12 @@ defmodule TriageWeb.WorkspaceComponents do
     >
       <div class="confirmation-layout">
         <header class="modal-head">
-          <h2 id="risk-title">Whitelist temporarily?</h2>
+          <h2 id="risk-title">Accept risk temporarily?</h2>
         </header><div class="modal-body">
-          <strong>{@row.cve} · {length(@draft.targets)} exact targets</strong><.scope_table targets={
+          <strong>{@row.cve} · {deployments(length(@draft.targets))}</strong><.scope_table targets={
             Enum.filter(@row.scopes, &(&1.id in @draft.targets))
           } /><p>{@draft.fields["reason"]}</p><p>
-            Valid through {@draft.fields["due_on"]}, UTC; expires at the following midnight.
+            Accepted through {@draft.fields["due_on"]} (UTC). Expires at 00:00 UTC on the following day.
           </p><p>
             Recorded locally with the current date.
           </p><p>This does not mark the CVE fixed or create an external ticket.</p>
@@ -731,7 +738,7 @@ defmodule TriageWeb.WorkspaceComponents do
             class="primary"
             phx-click="confirm-risk"
             phx-disable-with="Saving…"
-          >Confirm whitelist</button>
+          >Confirm risk acceptance</button>
         </footer>
       </div>
     </dialog>
@@ -756,6 +763,7 @@ defmodule TriageWeb.WorkspaceComponents do
     ~H"""
     <dialog
       id="ticket-confirmation"
+      data-return-focus="save-decision"
       class="confirm"
       phx-hook="WorkspaceDialog"
       data-close-event="cancel-risk"
@@ -792,6 +800,7 @@ defmodule TriageWeb.WorkspaceComponents do
     ~H"""
     <dialog
       id="workspace-settings-dialog"
+      data-return-focus="workspace-settings"
       class="confirm"
       phx-hook="WorkspaceDialog"
       data-close-event="close-settings"
@@ -809,7 +818,7 @@ defmodule TriageWeb.WorkspaceComponents do
             </div>
             <div>
               <dt>Your work is saved to your account</dt><dd>
-                Drafts survive reloads and server restarts. A draft is not a decision: use the action button to commit it. Discard draft only clears the current draft.
+                Drafts marked saved to your account survive reloads and server restarts. Recent edits may still be saving; if saving fails, keep this tab open. A draft is not a decision: use the action button to commit it. Discard draft only clears the current draft.
               </dd>
             </div>
             <div>
@@ -878,7 +887,7 @@ defmodule TriageWeb.WorkspaceComponents do
   # "Critical" priority belongs to critical advisories only, and a critical
   # advisory never shows a lesser label beside its severity. Without a
   # recorded severity the computed review priority stands on its own.
-  defp displayed_priority(nil, _severity), do: "No active scope"
+  defp displayed_priority(nil, _severity), do: "No active deployment"
 
   defp displayed_priority(risk, severity) do
     case to_string(severity || "") |> String.downcase() do
@@ -928,10 +937,10 @@ defmodule TriageWeb.WorkspaceComponents do
     label =
       case state do
         "fixed" -> "Reported fix (unverified)"
-        "accepted_risk" -> "Whitelisted"
+        "accepted_risk" -> "Risk accepted"
         "create_ticket" -> "In progress — ticket created"
         "needs" -> "Needs decision"
-        "mixed" -> "Mixed scope statuses"
+        "mixed" -> "Different deployment statuses"
         _ -> "In progress"
       end
 
@@ -951,7 +960,7 @@ defmodule TriageWeb.WorkspaceComponents do
     |> Enum.map(fn scope ->
       cond do
         not scope.active? -> "No longer observed"
-        scope.covered? -> Decisions.label(scope.decision.decision)
+        scope.covered? -> decision_label(scope.decision.decision)
         true -> "Needs decision"
       end
     end)
@@ -961,8 +970,8 @@ defmodule TriageWeb.WorkspaceComponents do
 
   @doc """
   Visibility state of the current assessment's active whitelist decisions:
-  `nil` when nothing is whitelisted, `"Whitelisted"` when every active scope is,
-  `"Partially whitelisted"` when only some are.
+  `nil` when nothing is whitelisted, `"Risk accepted"` when every active scope is,
+  `"Risk accepted for some deployments"` when only some are.
   """
   def whitelist_state(nil), do: nil
 
@@ -974,8 +983,8 @@ defmodule TriageWeb.WorkspaceComponents do
 
     cond do
       active == [] or whitelisted == 0 -> nil
-      whitelisted == length(active) -> "Whitelisted"
-      true -> "Partially whitelisted"
+      whitelisted == length(active) -> "Risk accepted"
+      true -> "Risk accepted for some deployments"
     end
   end
 
@@ -985,7 +994,7 @@ defmodule TriageWeb.WorkspaceComponents do
   def history_scope(d) do
     target = d.metadata["target"] || %{}
 
-    "Placement #{d.placement_id} · #{target["team"] || "historical team unknown"} · #{target["environment"] || "historical environment unknown"}"
+    "Deployment #{d.placement_id} · #{target["team"] || "historical team unknown"} · #{target["environment"] || "historical environment unknown"}"
   end
 
   # T03: source-backed "Why now" from the deterministic risk policy. The
@@ -1018,7 +1027,7 @@ defmodule TriageWeb.WorkspaceComponents do
           {if @assessing, do: "Classifying…", else: "Classify now"}
         </button>
       </div>
-      <p class="classification-scope">{@cve} · All deployments in the current Review scope</p>
+      <p class="classification-scope">{@cve} · All deployments matching the current Review filters</p>
       <p :if={not @can_review} class="form-note">
         Reviewer access is required to start classification.
       </p>
@@ -1059,7 +1068,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <span class="classification-score-help">{String.capitalize(@assessment["danger_level"])} · higher is riskier</span>
           </div>
           <div class="classification-score-card" id="classification-whitelist">
-            <span class="classification-score-label">Whitelist suitability</span>
+            <span class="classification-score-label">Risk acceptance suitability</span>
             <div class="classification-score-number">
               <strong>{if is_integer(@assessment["whitelist_score"]),
                 do: @assessment["whitelist_score"],
@@ -1073,7 +1082,7 @@ defmodule TriageWeb.WorkspaceComponents do
               high="70"
               optimum="100"
               value={@assessment["whitelist_score"]}
-              aria-label="Kiro whitelist suitability"
+              aria-label="Kiro risk acceptance suitability"
             />
             <span class="classification-score-help">{if is_integer(@assessment["whitelist_score"]),
               do: "Higher means stronger support",
@@ -1094,7 +1103,7 @@ defmodule TriageWeb.WorkspaceComponents do
         </details>
         <div :if={@assessment["guard_reasons"] != []} id="classification-guards" class="inline-notice">
           <p :for={reason <- @assessment["guard_reasons"]}>{reason}</p>
-          <small>Kiro's original suitability score: {@assessment["raw_whitelist_score"]}/100. It is not accepted as a whitelist recommendation.</small>
+          <small>Kiro's original suitability score: {@assessment["raw_whitelist_score"]}/100. It is not accepted as a risk acceptance recommendation.</small>
         </div>
         <p class="classification-timestamp">
           Scored by Kiro ·
@@ -1104,11 +1113,11 @@ defmodule TriageWeb.WorkspaceComponents do
       <details class="classification-disclosure">
         <summary>What is sent to Kiro?</summary>
         <p>
-          The CVE's complete stored findings and descriptions, packages, fixes, images, deployments, exposure, intelligence and existing decisions in this scope. No draft, login token or application credentials. Kiro has no action tools.
+          The CVE's complete stored findings and descriptions, packages, fixes, images, deployments, exposure, intelligence and existing decisions for these deployments. No draft, login token or application credentials. Kiro has no action tools.
         </p>
       </details>
       <p class="classification-footnote">
-        AI guidance, not a probability or approval. Classification does not approve, whitelist, or commit anything.
+        AI guidance, not a probability or approval. Classification does not approve, accept risk, or commit anything.
       </p>
     </section>
     """
@@ -1118,16 +1127,26 @@ defmodule TriageWeb.WorkspaceComponents do
   defp ai_recommendation_label("remediate"), do: "Remediate (schedule a fix)"
 
   defp ai_recommendation_label("suggest_risk_acceptance"),
-    do: "Whitelist candidate (review before accepting)"
+    do: "Risk acceptance candidate (review before accepting)"
 
   defp ai_recommendation_label("request_verification"), do: "Request verification"
   defp ai_recommendation_label(_), do: "Investigate this CVE"
 
   defp why_now(row) do
     cond do
-      row.risk && row.risk.reasons != [] -> hd(row.risk.reasons)
-      Enum.any?(row.scopes, &(!&1.active?)) -> "No longer observed in local inventory"
-      true -> "No recorded attention reason; coverage is unverified"
+      row.risk && row.risk.reasons != [] ->
+        # Translate generated priority copy only; preserve the risk policy and stored evidence.
+        String.replace(
+          hd(row.risk.reasons),
+          "Internet-exposed placement",
+          "Internet-exposed deployment"
+        )
+
+      Enum.any?(row.scopes, &(!&1.active?)) ->
+        "No longer observed in local inventory"
+
+      true ->
+        "No recorded attention reason; coverage is unverified"
     end
   end
 
@@ -1140,7 +1159,7 @@ defmodule TriageWeb.WorkspaceComponents do
       fixed_scopes?(row.scopes) ->
         "Reported fix · verification needed, not a verified deployment"
 
-      whitelist_state(row) in ["Whitelisted", "Partially whitelisted"] ->
+      whitelist_state(row) in ["Risk accepted", "Risk accepted for some deployments"] ->
         "Risk accepted · review at expiry"
 
       Enum.any?(row.scopes, &(&1.covered? and &1.decision.decision in Decisions.work_actions())) ->
@@ -1150,7 +1169,7 @@ defmodule TriageWeb.WorkspaceComponents do
         "Historical record · no current action"
 
       true ->
-        "Choose an action for exact scopes"
+        "Choose an action for selected deployments"
     end
   end
 
@@ -1178,7 +1197,7 @@ defmodule TriageWeb.WorkspaceComponents do
     ~H"""
     <article :for={d <- @history} id={"decision-history-#{d.id}"} class="history-entry">
       <time>{time(d.decided_at)}</time><div>
-        <strong>{d.label} · {d.state}</strong><p>{history_scope(d)}</p><p>
+        <strong>{decision_label(d.decision)} · {d.state}</strong><p>{history_scope(d)}</p><p>
           {d.reason}
           <a
             :if={d.metadata["ticket_url"]}
@@ -1191,7 +1210,7 @@ defmodule TriageWeb.WorkspaceComponents do
           {time(d.expires_at)}
         </p>
       </div>
-    </article><p :if={@history == []}>No recorded decisions for these scopes.</p>
+    </article><p :if={@history == []}>No recorded decisions for these deployments.</p>
     """
   end
 end

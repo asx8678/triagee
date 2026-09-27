@@ -52,7 +52,7 @@ defmodule TriageWeb.WorkspaceUXTest do
 
     # Fresh draft: no action and no write targets selected (I05).
     assert has_element?(view, "#save-decision[disabled]", "Select an action")
-    assert has_element?(view, "#decision-no-targets", "Select at least one deployment")
+    assert has_element?(view, "#decision-no-targets", "Select deployments to continue")
     assert has_element?(view, "#cancel-decision[disabled]")
 
     # Targets alone are not enough: the action must also be chosen explicitly.
@@ -64,13 +64,113 @@ defmodule TriageWeb.WorkspaceUXTest do
 
     # Deselecting every target disables submission again.
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
-    assert has_element?(view, "#decision-no-targets", "Select at least one deployment")
+    assert has_element?(view, "#decision-no-targets", "Select deployments to continue")
     assert has_element?(view, "#save-decision[disabled]")
     view |> element("#cancel-decision") |> render_click()
     assert has_element?(view, "#decision-no-targets")
     assert has_element?(view, "#save-decision[disabled]")
     assert has_element?(view, "#cancel-decision[disabled]")
     assert Repo.aggregate(Decisions.Decision, :count) == 0
+  end
+
+  test "selection guidance is neutral and counts use deployment grammar", c do
+    {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.first.cve}")
+
+    assert has_element?(
+             view,
+             "#decision-no-targets.decision-guidance",
+             "Select deployments to continue"
+           )
+
+    refute has_element?(view, "#decision-no-targets.form-error")
+    refute has_element?(view, "#workspace-decision [aria-invalid=true]")
+    assert has_element?(view, ".decision-head", "0 deployments selected")
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+    assert has_element?(view, ".decision-head", "1 deployment selected")
+    refute has_element?(view, "#decision-no-targets")
+    view |> element("#scope-target-#{c.staging.id}") |> render_click()
+    assert has_element?(view, ".decision-head", "2 deployments selected")
+
+    assert has_element?(
+             view,
+             "#scope-target-#{c.prod.id}[aria-label='Select alpha prod deployment #{c.prod.id}']"
+           )
+  end
+
+  test "server validation exposes field errors and requests keyboard recovery", c do
+    {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.first.cve}")
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+    view |> form("#workspace-decision", decision: %{action: "accepted_risk"}) |> render_change()
+    assert has_element?(view, "#workspace-decision[phx-hook=WorkspaceValidation]")
+    assert has_element?(view, "#decision_reason[required]")
+    view |> form("#workspace-decision", decision: %{reason: "   "}) |> render_submit()
+
+    assert has_element?(
+             view,
+             "#decision_reason[aria-invalid=true][aria-errormessage=decision_reason-errors]"
+           )
+
+    assert has_element?(view, "#decision-error[role=alert]", "highlighted fields")
+    assert_push_event(view, "workspace-validation-failed", %{})
+    refute has_element?(view, "#risk-confirmation")
+    assert Repo.aggregate(Decisions.Decision, :count) == 0
+  end
+
+  test "risk acceptance copy and exclusive UTC expiry agree across review and history", c do
+    through = Date.add(Date.utc_today(), 30)
+    expires_on = Date.add(through, 1)
+    {:ok, view, _} = live(c.conn, "/?page=review&item=#{c.first.cve}")
+    view |> element("#scope-target-#{c.prod.id}") |> render_click()
+    view |> form("#workspace-decision", decision: %{action: "accepted_risk"}) |> render_change()
+
+    assert has_element?(
+             view,
+             "#decision_action option[value=accepted_risk]",
+             "Accept risk temporarily"
+           )
+
+    assert has_element?(
+             view,
+             "#whitelist-expiry-help",
+             "expires at 00:00 UTC on the following day"
+           )
+
+    view
+    |> form("#workspace-decision",
+      decision: %{reason: "Patch rollout scheduled", due_on: Date.to_iso8601(through)}
+    )
+    |> render_submit()
+
+    assert has_element?(
+             view,
+             "#risk-confirmation[data-return-focus=save-decision]",
+             "1 deployment"
+           )
+
+    assert has_element?(view, "#risk-title", "Accept risk temporarily?")
+    assert has_element?(view, "#risk-confirmation", "Accepted through #{through} (UTC)")
+    assert has_element?(view, "#risk-confirmation", "Expires at 00:00 UTC on the following day")
+    view |> element("#confirm-risk") |> render_click()
+    assert has_element?(view, ".action-toast", "risk accepted for selected deployments")
+    assert has_element?(view, ".scope-table", "Needs decision")
+    [decision] = Decisions.history_for_cve(c.first.cve)
+    assert decision.expires_at == DateTime.new!(expires_on, ~T[00:00:00])
+    view |> element("#workspace-nav-exceptions") |> render_click()
+    assert has_element?(view, "#exceptions-count", "1 decision")
+    assert has_element?(view, "#exceptions-count", "1 underlying record")
+    refute has_element?(view, "#exceptions-count", "1 underlying records")
+    assert has_element?(view, ".risk-action-tag", "Temporary risk acceptance")
+    assert has_element?(view, ".risk-entry-expiry", "Expires at")
+
+    assert has_element?(
+             view,
+             ".risk-entry-expiry time",
+             Calendar.strftime(expires_on, "%d %b %Y") <> ", 00:00 UTC"
+           )
+
+    view |> element("#workspace-nav-daily") |> render_click()
+    assert has_element?(view, ".timeline-event-heading", "Risk accepted")
+    assert has_element?(view, ".timeline-event-expiry", "Risk acceptance expires at")
   end
 
   test "review displays actual scanner fix data, not placeholder evidence", c do
@@ -136,7 +236,7 @@ defmodule TriageWeb.WorkspaceUXTest do
   test "overview drilldown remains scoped and reference caveats stay available", c do
     {:ok, view, _} = live(c.conn, "/?page=overview&team=alpha&environment=prod")
     assert has_element?(view, "#overview-data-note", "Scan coverage is unverified")
-    assert has_element?(view, "#metric-unknown .sub", "Deployment scopes, not CVEs")
+    assert has_element?(view, "#metric-unknown .sub", "Affected deployments, counted per CVE")
     view |> element("#start-review") |> render_click()
     query = view |> assert_patch() |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
     assert query["page"] == "review"

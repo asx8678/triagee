@@ -79,7 +79,7 @@ defmodule TriageWeb.DailyAndAiLiveTest do
       row = "#daily-#{c.cve}"
       assert has_element?(view, "#{row} .timeline-duration", "2 d 2 h 30 min")
       assert has_element?(view, "#{row} time[datetime='2026-09-10T08:00:00Z']")
-      assert has_element?(view, "#timeline-event-decision-#{decision.id}", "Whitelisted")
+      assert has_element?(view, "#timeline-event-decision-#{decision.id}", "Risk accepted")
       assert has_element?(view, "#timeline-event-decision-#{decision.id}", "alpha · prod")
       assert has_element?(view, "#timeline-event-decision-#{decision.id}", "alice")
 
@@ -122,13 +122,13 @@ defmodule TriageWeb.DailyAndAiLiveTest do
         |> LazyHTML.query("#daily-CVE-2099-9028 .timeline-event-heading strong")
         |> Enum.map(&LazyHTML.text/1)
 
-      assert labels == ["Detected", "Whitelisted"]
+      assert labels == ["Detected", "Risk accepted"]
       assert has_element?(view, "#daily-CVE-2099-9028 .timeline-duration", "2 h 0 min")
 
       assert has_element?(
                view,
                "#daily-CVE-2099-9028 .timeline-event-scopes summary",
-               "2 deployment scopes"
+               "2 deployments"
              )
 
       fixed_labels =
@@ -192,7 +192,7 @@ defmodule TriageWeb.DailyAndAiLiveTest do
       assert has_element?(view, "#classification-whitelist strong", "18")
       assert render(view) =~ "Investigate this CVE"
       assert render(view) =~ "Fake runner fixture: deterministic pipeline response."
-      assert render(view) =~ "does not approve, whitelist, or commit anything"
+      assert render(view) =~ "does not approve, accept risk, or commit anything"
     end
 
     test "duplicate triggers are bounded to one runner invocation", c do

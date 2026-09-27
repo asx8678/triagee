@@ -735,3 +735,39 @@ dialog{border:1px solid var(--line);border-radius:4px;padding:0;color:var(--ink)
 .ai-rationale { margin:0 0 8px; font-size:.85rem; color:#334155; line-height:1.4; background:#fff; padding:8px; border-radius:6px; border:1px solid #f1f5f9; }
 .ai-disclaimer { margin:0; font-size:.75rem; }
 .scope-table .focused-target { outline:2px solid #5e86e5; outline-offset:-2px; background:#f4f7ff; }
+
+/* Decision-critical copy stays readable without enlarging decorative metadata. */
+@scope (.approved-workspace) {
+  .decision-guidance { margin:10px 0; padding:10px 12px; border-left:2px solid var(--line); background:#f3f6fb; color:var(--ink); font-size:13px; line-height:1.5; }
+  .decision-guidance a { text-decoration:underline; }
+  :scope .review-content .fieldset .label,
+  :scope .review-heading .subtitle,
+  :scope .review-actions .save-state,
+  :scope .review-actions .decision-action-help,
+  :scope .review-content .form-note,
+  :scope .review-content .coverage-note,
+  :scope .decision-head .small,
+  :scope .scope-table td,
+  :scope .scope-table small,
+  :scope .modal-body,
+  :scope .history-entry { font-size:13px; line-height:1.5; }
+  :scope .form-error, :scope .field-errors, :scope .workspace-notice { font-size:14px; line-height:1.5; }
+  :scope .risk-field-label, :scope .risk-status, :scope .risk-action-tag,
+  :scope .risk-metric-hint, :scope .risk-list-meta, :scope .risk-expiry-relative,
+  :scope .risk-record-details > summary, :scope .risk-record-note,
+  :scope .risk-decisions-footer, :scope .risk-environment,
+  :scope .classification-footnote, :scope .classification-timestamp,
+  :scope .classification-score-help, :scope .classification-disclosure,
+  :scope .classification-setup { font-size:12px; line-height:1.5; }
+  :scope .risk-field-label, :scope .risk-expiry-relative,
+  :scope .classification-footnote, :scope .classification-timestamp { color:var(--muted); }
+  :scope .bottom-status { font-size:12px; line-height:1.5; }
+  :scope .risk-reason-preview, :scope .risk-entry-expiry time,
+  :scope .risk-entry-scope strong, :scope .risk-entry-reviewer strong,
+  :scope .timeline-event-time, :scope .timeline-event-expiry,
+  :scope .timeline-event-scope, :scope .timeline-event-note,
+  :scope .timeline-response dt, :scope .classification-scope { font-size:13px; line-height:1.5; }
+  .risk-entry-expiry .risk-field-label { margin-top:8px; }
+  .risk-entry-expiry time { overflow-wrap:anywhere; }
+  .review-content [aria-invalid="true"] { scroll-margin-block:16px; }
+}

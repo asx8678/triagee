@@ -48,9 +48,9 @@ implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener 
 
 Select a CVE in **Review** and click **Classify now**. Phoenix sends its complete
 stored evidence for the current team/environment scope to **headless Kiro**, then
-shows a **risk score**, **whitelist-suitability score**, and reasoning directly in
+shows a **risk score**, **risk-acceptance suitability score**, and reasoning directly in
 Review. Results are saved independently of the browser connection. Classification
-never applies a whitelist, edits a repository or creates an Azure ticket.
+never accepts risk, edits a repository or creates an Azure ticket.
 
 Enable explicitly with `TRIAGE_ANALYSIS_ENABLED=true` and `TRIAGE_KIRO_CLI` pointing
 to your authenticated `kiro-cli`; optionally pin `TRIAGE_KIRO_MODEL`. No separate
@@ -60,8 +60,8 @@ flags are retired. See [setup, scoring and safety](docs/AI_CLASSIFIER.md).
 
 ## Presentation demo
 
-Development preselects **Whitelist temporarily** and the CVE's active deployments
-in the current scope, so **Whitelist now** starts enabled. A reason and confirmation
+Development preselects **Accept risk temporarily** and the CVE's active deployments
+in the current scope, so **Accept risk** starts enabled. A reason and confirmation
 are still required; existing drafts are preserved. Set `TRIAGE_DEMO_MODE=false`
 for neutral defaults (the default in test/production).
 
@@ -77,23 +77,23 @@ The homepage `/` is the new workspace; `/workspace` is an alias for the same UI.
 The primary navigation is **Review**, **Risk decisions**, and **Timeline**:
 
 - **Review** (`/?page=findings`, with `/?page=review` for existing detail links):
-  review CVEs, select deployments, and choose **Mark as fixed**, **Whitelist
+  review CVEs, select deployments, and choose **Mark as fixed**, **Accept risk
   temporarily**, or **Create Azure DevOps ticket**. Disabled decision buttons
   explain what is missing and link to deployment selection. AI classification is
-  optional and never blocks manual whitelisting; a reason and confirmation are
+  optional and never blocks manual risk acceptance; a reason and confirmation are
   still required. Historical work requests remain visible in the timeline.
 - **Risk decisions** (`/?page=exceptions`): a searchable register of the last
-  365 days of whitelist and not-affected decisions, including older replacements.
+  365 days of risk-acceptance and not-affected decisions, including older replacements.
   Summary tiles filter by expiry; team/environment filters and search are saved
   in the URL. Identical approvals from one operation are grouped across deployments,
   with full reasons, exact UTC dates and individual record IDs in expandable details.
   Pages show up to 12 grouped entries. Counts distinguish decisions from underlying
   records. Expiry is not current coverage or proof of remediation: **Review** opens
   the CVE with the explicitly selected scope, not an unrelated previous Review scope.
-  A whitelist applies through the selected date and expires at the following
-  midnight UTC. The deployments then need review unless a newer decision applies.
+  Risk acceptance applies through the selected date and expires at 00:00 UTC
+  on the following day. The deployments then need review unless a newer decision applies.
 - **Timeline** (`/?page=daily`): one history per CVE, ordered from detection
-  through whitelisting, work actions, marked fixes, and scanner observations.
+  through risk acceptance, work actions, marked fixes, and scanner observations.
   Each CVE shows its first detection, first recorded action on any deployment,
   and response time. Every action includes its timestamp, scope, reviewer,
   reason, expiry when present, and elapsed time since detection. CVEs without a
@@ -101,13 +101,13 @@ The primary navigation is **Review**, **Risk decisions**, and **Timeline**:
   action; it does not establish verified remediation or coverage of every
   deployment. A single operation across several deployments is one step with
   all its scopes. Independent later reviews remain dated steps; repeated
-  whitelist decisions are labelled **Whitelist updated**. CVEs are sorted by
+  risk-acceptance decisions are labelled **Risk acceptance updated**. CVEs are sorted by
   latest activity and paged as complete histories, so detection and action
   cannot end up on separate pages.
 
 To add three fictional local Timeline examples, run
 `mise x -- mix run priv/repo/timeline_samples.exs` in development. The two
-whitelist examples respond after 2 and 5 hours. The third shows detection,
+risk-acceptance examples respond after 2 and 5 hours. The third shows detection,
 a fix marked by a reviewer, then a later scanner clearance. These records use
 `CVE-2099-9028` through `CVE-2099-9030`, have no public advisory URLs, and are
 added only if missing; repeated runs preserve existing history.

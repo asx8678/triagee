@@ -563,8 +563,8 @@ defmodule Triage.Timeline do
         reason: d.reason,
         label:
           if(d.placement_id,
-            do: "Partially whitelisted — one placement only",
-            else: "Whitelisted"
+            do: "Risk accepted for one deployment only",
+            else: "Risk accepted"
           )
       }
     end)

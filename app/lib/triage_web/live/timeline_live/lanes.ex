@@ -43,7 +43,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
           <thead>
             <tr>
               <th scope="col">CVE</th><th scope="col">First detected</th>
-              <th scope="col">Fixed / whitelisted on</th><th scope="col">Time taken</th>
+              <th scope="col">Fix / risk acceptance date</th><th scope="col">Time taken</th>
               <th scope="col">Current status</th><th scope="col">History</th>
             </tr>
           </thead>
@@ -92,7 +92,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
                   class="button button-secondary"
                 >CVE detail</.link>
                 <details>
-                  <summary>Actions &amp; scope</summary>
+                  <summary>Actions &amp; deployments</summary>
                   <p>
                     {lane.occurrence_count} occurrences ({lane.open_count} open, {lane.resolved_count} no longer observed) · {length(
                       lane.observed_dates
@@ -100,16 +100,16 @@ defmodule TriageWeb.TimelineLive.Lanes do
                   </p>
                   <p :if={lane.reopen_count > 0}>Detected again · reopened history</p>
                   <p :if={lane.suppressed_count > 0}>
-                    Whitelisted via scanner: {lane.suppressed_count} occurrence(s). Date unknown.
+                    Scanner suppression recorded: {lane.suppressed_count} occurrence(s). Date unknown.
                   </p>
                   <ol>
                     <li :for={decision <- Map.get(lane, :decisions, [])}>
-                      <strong>{Triage.Decisions.label(decision.decision)}</strong>
+                      <strong>{decision_label(decision.decision)}</strong>
                       · {decision_state(decision, Map.get(lane, :decisions, []), @now)}
                       <span class="supporting"><.timestamp value={decision.decided_at} />
                       · {duration(lane.first_seen, decision.decided_at)} after detection</span>
                       <span class="supporting">{if decision.placement_id,
-                        do: "Placement #{decision.placement_id} only",
+                        do: "Deployment #{decision.placement_id} only",
                         else: "Whole-CVE decision"}</span>
                       <span :if={decision.expires_at} class="supporting">Expires
                       <.timestamp value={decision.expires_at} /></span>
@@ -131,6 +131,9 @@ defmodule TriageWeb.TimelineLive.Lanes do
     </section>
     """
   end
+
+  defp decision_label("accepted_risk"), do: "Risk accepted"
+  defp decision_label(value), do: Triage.Decisions.label(value)
 
   defp decision_state(d, history, now) do
     cond do
@@ -171,10 +174,18 @@ defmodule TriageWeb.TimelineLive.Lanes do
 
       decision ->
         %{
-          label: if(decision.placement_id, do: "Partially whitelisted", else: "Whitelisted"),
-          detail: Triage.Decisions.label(decision.decision),
+          label:
+            if(decision.decision == "accepted_risk" and decision.placement_id,
+              do: "Risk accepted for one deployment",
+              else: decision_label(decision.decision)
+            ),
+          detail: decision_label(decision.decision),
           at: decision.decided_at,
-          timing: "Time to whitelist",
+          timing:
+            if(decision.decision == "accepted_risk",
+              do: "Time to risk acceptance",
+              else: "Time to decision"
+            ),
           waiting: false
         }
 
@@ -182,13 +193,13 @@ defmodule TriageWeb.TimelineLive.Lanes do
         %{
           label:
             if(lane.suppressed_count == lane.occurrence_count,
-              do: "Whitelisted",
-              else: "Partially whitelisted"
+              do: "Scanner-suppressed",
+              else: "Partially scanner-suppressed"
             ),
           detail:
             "Via scanner · #{lane.suppressed_count} of #{lane.occurrence_count} occurrences",
           at: nil,
-          timing: "Whitelist date unknown",
+          timing: "Scanner suppression date unknown",
           waiting: false
         }
 
@@ -208,7 +219,7 @@ defmodule TriageWeb.TimelineLive.Lanes do
   defp waiting_detail(lane, history, now) do
     cond do
       lane.reopen_count > 0 -> "Detected again"
-      Enum.any?(history, &(decision_state(&1, history, now) == "Expired")) -> "Whitelist expired"
+      Enum.any?(history, &(decision_state(&1, history, now) == "Expired")) -> "Decision expired"
       true -> "Not fixed"
     end
   end

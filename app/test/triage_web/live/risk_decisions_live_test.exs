@@ -42,6 +42,36 @@ defmodule TriageWeb.RiskDecisionsLiveTest do
     assert Repo.aggregate(Decisions.Decision, :count) == 3
   end
 
+  test "legacy inclusive expiry retains its exact time and meaning", c do
+    expiry = DateTime.new!(Date.add(Date.utc_today(), 10), ~T[13:15:37])
+
+    c.first
+    |> Ecto.Changeset.change(
+      expires_at: expiry,
+      metadata: Map.delete(c.first.metadata, "expiry_boundary")
+    )
+    |> Repo.update!()
+
+    {:ok, view, _} = live(c.conn, "/?page=exceptions&risk_team=alpha&risk_environment=prod")
+    assert has_element?(view, "#exceptions-count", "1 underlying record")
+
+    assert has_element?(
+             view,
+             "#exception-#{c.first.id} .risk-entry-expiry",
+             "Valid through (inclusive)"
+           )
+
+    assert has_element?(view, "#exception-#{c.first.id} .risk-entry-expiry time", "13:15:37 UTC")
+
+    assert has_element?(
+             view,
+             "#risk-details-#{c.first.id}",
+             "Older record: the expiry time is inclusive"
+           )
+
+    assert Repo.get!(Decisions.Decision, c.first.id).expires_at == expiry
+  end
+
   test "expiry cards, search and clear controls update results without writing decisions", c do
     {:ok, view, _} = live(c.conn, "/?page=exceptions")
     view |> element("#risk-status-expired") |> render_click()

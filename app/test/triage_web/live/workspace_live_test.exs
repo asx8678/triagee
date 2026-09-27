@@ -57,16 +57,16 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert has_element?(
              view,
              ".action-toast",
-             "whitelisted until #{Triage.Workspace.Commit.default_due_on()}"
+             "risk accepted for selected deployments through #{Triage.Workspace.Commit.default_due_on()}"
            )
 
     refute has_element?(view, ".saved-status.status-accepted_risk")
     refute has_element?(view, ".whitelist-badge")
-    assert has_element?(view, ".whitelist-toast .confirmation-title", "Whitelisted")
-    assert has_element?(view, ".whitelisted-heading .whitelisted-banner", "WHITELISTED")
+    assert has_element?(view, ".whitelist-toast .confirmation-title", "Risk accepted")
+    assert has_element?(view, ".whitelisted-heading .whitelisted-banner", "RISK ACCEPTED")
     refute has_element?(view, ".fixed-heading")
     {:ok, reloaded, _} = live(c.conn, "/?page=review&mode=accepted&item=#{c.cve}")
-    assert has_element?(reloaded, ".whitelisted-heading .whitelisted-banner", "WHITELISTED")
+    assert has_element?(reloaded, ".whitelisted-heading .whitelisted-banner", "RISK ACCEPTED")
     assert has_element?(reloaded, "#queue-#{c.cve}.whitelisted-item")
     refute has_element?(reloaded, ".whitelist-badge, .status-accepted_risk")
     refute has_element?(reloaded, ".action-toast")
@@ -90,7 +90,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
 
     # A fresh draft preselects no action, no conclusion and no write targets.
     assert has_element?(view, "#save-decision[disabled]", "Select an action")
-    assert has_element?(view, "#decision-no-targets", "Select at least one deployment")
+    assert has_element?(view, "#decision-no-targets", "Select deployments to continue")
     assert has_element?(view, "#decision-action-help", "Choose one of the three actions")
     refute has_element?(view, "#ai-triage h3")
     refute render(view) =~ "KIRO · HEADLESS"
@@ -105,7 +105,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
 
     for {action, label} <- [
           {"fixed", "Mark as fixed"},
-          {"accepted_risk", "Whitelist now"},
+          {"accepted_risk", "Accept risk"},
           {"create_ticket", "Create Azure DevOps ticket"}
         ] do
       view |> form("#workspace-decision", decision: %{action: action}) |> render_change()
@@ -172,12 +172,10 @@ defmodule TriageWeb.WorkspaceLiveTest do
 
     view |> element("#confirm-risk") |> render_click()
 
-    assert Enum.all?(
-             Decisions.history_for_cve(c.cve),
-             &(&1.reason == "Accepted until service replacement lands")
-           )
+    assert has_element?(view, "#draft-state", "Decision saved"), decision_feedback(view)
 
-    assert has_element?(view, "#draft-state", "Decision saved")
+    assert [%{reason: "Accepted until service replacement lands"}] =
+             Decisions.history_for_cve(c.cve)
   end
 
   test "the findings table uses the four-column hierarchy with source-backed reasons", c do
@@ -193,16 +191,21 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert has_element?(
              view,
              "#inventory-#{c.cve} .why-now",
-             "Internet-exposed placement with CRITICAL severity"
+             "Internet-exposed deployment with CRITICAL severity"
            )
 
     # Next action is a concrete step; the fix summary never invents a version.
-    assert has_element?(view, "#inventory-#{c.cve} td", "Choose an action for exact scopes")
+    assert has_element?(
+             view,
+             "#inventory-#{c.cve} td",
+             "Choose an action for selected deployments"
+           )
+
     assert has_element?(view, "#inventory-#{c.cve} td", "Scanner fix: not reported")
 
     # Affected carries real team/environment identity and the exact scope count.
     assert has_element?(view, "#inventory-#{c.cve} td", "alpha")
-    assert has_element?(view, "#inventory-#{c.cve} td", "2 scopes")
+    assert has_element?(view, "#inventory-#{c.cve} td", "2 deployments")
   end
 
   test "a recorded decision changes the next-action column and appears in the detail history",
@@ -237,7 +240,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert has_element?(
              view,
              "#save-decision[disabled][aria-describedby=decision-action-help]",
-             "Whitelist now"
+             "Accept risk"
            )
 
     assert has_element?(view, "#decision-action-help", "Select at least one deployment")
@@ -251,7 +254,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     refute has_element?(view, "#classification-result")
 
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
-    assert has_element?(view, "#save-decision:not([disabled])", "Whitelist now")
+    assert has_element?(view, "#save-decision:not([disabled])", "Accept risk")
     refute has_element?(view, "#decision-action-help")
 
     view
@@ -261,6 +264,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     assert has_element?(view, "#risk-confirmation")
     assert Decisions.history_for_cve(c.cve) == []
     view |> element("#confirm-risk") |> render_click()
+    assert has_element?(view, "#draft-state", "Decision saved"), decision_feedback(view)
     assert [%{decision: "accepted_risk", placement_id: id}] = Decisions.history_for_cve(c.cve)
     assert id == c.prod.id
   end
@@ -283,7 +287,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
       assert has_element?(
                view,
                "#decision-error",
-               "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
+               "Choose Mark as fixed, Accept risk temporarily, or Create Azure DevOps ticket."
              )
 
       assert has_element?(view, "#save-decision[disabled]", "Select an action")
@@ -317,7 +321,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     |> render_change()
 
     assert has_element?(restored, "textarea[name='decision[reason]']", "Keep my draft context")
-    assert has_element?(restored, "#save-decision:not([disabled])", "Whitelist now")
+    assert has_element?(restored, "#save-decision:not([disabled])", "Accept risk")
     assert Decisions.history_for_cve(c.cve) == []
   end
 
@@ -541,6 +545,14 @@ defmodule TriageWeb.WorkspaceLiveTest do
       else: %{"action" => action}
   end
 
+  defp decision_feedback(view) do
+    view
+    |> render()
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#draft-state, #decision-error")
+    |> LazyHTML.text()
+  end
+
   defp decision_form(view, fields) do
     # Change action first so conditional inputs are actually present.
     view |> form("#workspace-decision", decision: %{action: "create_ticket"}) |> render_change()
@@ -596,8 +608,8 @@ defmodule TriageWeb.WorkspaceLiveTest do
     {:ok, view, _} = live(c.conn, "/?page=review&environment=prod&item=#{c.cve}")
     view |> element("#scope-target-#{c.prod.id}") |> render_click()
     view |> decision_form(fields("accepted_risk")) |> render_submit()
-    assert has_element?(view, "#risk-confirmation", "Whitelist temporarily?")
-    assert has_element?(view, "#confirm-risk", "Confirm whitelist")
+    assert has_element?(view, "#risk-confirmation", "Accept risk temporarily?")
+    assert has_element?(view, "#confirm-risk", "Confirm risk acceptance")
     assert Repo.aggregate(Decisions.Decision, :count) == 0
     view |> element("#cancel-risk") |> render_click()
 
@@ -616,7 +628,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
 
     refute has_element?(whitelisted, ".whitelist-badge")
     refute has_element?(whitelisted, ".status-accepted_risk")
-    assert has_element?(whitelisted, ".review-tools a", "Whitelisted")
+    assert has_element?(whitelisted, ".review-tools a", "Risk accepted")
 
     assert Workspace.metrics(Workspace.targets(%{"cve" => c.cve}))["needs"].targets == [
              {c.cve, c.staging.id}
@@ -630,10 +642,10 @@ defmodule TriageWeb.WorkspaceLiveTest do
     expired = %{accepted | covered?: false}
     work = %{accepted | decision: %{decision: "investigate"}}
 
-    assert WorkspaceComponents.whitelist_state(%{scopes: [accepted]}) == "Whitelisted"
+    assert WorkspaceComponents.whitelist_state(%{scopes: [accepted]}) == "Risk accepted"
 
     assert WorkspaceComponents.whitelist_state(%{scopes: [accepted, uncovered]}) ==
-             "Partially whitelisted"
+             "Risk accepted for some deployments"
 
     assert WorkspaceComponents.whitelist_state(%{scopes: [expired, work]}) == nil
     assert WorkspaceComponents.whitelist_state(%{scopes: [%{accepted | active?: false}]}) == nil
@@ -652,7 +664,7 @@ defmodule TriageWeb.WorkspaceLiveTest do
     |> render_change()
 
     assert has_element?(view, "#save-decision[disabled]")
-    assert has_element?(view, ".form-error", "selected targets are hidden")
+    assert has_element?(view, ".form-error", "selected but hidden by these filters")
     view |> form("#workspace-scope", scope: %{team: "alpha", environment: ""}) |> render_change()
     assert has_element?(view, "#scope-target-#{c.staging.id}[checked]")
 

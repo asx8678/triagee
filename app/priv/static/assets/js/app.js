@@ -219,6 +219,8 @@ syncNavigation();
 const WorkspaceDialog = {
   mounted() {
     this.opener = document.activeElement;
+    // Submit buttons may lose focus while LiveView temporarily disables them.
+    this.openerId = this.el.dataset.returnFocus || this.opener?.id;
     this.cancel = event => { event.preventDefault(); this.pushEvent(this.el.dataset.closeEvent, {}); };
     // Clicking the modal backdrop — anywhere outside the dialog box — dismisses
     // it exactly like Escape. A press that starts inside the panel is left
@@ -243,13 +245,38 @@ const WorkspaceDialog = {
     this.el.removeEventListener("mousedown", this.press);
     this.el.removeEventListener("click", this.backdrop);
     this.el.close();
-    if (this.opener?.isConnected) this.opener.focus({preventScroll: true});
-    else document.getElementById("main-content")?.focus({preventScroll: true});
+    // Restore after the patch finishes and submit controls are enabled again.
+    // Resolve the ID afresh: a patch may have replaced the original DOM node.
+    requestAnimationFrame(() => {
+      if (document.querySelector("dialog[open]")) return;
+      const opener = (this.openerId && document.getElementById(this.openerId)) || this.opener;
+      if (opener?.isConnected && !opener.disabled && opener !== document.body) {
+        opener.focus({preventScroll: true});
+      } else {
+        document.getElementById("main-content")?.focus({preventScroll: true});
+      }
+    });
   }
 };
 
-// Sensitive drafts never enter browser storage. Patches preserve server memory;
-// leaving/reloading warns rather than claiming durable draft persistence.
+// Server validation arrives with the patched aria-invalid fields. Native
+// required-field validation still works before submission without a round trip.
+const WorkspaceValidation = {
+  mounted() {
+    this.handleEvent("workspace-validation-failed", () => {
+      cancelAnimationFrame(this.focusFrame);
+      this.focusFrame = requestAnimationFrame(() => {
+        const field = this.el.querySelector('[aria-invalid="true"]:not([disabled])');
+        field?.focus({preventScroll: true});
+        field?.scrollIntoView({block: "nearest", inline: "nearest"});
+      });
+    });
+  },
+  destroyed() { cancelAnimationFrame(this.focusFrame); }
+};
+
+// Acknowledged drafts are stored on the account, never in browser storage.
+// Keep guarding recent edits: they may still be in flight or fail to persist.
 const WorkspaceDraftGuard = {
   mounted() {
     this.wrapper = this.el.closest(".approved-workspace");
@@ -285,7 +312,7 @@ const WorkspaceDraftGuard = {
       const current = new URL(location.href);
       if (url.origin === current.origin && url.pathname === current.pathname && url.search === current.search && url.hash) return;
       if (url.origin === location.origin && ["/", "/workspace", "/timeline"].includes(url.pathname) && link.getAttribute("data-phx-link") === "patch") return;
-      if (!confirm("Leave this workspace? Drafts are held only in this live connection and may be lost.")) {
+      if (!confirm("Leave this workspace? Drafts marked saved to your account will be kept. Recent edits may still be saving and could be lost.")) {
         event.preventDefault(); event.stopImmediatePropagation();
       } else {
         this.leaving = true; // No second beforeunload prompt after explicit consent.
@@ -314,7 +341,7 @@ if (typeof Phoenix === "undefined" || typeof LiveView === "undefined") {
 } else {
   const liveSocket = new LiveView.LiveSocket("/live", Phoenix.Socket, {
     params: { _csrf_token: csrfToken },
-    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth, SavedQueueFilters, WorkspaceDialog, WorkspaceDraftGuard },
+    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth, SavedQueueFilters, WorkspaceDialog, WorkspaceValidation, WorkspaceDraftGuard },
   });
   window.liveSocket = liveSocket;
   liveSocket.connect();

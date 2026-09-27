@@ -65,27 +65,27 @@ defmodule TriageWeb.TimelineLaneTimingTest do
     assert html =~ "Not affected"
   end
 
-  test "operator and scanner whitelist use one vocabulary without invented dates" do
+  test "operator decisions and scanner suppression stay distinct without invented dates" do
     html = render_lane(lane(%{decisions: [decision()]}))
-    assert html =~ "Whitelisted"
-    assert html =~ "Time to whitelist"
+    assert html =~ "Not affected"
+    assert html =~ "Time to decision"
     assert html =~ "2 days 0 h"
     html = render_lane(lane(%{suppressed_count: 2}))
-    assert html =~ "Whitelisted"
+    assert html =~ "Scanner-suppressed"
     assert html =~ "Via scanner"
     assert html =~ "Date unknown"
-    assert html =~ "Whitelist date unknown"
-    assert render_lane(lane(%{suppressed_count: 1})) =~ "Partially whitelisted"
+    assert html =~ "Scanner suppression date unknown"
+    assert render_lane(lane(%{suppressed_count: 1})) =~ "Partially scanner-suppressed"
 
     assert render_lane(lane(%{decisions: [decision(%{placement_id: 42})]})) =~
-             "Partially whitelisted"
+             "Not affected"
   end
 
   test "expired and future decisions do not stop waiting; reopened and unknown timing remain explicit" do
     expired = decision(%{expires_at: ~U[2026-01-04 00:00:00Z]})
     html = render_lane(lane(%{decisions: [expired]}))
     assert html =~ "Awaiting action"
-    assert html =~ "Whitelist expired"
+    assert html =~ "Decision expired"
     assert html =~ "Waiting since detection"
     future = decision(%{decided_at: ~U[2099-01-01 00:00:00Z]})
     html = render_lane(lane(%{decisions: [future], reopen_count: 1}))

@@ -176,7 +176,7 @@ defmodule TriageWeb.TimelineReadabilityTest do
           "Red dots record detection",
           "black line behind them carries the open state",
           "a red dot at the window edge",
-          "Black dots record a whitelist decision",
+          "Black dots record a risk acceptance decision",
           "grey line behind the black dot",
           "Green dots record disappearance, not a verified fix",
           "hidden from screen readers"

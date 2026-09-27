@@ -494,7 +494,7 @@ defmodule TriageWeb.WorkspaceLive do
            assign(socket,
              ticket_evidence: nil,
              error:
-               "An original ticket target is missing or inactive. Contact an administrator; no replacement ticket was created."
+               "An original ticket deployment is missing or inactive. Contact an administrator; no replacement ticket was created."
            )}
         end
 
@@ -687,7 +687,7 @@ defmodule TriageWeb.WorkspaceLive do
       socket.assigns.draft.fields["action"] not in Commit.review_actions() ->
         {:noreply,
          assign(socket,
-           error: "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
+           error: "Choose Mark as fixed, Accept risk temporarily, or Create Azure DevOps ticket."
          )}
 
       socket.assigns.draft.stale ->
@@ -699,20 +699,22 @@ defmodule TriageWeb.WorkspaceLive do
 
       not changeset.valid? ->
         {:noreply,
-         assign(socket,
-           error: "Complete the required fields. Your draft is unchanged.",
+         socket
+         |> assign(
+           error: "Check the highlighted fields. Your draft is unchanged.",
            decision_form: to_form(%{changeset | action: :insert}, as: :decision)
-         )}
+         )
+         |> push_event("workspace-validation-failed", %{})}
 
       socket.assigns.hidden_targets != [] ->
         {:noreply,
          assign(socket,
            error:
-             "Selected targets are hidden by the current scope. Restore the original scope before saving."
+             "Selected deployments are hidden by the current filters. Restore the original filters before saving."
          )}
 
       socket.assigns.draft.targets == [] ->
-        {:noreply, assign(socket, error: "Select at least one affected scope.")}
+        {:noreply, assign(socket, error: "Select at least one affected deployment.")}
 
       # Decide from the draft's effective action after the merge, never the
       # raw submitted fields: a payload that omits `action` must open the
@@ -857,7 +859,7 @@ defmodule TriageWeb.WorkspaceLive do
       {:noreply,
        assign(socket,
          error:
-           "A selected target is no longer available in this scope. Restore scope or explicitly deselect it; no replacement was selected."
+           "A selected deployment is no longer available with these filters. Restore the filters or explicitly deselect it; no replacement was selected."
        )}
     end
   end
@@ -896,7 +898,7 @@ defmodule TriageWeb.WorkspaceLive do
               "Kiro is not configured. Set TRIAGE_KIRO_CLI to your authenticated kiro-cli executable."
 
             :prompt_too_large ->
-              "Full evidence exceeds the input limit. Narrow the team/environment scope; no evidence was dropped."
+              "Full evidence exceeds the input limit. Narrow the team/environment filters; no evidence was dropped."
 
             _ ->
               "Classification could not start. Refresh the evidence and check your review permission."
@@ -1060,7 +1062,7 @@ defmodule TriageWeb.WorkspaceLive do
       assign(socket,
         selected: [],
         message:
-          "Scope changed. Inventory selection cleared; decision draft targets are unchanged."
+          "Deployment filters changed. Inventory selection cleared; deployments selected in your draft are unchanged."
       )
     else
       socket
@@ -1122,7 +1124,8 @@ defmodule TriageWeb.WorkspaceLive do
     do: "#{cve} reported fixed · deployment verification still needed"
 
   defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}),
-    do: "#{cve} whitelisted until #{date}"
+    do:
+      "#{cve}: risk accepted for selected deployments through #{date} (UTC); expires at 00:00 UTC on the following day."
 
   defp action_message(cve, _), do: "#{cve}: Azure DevOps ticket created — in progress"
 
@@ -1183,7 +1186,7 @@ defmodule TriageWeb.WorkspaceLive do
         assign(socket,
           confirmation: nil,
           error:
-            "Exposure evidence is #{state} for a selected target; review the evidence before accepting risk. Your draft is unchanged."
+            "Exposure evidence is #{state} for a selected deployment; review the evidence before accepting risk. Your draft is unchanged."
         )
 
       {:error, _} ->
@@ -1213,10 +1216,10 @@ defmodule TriageWeb.WorkspaceLive do
     message =
       case kind do
         :finalization_conflict ->
-          "Azure ticket exists, but local evidence changed. Review current exact targets before finalizing the existing operation."
+          "Azure ticket exists, but local evidence changed. Review the selected deployments before finalizing the existing operation."
 
         :operation_pending ->
-          "A ticket operation already claims these targets. Its original reviewer or an administrator must reconcile it."
+          "A ticket operation already claims these deployments. Its original reviewer or an administrator must reconcile it."
 
         _ ->
           "Azure creation outcome is not yet confirmed. The durable operation is preserved. Reconcile it; never create a replacement ticket."
@@ -1402,7 +1405,7 @@ defmodule TriageWeb.WorkspaceLive do
           class="scopebar"
           phx-change="scope"
         >
-          <span class="scope-label">Scope</span>
+          <span class="scope-label">Deployments</span>
           <.input
             field={@scope_form[:team]}
             type="select"
@@ -1429,12 +1432,12 @@ defmodule TriageWeb.WorkspaceLive do
                 do: TimelineFilters.path(@filters, %{owner: nil, environment: nil, cve: nil}),
                 else: workspace_path(@params, %{"team" => nil, "environment" => nil, "offset" => nil})
             }
-          >Reset scope</.link>
+          >Reset deployment filters</.link>
           <.link
             :if={@demo_mode}
             id="demo-mode"
             class="tag"
-            title="Demo defaults: active deployments in the current scope and Whitelist temporarily are preselected. Your reason and confirmation are still required."
+            title="Demo defaults: active deployments in the current deployment filters and Accept risk temporarily are preselected. Your reason and confirmation are still required."
             patch={
               workspace_path(%{}, %{
                 "page" => "review",
@@ -1474,7 +1477,7 @@ defmodule TriageWeb.WorkspaceLive do
           >
             <span class="confirmation-icon" aria-hidden="true">✓</span>
             <strong class="confirmation-title">{if @action_toast.action == "accepted_risk",
-              do: "Whitelisted",
+              do: "Risk accepted",
               else: "Action completed"}</strong>
             <span>{@action_toast.text}</span>
             <button type="button" phx-click="dismiss-action-toast" aria-label="Dismiss confirmation">×</button>
@@ -1521,7 +1524,7 @@ defmodule TriageWeb.WorkspaceLive do
             >Review current evidence for this ticket</button>
             <div :if={@ticket_evidence} id="ticket-current-evidence">
               <p>
-                Explicitly accept this current evidence for the original ticket targets. The original request remains recorded.
+                Explicitly accept this current evidence for the original ticket deployments. The original request remains recorded.
               </p>
               <.scope_table targets={@ticket_evidence} />
               <button id="reconcile-ticket-current" phx-click="reconcile-ticket-current">Accept reviewed evidence and finalize existing ticket</button>
@@ -1603,6 +1606,7 @@ defmodule TriageWeb.WorkspaceLive do
       <dialog
         :if={@manual_open}
         id="manual-cves"
+        data-return-focus="manual-cve-open"
         class="confirm manual-cves"
         phx-hook="WorkspaceDialog"
         data-close-event="manual-close"

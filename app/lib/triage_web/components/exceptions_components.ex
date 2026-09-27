@@ -98,7 +98,9 @@ defmodule TriageWeb.ExceptionsComponents do
                                                                                             "decision",
                                                                                           else:
                                                                                             "decisions"}
-          <span>· {@history.records} underlying records</span></span>
+          <span>· {@history.records} underlying {if @history.records == 1,
+            do: "record",
+            else: "records"}</span></span>
           <span>Newest first · dates in UTC</span>
         </div>
 
@@ -122,7 +124,7 @@ defmodule TriageWeb.ExceptionsComponents do
                 <p class="risk-reason-preview">{reason(d)}</p>
               </div>
               <div class="risk-entry-scope">
-                <span class="risk-field-label">Scope</span>
+                <span class="risk-field-label">Deployments</span>
                 <strong>{scope_count(d)}</strong>
                 <span class="risk-team-label">{if d.teams == [],
                   do: "Team not recorded",
@@ -139,11 +141,12 @@ defmodule TriageWeb.ExceptionsComponents do
                   class="risk-dot"
                   aria-hidden="true"
                 ></span>{d.status_label}</span>
+                <span :if={d.expires_at} class="risk-field-label">{expiry_label(hd(d.records))}</span>
                 <time
                   :if={d.expires_at}
                   datetime={DateTime.to_iso8601(d.expires_at)}
                   title={full_time(d.expires_at)}
-                >{date(d.expires_at)}</time>
+                >{expiry_time(d.expires_at)}</time>
                 <span class="risk-expiry-relative">{d.relative_expiry}</span>
               </div>
               <div class="risk-entry-reviewer">
@@ -168,7 +171,7 @@ defmodule TriageWeb.ExceptionsComponents do
                   <h3>Recorded reason</h3><p class="risk-full-reason">{reason(d)}</p>
                   <dl class="risk-audit-dates">
                     <dt>Decided at</dt><dd>{full_time(d.decided_at)} UTC</dd>
-                    <dt>Expires at</dt><dd>
+                    <dt>{expiry_label(hd(d.records))}</dt><dd>
                       {if d.expires_at,
                         do: full_time(d.expires_at) <> " UTC",
                         else: "No expiry recorded"}
@@ -204,7 +207,7 @@ defmodule TriageWeb.ExceptionsComponents do
           </h2>
           <p>
             {if @history.empty?,
-              do: "Decisions recorded in Review will appear here with their scope and expiry.",
+              do: "Decisions recorded in Review will appear here with their deployments and expiry.",
               else: "Try another CVE, team or environment, or clear the filters."}
           </p>
           <.link
@@ -248,7 +251,7 @@ defmodule TriageWeb.ExceptionsComponents do
         cve
       )
 
-  defp action_label("accepted_risk"), do: "Temporary whitelist"
+  defp action_label("accepted_risk"), do: "Temporary risk acceptance"
   defp action_label("not_affected"), do: "Not affected"
   defp reason(%{reason: ""}), do: "No reason saved in this older record."
   defp reason(d), do: d.reason
@@ -257,6 +260,17 @@ defmodule TriageWeb.ExceptionsComponents do
   defp scope_count(d) do
     count = d.scopes |> Enum.map(& &1.placement_id) |> Enum.uniq() |> length()
     if count == 1, do: "1 deployment", else: "#{count} deployments"
+  end
+
+  defp expiry_label(d) do
+    if (d.metadata || %{})["expiry_boundary"] == "exclusive",
+      do: "Expires at",
+      else: "Valid through (inclusive)"
+  end
+
+  defp expiry_time(datetime) do
+    format = if datetime.second == 0, do: "%d %b %Y, %H:%M UTC", else: "%d %b %Y, %H:%M:%S UTC"
+    Calendar.strftime(datetime, format)
   end
 
   defp date(nil), do: "Not recorded"

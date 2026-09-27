@@ -324,10 +324,10 @@ defmodule TriageWeb.TimelineLive.Chart do
       <p id="tl-chart-key" class="supporting">
         Red dots record detection; the black line behind them carries the open state through
         today. Every lane starts with a detection — a red dot at the window edge marks a CVE
-        detected before the window. Black dots record a whitelist decision and every observation
-        day it covers; the grey line behind the black dot runs while all displayed placements
-        stay whitelisted until expiry or a superseding decision. Partial whitelists do not grey
-        the whole CVE, and lane backgrounds stay white unless a whitelist or fix colors them.
+        detected before the window. Black dots record a risk acceptance decision and every observation
+        day it covers; the grey line behind the black dot runs while all displayed deployments
+        remain covered by risk acceptance until expiry or a superseding decision. Acceptance for only some deployments does not grey
+        the whole CVE, and lane backgrounds stay white unless a risk acceptance or fix colors them.
         Green dots record disappearance, not a verified fix. Missing observations do not prove
         safety or continuous exposure.
       </p>
@@ -512,7 +512,7 @@ defmodule TriageWeb.TimelineLive.Chart do
           dashed?: false,
           kind: kind,
           title:
-            "#{iso}: #{if covered, do: "Whitelisted", else: "Open / not fully whitelisted"}; recorded state, not continuous observation."
+            "#{iso}: #{if covered, do: "Risk accepted", else: "Open / risk not accepted for all deployments"}; recorded state, not continuous observation."
         }
       ]
     else

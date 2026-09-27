@@ -26,11 +26,11 @@ defmodule TriageWeb.DailyComponents do
         <summary>How response time is measured</summary>
         <p>
           Time to first action runs from the first recorded detection to the first saved decision
-          on any deployment. Each action shows its scope. A whitelist, ticket, or work request
+          on any deployment. Each action shows its deployments. A risk acceptance, ticket, or work request
           counts as a response; it does not confirm a fix or mean every deployment was handled.
-          Later detections and expired whitelists stay in the history without resetting this timer.
+          Later detections and expired risk acceptances stay in the history without resetting this timer.
           A fix marked by a reviewer and a later scan that no longer detects a finding are separate
-          events. A shared action across deployments appears once with all its scopes.
+          events. A shared action across deployments appears once with all its deployments.
         </p>
       </details>
       <div class="timeline-page-summary">
@@ -127,7 +127,7 @@ defmodule TriageWeb.DailyComponents do
                     <details :if={length(event.scopes) > 1} class="timeline-event-scopes">
                       <summary>
                         {length(event.scopes)} {if event.source == "decision",
-                          do: "deployment scopes",
+                          do: "deployments",
                           else: "package / image scopes"}
                       </summary>
                       <ul>
@@ -142,8 +142,8 @@ defmodule TriageWeb.DailyComponents do
                     </p>
                     <p :if={event.expires_at} class="timeline-event-expiry">
                       {if event.kind == "accepted_risk",
-                        do: "Whitelist expires",
-                        else: "Decision expires"}
+                        do: "Risk acceptance expires at",
+                        else: "Decision expires at"}
                       <.recorded_time value={event.expires_at} />
                     </p>
                     <p
@@ -186,7 +186,7 @@ defmodule TriageWeb.DailyComponents do
     """
   end
 
-  defp event_label(%{kind: "accepted_risk", repeated?: true}), do: "Whitelist updated"
+  defp event_label(%{kind: "accepted_risk", repeated?: true}), do: "Risk acceptance updated"
   defp event_label(%{kind: "fixed", repeated?: true}), do: "Fix updated"
 
   defp event_label(%{kind: "detected", elapsed_seconds: seconds})
@@ -197,7 +197,7 @@ defmodule TriageWeb.DailyComponents do
   defp event_label("detected"), do: "Detected"
   defp event_label("reopened"), do: "Detected again"
   defp event_label("resolved"), do: "No longer detected (scanner observation)"
-  defp event_label("accepted_risk"), do: "Whitelisted"
+  defp event_label("accepted_risk"), do: "Risk accepted"
   defp event_label("fixed"), do: "Fix marked by reviewer"
   defp event_label("not_affected"), do: "Marked not affected"
   defp event_label("create_ticket"), do: "Ticket created"

@@ -63,29 +63,29 @@ defmodule TriageWeb.TimelineTimingTest do
     assert cell(doc, 4) =~ "2 days 0 h"
     assert cell(doc, 5) =~ "Fixed"
     assert cell(doc, 5) =~ "recorded disappearance"
-    assert cell(doc, 6) =~ "Whitelisted"
+    assert cell(doc, 6) =~ "Risk accepted"
   end
 
   test "whitelist response is distinct from waiting, expired and placement-only decisions" do
     doc = render_lane(%{decisions: [decision()]})
-    assert cell(doc, 5) =~ "Whitelisted"
-    assert cell(doc, 4) =~ "Time to whitelist"
+    assert cell(doc, 5) =~ "Risk accepted"
+    assert cell(doc, 4) =~ "Time to risk acceptance"
     assert cell(doc, 4) =~ "2 days 0 h"
     doc = render_lane(%{decisions: [decision(%{placement_id: 123})]})
-    assert cell(doc, 5) =~ "Partially whitelisted"
+    assert cell(doc, 5) =~ "Risk accepted for one deployment"
     doc = render_lane(%{decisions: [decision(%{expires_at: @action})]})
     assert cell(doc, 5) =~ "Awaiting action"
-    assert cell(doc, 5) =~ "Whitelist expired"
+    assert cell(doc, 5) =~ "Decision expired"
     assert cell(doc, 4) =~ "Waiting since detection"
   end
 
   test "scanner whitelist never invents a date and partial coverage stays visible" do
     doc = render_lane(%{suppressed_count: 1})
-    assert cell(doc, 5) =~ "Partially whitelisted"
+    assert cell(doc, 5) =~ "Partially scanner-suppressed"
     assert cell(doc, 3) =~ "Date unknown"
     assert cell(doc, 4) =~ "Unknown"
     doc = render_lane(%{suppressed_count: 2})
-    assert cell(doc, 5) =~ "Whitelisted"
+    assert cell(doc, 5) =~ "Scanner-suppressed"
     refute cell(doc, 5) =~ "Partially"
   end
 

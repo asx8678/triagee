@@ -5,3656 +5,944 @@
       "key": "topology/peer-seq",
       "value": {
         "format": 1,
-        "next": 10
+        "next": 26
       },
-      "version": 10,
-      "updatedAt": 1789889769811,
+      "version": 26,
+      "updatedAt": 1790339134117,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0d83d-243d-7727-87d9-86226f6ae4bf",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0d83d-243d-7727-87d9-86226f6ae4bf"
       }
     },
-    "sessions/01a0b966-be89-77d8-a791-3dd6233050dd": {
-      "key": "sessions/01a0b966-be89-77d8-a791-3dd6233050dd",
+    "topology/control-seen/f8c0cc9f0900204e01f18f3c5eda67b8294a2aa3ccca57d68513653c363f1a32": {
+      "key": "topology/control-seen/f8c0cc9f0900204e01f18f3c5eda67b8294a2aa3ccca57d68513653c363f1a32",
       "value": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "TRI-3",
-        "label": "TRI-3",
-        "kind": "peer",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789816915259,
-        "updatedAt": 1789892285513,
-        "pendingMessages": false,
-        "local": false
-      },
-      "version": 15138,
-      "updatedAt": 1789892285516,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "topology/participants/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f": {
-      "key": "topology/participants/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f",
-      "value": {
-        "format": 1,
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "kind": "root",
-        "rootId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerHostId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerIdentityId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "capabilities": [
-          "steer",
-          "followUp",
-          "fabric"
-        ],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789816915259,
-        "updatedAt": 1789892285513,
-        "pendingMessages": false,
-        "controlProtocol": "v1",
-        "label": "TRI-3"
-      },
-      "version": 15138,
-      "updatedAt": 1789892285521,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "topology/hosts/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f": {
-      "key": "topology/hosts/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f",
-      "value": {
-        "format": 1,
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "rootId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "identity": {
-          "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-          "name": "main",
-          "kind": "main",
-          "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-        },
-        "startedAt": 1789816915259,
-        "updatedAt": 1789892285523,
-        "expiresAt": 1789892300523
-      },
-      "version": 15138,
-      "updatedAt": 1789892285524,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "topology/participants/f44cee9081b475158fd60fd8026d1dd1786369024c6812ceeb0f8b1de3fa88bc": {
-      "key": "topology/participants/f44cee9081b475158fd60fd8026d1dd1786369024c6812ceeb0f8b1de3fa88bc",
-      "value": {
-        "format": 1,
-        "id": "319109824f1740e0a91f3f631687cbc2",
-        "kind": "agent",
-        "rootId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerHostId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerIdentityId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "parentId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "78287",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789816938315,
-        "updatedAt": 1789817008040,
-        "finishedAt": 1789817008040,
-        "turns": 13,
-        "toolCalls": 12,
-        "usage": {
-          "input": 45694,
-          "output": 1140,
-          "cacheRead": 207616,
-          "cacheWrite": 0,
-          "cost": 0.7215560000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 19,
-      "updatedAt": 1789817008079,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "topology/participants/0d5093ca84b95e4e5a6091d9a986a39492861b0ba0aefd298f9d6bbafacc836e": {
-      "key": "topology/participants/0d5093ca84b95e4e5a6091d9a986a39492861b0ba0aefd298f9d6bbafacc836e",
-      "value": {
-        "format": 1,
-        "id": "c1554fa6f4ad4c01b0de2c138b7f0b62",
-        "kind": "agent",
-        "rootId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerHostId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerIdentityId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "parentId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "81370",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789817015766,
-        "updatedAt": 1789817045759,
-        "finishedAt": 1789817045759,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 40611,
-          "output": 351,
-          "cacheRead": 53120,
-          "cacheWrite": 0,
-          "cost": 0.4767800000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 9,
-      "updatedAt": 1789817045818,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "topology/participants/70d443825f5cf4451f6f667ff5b084580c89a5682efd4c925b055d1051d37290": {
-      "key": "topology/participants/70d443825f5cf4451f6f667ff5b084580c89a5682efd4c925b055d1051d37290",
-      "value": {
-        "format": 1,
-        "id": "b6827dbee97a4faca2cc283034934cc0",
-        "kind": "agent",
-        "rootId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerHostId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerIdentityId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "parentId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "87590",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789817271499,
-        "updatedAt": 1789817281010,
-        "finishedAt": 1789817281010,
-        "turns": 2,
-        "toolCalls": 1,
-        "usage": {
-          "input": 14094,
-          "output": 135,
-          "cacheRead": 13696,
-          "cacheWrite": 0,
-          "cost": 0.161386
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 5,
-      "updatedAt": 1789817281214,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "topology/participants/b2afd370e9d74a8fbf04fcfe106eafd53fce8dcfb08dfd1034cdcd12b205c1ec": {
-      "key": "topology/participants/b2afd370e9d74a8fbf04fcfe106eafd53fce8dcfb08dfd1034cdcd12b205c1ec",
-      "value": {
-        "format": 1,
-        "id": "563d6f0de47a41d1985dfa3c68d138bd",
-        "kind": "agent",
-        "rootId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerHostId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "ownerIdentityId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "parentId": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "90839",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789817414763,
-        "updatedAt": 1789817441835,
-        "finishedAt": 1789817441835,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 19365,
-          "output": 464,
-          "cacheRead": 51200,
-          "cacheWrite": 0,
-          "cost": 0.26805
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 12,
-      "updatedAt": 1789817442083,
-      "updatedBy": {
-        "id": "session:01a0b966-be89-77d8-a791-3dd6233050dd",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b966-be89-77d8-a791-3dd6233050dd"
-      }
-    },
-    "sessions/01a0b9a7-faeb-70f6-a922-d1320391b910": {
-      "key": "sessions/01a0b9a7-faeb-70f6-a922-d1320391b910",
-      "value": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "TRI-4",
-        "label": "TRI-4",
-        "kind": "peer",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789821190557,
-        "updatedAt": 1789892285523,
-        "pendingMessages": false,
-        "local": false
-      },
-      "version": 14573,
-      "updatedAt": 1789892285536,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "topology/participants/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09": {
-      "key": "topology/participants/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09",
-      "value": {
-        "format": 1,
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "kind": "root",
-        "rootId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerHostId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerIdentityId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "capabilities": [
-          "steer",
-          "followUp",
-          "fabric"
-        ],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789821190557,
-        "updatedAt": 1789892285523,
-        "pendingMessages": false,
-        "controlProtocol": "v1",
-        "label": "TRI-4"
-      },
-      "version": 14573,
-      "updatedAt": 1789892285540,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "topology/hosts/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09": {
-      "key": "topology/hosts/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09",
-      "value": {
-        "format": 1,
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "rootId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "identity": {
-          "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-          "name": "main",
-          "kind": "main",
-          "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-        },
-        "startedAt": 1789821190557,
-        "updatedAt": 1789892285542,
-        "expiresAt": 1789892300542
-      },
-      "version": 14573,
-      "updatedAt": 1789892285542,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "topology/participants/97923f61ec83cfb2dfdc45d500075c2d1c6dbf10b10586f9066e80bc1aef9f78": {
-      "key": "topology/participants/97923f61ec83cfb2dfdc45d500075c2d1c6dbf10b10586f9066e80bc1aef9f78",
-      "value": {
-        "format": 1,
-        "id": "adbb46659d444e96b47c41583fccf405",
-        "kind": "agent",
-        "rootId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerHostId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerIdentityId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "parentId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "Prewalk trajectory executor",
-        "status": "failed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "87772",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789821271761,
-        "updatedAt": 1789824299415,
-        "finishedAt": 1789824299415,
-        "turns": 122,
-        "toolCalls": 121,
-        "usage": {
-          "input": 435443,
-          "output": 77807,
-          "cacheRead": 17871744,
-          "cacheWrite": 0,
-          "cost": 26.116524000000023
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 238,
-      "updatedAt": 1789824299514,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "topology/participants/85ca699e57795e3d8e0e08f8808dd65477f10ab3ded2f02c65c60f39d2777f75": {
-      "key": "topology/participants/85ca699e57795e3d8e0e08f8808dd65477f10ab3ded2f02c65c60f39d2777f75",
-      "value": {
-        "format": 1,
-        "id": "a9280dbbb26c471e9d3141cc175a48ff",
-        "kind": "agent",
-        "rootId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerHostId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerIdentityId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "parentId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "12779",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789824304830,
-        "updatedAt": 1789825153039,
-        "finishedAt": 1789825153039,
-        "turns": 34,
-        "toolCalls": 33,
-        "usage": {
-          "input": 150247,
-          "output": 19608,
-          "cacheRead": 3007744,
-          "cacheWrite": 0,
-          "cost": 5.490614
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 64,
-      "updatedAt": 1789825153249,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "topology/participants/a7acfd0dcf1a97137d98ed528f439e36a7ea0eeb3ff87761a90ae908393f92b9": {
-      "key": "topology/participants/a7acfd0dcf1a97137d98ed528f439e36a7ea0eeb3ff87761a90ae908393f92b9",
-      "value": {
-        "format": 1,
-        "id": "479cc05c3d2d4129b611c96258fc373e",
-        "kind": "agent",
-        "rootId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerHostId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerIdentityId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "parentId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "92606",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789825187457,
-        "updatedAt": 1789825226050,
-        "finishedAt": 1789825226050,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 23666,
-          "output": 919,
-          "cacheRead": 38272,
-          "cacheWrite": 0,
-          "cost": 0.320882
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 9,
-      "updatedAt": 1789825226214,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "topology/participants/15c5e3ad32cc08046b5099d3916fadcb1b9efe1cdb03b45765c6f2bd86f8a12e": {
-      "key": "topology/participants/15c5e3ad32cc08046b5099d3916fadcb1b9efe1cdb03b45765c6f2bd86f8a12e",
-      "value": {
-        "format": 1,
-        "id": "f944543a53164137859ab7dc69fb2120",
-        "kind": "agent",
-        "rootId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerHostId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "ownerIdentityId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "parentId": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "21139",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789825506967,
-        "updatedAt": 1789825601746,
-        "finishedAt": 1789825601746,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 26783,
-          "output": 2001,
-          "cacheRead": 84992,
-          "cacheWrite": 0,
-          "cost": 0.45287200000000005
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 15,
-      "updatedAt": 1789825601913,
-      "updatedBy": {
-        "id": "session:01a0b9a7-faeb-70f6-a922-d1320391b910",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9a7-faeb-70f6-a922-d1320391b910"
-      }
-    },
-    "sessions/01a0b9f0-23c7-7433-aea3-f2fa02e1e395": {
-      "key": "sessions/01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-      "value": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "TRI-6",
-        "label": "TRI-6",
-        "kind": "peer",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789825918849,
-        "updatedAt": 1789892288115,
-        "pendingMessages": false,
-        "local": false
-      },
-      "version": 13644,
-      "updatedAt": 1789892288118,
-      "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-      }
-    },
-    "topology/participants/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca": {
-      "key": "topology/participants/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca",
-      "value": {
-        "format": 1,
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "kind": "root",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "capabilities": [
-          "steer",
-          "followUp",
-          "fabric"
-        ],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789825918849,
-        "updatedAt": 1789892288115,
-        "pendingMessages": false,
-        "controlProtocol": "v1",
-        "label": "TRI-6"
-      },
-      "version": 13644,
-      "updatedAt": 1789892288122,
-      "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-      }
-    },
-    "topology/hosts/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca": {
-      "key": "topology/hosts/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca",
-      "value": {
-        "format": 1,
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "identity": {
-          "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-          "name": "main",
-          "kind": "main",
-          "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-        },
-        "startedAt": 1789825918849,
-        "updatedAt": 1789892288124,
-        "expiresAt": 1789892303124
-      },
-      "version": 13644,
-      "updatedAt": 1789892288125,
-      "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-      }
-    },
-    "topology/participants/0d34bb45e505dbc5831d803d911646f22cfd1783a7e82fea2de2ee4e986d5265": {
-      "key": "topology/participants/0d34bb45e505dbc5831d803d911646f22cfd1783a7e82fea2de2ee4e986d5265",
-      "value": {
-        "format": 1,
-        "id": "430e6e0d3fd640ccb146da1bce6eefc2",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "64653",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789826857567,
-        "updatedAt": 1789827924348,
-        "finishedAt": 1789827924348,
-        "turns": 59,
-        "toolCalls": 58,
-        "usage": {
-          "input": 217042,
-          "output": 24676,
-          "cacheRead": 10176896,
-          "cacheWrite": 0,
-          "cost": 13.581115999999998
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 107,
-      "updatedAt": 1789827924593,
-      "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-      }
-    },
-    "sessions/01a0ba06-8246-72ed-97d9-49e3636cb836": {
-      "key": "sessions/01a0ba06-8246-72ed-97d9-49e3636cb836",
-      "value": {
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "TRI-7",
-        "label": "TRI-7",
-        "kind": "peer",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789827385850,
-        "updatedAt": 1789892285316,
-        "pendingMessages": false,
-        "local": false
-      },
-      "version": 12988,
-      "updatedAt": 1789892285321,
-      "updatedBy": {
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836"
-      }
-    },
-    "topology/participants/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1": {
-      "key": "topology/participants/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1",
-      "value": {
-        "format": 1,
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "kind": "root",
-        "rootId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "ownerHostId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "ownerIdentityId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "main",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "capabilities": [
-          "steer",
-          "followUp",
-          "fabric"
-        ],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "xhigh",
-        "startedAt": 1789827385850,
-        "updatedAt": 1789892285316,
-        "pendingMessages": false,
-        "controlProtocol": "v1",
-        "label": "TRI-7"
-      },
-      "version": 12988,
-      "updatedAt": 1789892285326,
-      "updatedBy": {
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836"
-      }
-    },
-    "topology/hosts/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1": {
-      "key": "topology/hosts/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1",
-      "value": {
-        "format": 1,
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "rootId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "identity": {
-          "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-          "name": "main",
-          "kind": "main",
-          "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836"
-        },
-        "startedAt": 1789827385850,
-        "updatedAt": 1789892285330,
-        "expiresAt": 1789892300330
-      },
-      "version": 12988,
-      "updatedAt": 1789892285331,
-      "updatedBy": {
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836"
-      }
-    },
-    "topology/participants/f53849d0d1121b6fcf7e23cea84d08f469d7201dc3f22624ff70fe3d361996cf": {
-      "key": "topology/participants/f53849d0d1121b6fcf7e23cea84d08f469d7201dc3f22624ff70fe3d361996cf",
-      "value": {
-        "format": 1,
-        "id": "ecfb88c8987e4601ae782e2f1c8a4a6f",
-        "kind": "agent",
-        "rootId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "ownerHostId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "ownerIdentityId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "parentId": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "28402",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789827401572,
-        "updatedAt": 1789827415586,
-        "finishedAt": 1789827415586,
-        "turns": 2,
-        "toolCalls": 1,
-        "usage": {
-          "input": 5227,
-          "output": 188,
-          "cacheRead": 4736,
-          "cacheWrite": 0,
-          "cost": 0.066406
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 6,
-      "updatedAt": 1789827415779,
-      "updatedBy": {
-        "id": "session:01a0ba06-8246-72ed-97d9-49e3636cb836",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba06-8246-72ed-97d9-49e3636cb836"
-      }
-    },
-    "topology/participants/97790b13b20d81d5247b5138d7ed1d74c6ae2c109d41b07ca1753ad4aa298732": {
-      "key": "topology/participants/97790b13b20d81d5247b5138d7ed1d74c6ae2c109d41b07ca1753ad4aa298732",
-      "value": {
-        "format": 1,
-        "id": "8c27829eddc14cccafeaf3e561453a39",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "92420",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789827946049,
-        "updatedAt": 1789827979267,
-        "finishedAt": 1789827979267,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 121939,
-          "output": 661,
-          "cacheRead": 239744,
-          "cacheWrite": 0,
-          "cost": 1.4921840000000002
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 9,
-      "updatedAt": 1789827979439,
-      "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-      }
-    },
-    "topology/participants/b0bd190c008b22d0e04b775a615ae127862da94582cf0d4c02c49ca79a336f2b": {
-      "key": "topology/participants/b0bd190c008b22d0e04b775a615ae127862da94582cf0d4c02c49ca79a336f2b",
-      "value": {
-        "format": 1,
-        "id": "692b60027d0f48dbb4e4706c3705e97f",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "98872",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789828000174,
-        "updatedAt": 1789828013013,
-        "finishedAt": 1789828013013,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 117493,
-          "output": 174,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 1.18363
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 4,
-      "updatedAt": 1789828013038,
-      "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
-      }
-    },
-    "topology/participants/a5903ed264f1b8cab1a960fefe9de3afe8d5b6889bda0de97adae4cab5cc0aaf": {
-      "key": "topology/participants/a5903ed264f1b8cab1a960fefe9de3afe8d5b6889bda0de97adae4cab5cc0aaf",
-      "value": {
         "format": 1,
-        "id": "ee43c60f11b5482f9f35281bd5777ab0",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "2592",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789828025476,
-        "updatedAt": 1789828044099,
-        "finishedAt": 1789828044099,
-        "turns": 2,
-        "toolCalls": 1,
-        "usage": {
-          "input": 118567,
-          "output": 316,
-          "cacheRead": 118144,
-          "cacheWrite": 0,
-          "cost": 1.319614
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "b8096b48-5f78-4346-b92b-9cd60e1ff7aa",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978769819,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "38d293e3-36d9-4f74-99b1-880309f0b637"
+        }
       },
-      "version": 6,
-      "updatedAt": 1789828044212,
+      "version": 2,
+      "updatedAt": 1789978760070,
       "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/a15e7991949790f7b3bf1fe4e00400581dd8b4888ebcd7d3f808e19c3f5fdb86": {
-      "key": "topology/participants/a15e7991949790f7b3bf1fe4e00400581dd8b4888ebcd7d3f808e19c3f5fdb86",
+    "topology/control-seen/df15271bbfd0c0d9006448e116d70849143a91d77c4e7f80181e2fb9e7736e29": {
+      "key": "topology/control-seen/df15271bbfd0c0d9006448e116d70849143a91d77c4e7f80181e2fb9e7736e29",
       "value": {
         "format": 1,
-        "id": "e32a4828a27c4edfb4228902615d9674",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "7183",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789828065555,
-        "updatedAt": 1789828109860,
-        "finishedAt": 1789828109860,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 119669,
-          "output": 784,
-          "cacheRead": 244736,
-          "cacheWrite": 0,
-          "cost": 1.480626
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "24cca91f-f76d-4a07-9835-7e12ee64c554",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978786654,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "72c6c07a-1c3e-4f80-88f0-002791dec124"
+        }
       },
-      "version": 8,
-      "updatedAt": 1789828109970,
+      "version": 2,
+      "updatedAt": 1789978776881,
       "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/d385a02b8a43016f9db925b0029f9e51b8bcc9c3067de60f4dad5ee477faa26c": {
-      "key": "topology/participants/d385a02b8a43016f9db925b0029f9e51b8bcc9c3067de60f4dad5ee477faa26c",
+    "topology/control-seen/c408471e1281bb3e54787fe877f0cb2b7b8899bfeb51f198d59c5f784761e9a9": {
+      "key": "topology/control-seen/c408471e1281bb3e54787fe877f0cb2b7b8899bfeb51f198d59c5f784761e9a9",
       "value": {
         "format": 1,
-        "id": "1ed36729ebe94a6691f643c07d1c1b85",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "23264",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789828217648,
-        "updatedAt": 1789828274673,
-        "finishedAt": 1789828274673,
-        "turns": 6,
-        "toolCalls": 5,
-        "usage": {
-          "input": 128060,
-          "output": 1054,
-          "cacheRead": 625408,
-          "cacheWrite": 0,
-          "cost": 1.9587080000000001
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "762f947e-d161-474d-83fe-2b4cca5327a4",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978808601,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "62c8469a-2275-4402-a7a4-56f0a07404d8"
+        }
       },
-      "version": 12,
-      "updatedAt": 1789828274682,
+      "version": 2,
+      "updatedAt": 1789978798713,
       "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/4fa5d9fecc5010644b8f55a49d1cc54debc3ed4086b6d3c5d9775d726cb6e098": {
-      "key": "topology/participants/4fa5d9fecc5010644b8f55a49d1cc54debc3ed4086b6d3c5d9775d726cb6e098",
+    "topology/control-seen/27bec95800a2337095cf5903143a06343b3e0a2cbbd36e361aa30c8f6f408a81": {
+      "key": "topology/control-seen/27bec95800a2337095cf5903143a06343b3e0a2cbbd36e361aa30c8f6f408a81",
       "value": {
         "format": 1,
-        "id": "93e9116f384f4be99660807ae8c6f236",
-        "kind": "agent",
-        "rootId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerHostId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "ownerIdentityId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "parentId": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "31594",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "max",
-        "startedAt": 1789828286909,
-        "updatedAt": 1789828297532,
-        "finishedAt": 1789828297532,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 120469,
-          "output": 110,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 1.21019
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "0774df3f-c213-41ef-9c05-97bfb704bae9",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978823291,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "c18ba2ad-3f5b-46da-b10a-d37e112b15ea"
+        }
       },
-      "version": 5,
-      "updatedAt": 1789828297747,
+      "version": 2,
+      "updatedAt": 1789978813541,
       "updatedBy": {
-        "id": "session:01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0b9f0-23c7-7433-aea3-f2fa02e1e395"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "sessions/01a0ba8d-a969-70d9-972a-1321ad5a27c0": {
-      "key": "sessions/01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+    "topology/control-seen/aee5438a4c9b87955e6ad81024cc84f6d1f57245f890f0517ff04ffdb0aa863f": {
+      "key": "topology/control-seen/aee5438a4c9b87955e6ad81024cc84f6d1f57245f890f0517ff04ffdb0aa863f",
       "value": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "TRI-8",
-        "label": "TRI-8",
-        "kind": "peer",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "model": "zro/deepseek-v4.1-flash",
-        "thinking": "high",
-        "startedAt": 1789836243650,
-        "updatedAt": 1789892285747,
-        "pendingMessages": false,
-        "local": false
-      },
-      "version": 12578,
-      "updatedAt": 1789892285748,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c": {
-      "key": "topology/participants/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c",
-      "value": {
-        "format": 1,
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "kind": "root",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "status": "idle",
-        "runner": "pi",
-        "transport": "host",
-        "capabilities": [
-          "steer",
-          "followUp",
-          "fabric"
-        ],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "model": "zro/deepseek-v4.1-flash",
-        "thinking": "high",
-        "startedAt": 1789836243650,
-        "updatedAt": 1789892285747,
-        "pendingMessages": false,
-        "controlProtocol": "v1",
-        "label": "TRI-8"
-      },
-      "version": 12577,
-      "updatedAt": 1789892285750,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/hosts/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c": {
-      "key": "topology/hosts/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c",
-      "value": {
-        "format": 1,
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "identity": {
-          "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-          "name": "main",
-          "kind": "main",
-          "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-        },
-        "startedAt": 1789836243650,
-        "updatedAt": 1789892285751,
-        "expiresAt": 1789892300751
-      },
-      "version": 12578,
-      "updatedAt": 1789892285752,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/1c712fd4a3718ee51310e901c7d712a248200d2e44a3ade2be8ef49c9b4127dc": {
-      "key": "topology/participants/1c712fd4a3718ee51310e901c7d712a248200d2e44a3ade2be8ef49c9b4127dc",
-      "value": {
-        "format": 1,
-        "id": "b39a546edfe447d3a61a31505bc06a00",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "9917",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789836303738,
-        "updatedAt": 1789836325214,
-        "finishedAt": 1789836325214,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 30975,
-          "output": 321,
-          "cacheRead": 24320,
-          "cacheWrite": 0,
-          "cost": 0.35012
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 10,
-      "updatedAt": 1789836325392,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/1accab7b515096231ee9dceda0f07f2edcea3ed01e9677112121163b692ea862": {
-      "key": "topology/participants/1accab7b515096231ee9dceda0f07f2edcea3ed01e9677112121163b692ea862",
-      "value": {
-        "format": 1,
-        "id": "c9666065013b4169a8ac1c617b7df4a3",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "14595",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789836334180,
-        "updatedAt": 1789836361930,
-        "finishedAt": 1789836361930,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 12793,
-          "output": 357,
-          "cacheRead": 21760,
-          "cacheWrite": 0,
-          "cost": 0.16754
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 9,
-      "updatedAt": 1789836362115,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/3f8dd9889e7a8999e7417ce8fd4240542dab919afac565053a382bb6e6e524cf": {
-      "key": "topology/participants/3f8dd9889e7a8999e7417ce8fd4240542dab919afac565053a382bb6e6e524cf",
-      "value": {
-        "format": 1,
-        "id": "dcb4120c4b8b44879358c23de8f453f5",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "19428",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789836366307,
-        "updatedAt": 1789836372678,
-        "finishedAt": 1789836372678,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 11907,
-          "output": 74,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 0.12277
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 5,
-      "updatedAt": 1789836372905,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/7d61c7a9a61a8045464e0f89543d2fd7e9053a9e9e7972fde159e62590b2473a": {
-      "key": "topology/participants/7d61c7a9a61a8045464e0f89543d2fd7e9053a9e9e7972fde159e62590b2473a",
-      "value": {
-        "format": 1,
-        "id": "114630a1301b462cb25ffef8a84663ae",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "21075",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789836378596,
-        "updatedAt": 1789836385759,
-        "finishedAt": 1789836385759,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 13102,
-          "output": 71,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 0.13457
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 4,
-      "updatedAt": 1789836385777,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/85908549f448c5fd03bc3c98b830f400b703c756ec3e5bca579d291eda4f966a": {
-      "key": "topology/participants/85908549f448c5fd03bc3c98b830f400b703c756ec3e5bca579d291eda4f966a",
-      "value": {
-        "format": 1,
-        "id": "842730bc9fdf4bb083379ef02f85b565",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "68448",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789836725851,
-        "updatedAt": 1789836851840,
-        "finishedAt": 1789836851840,
-        "turns": 14,
-        "toolCalls": 13,
-        "usage": {
-          "input": 90991,
-          "output": 1704,
-          "cacheRead": 1079168,
-          "cacheWrite": 0,
-          "cost": 2.0742779999999996
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 25,
-      "updatedAt": 1789836851915,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/2c69847f8806522f9257a35cc7462c8ada31749aad065c9062230d87c650ee03": {
-      "key": "topology/participants/2c69847f8806522f9257a35cc7462c8ada31749aad065c9062230d87c650ee03",
-      "value": {
-        "format": 1,
-        "id": "b45f8eaa1ab547c9a3a20ad6c7027915",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "2077",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789836954733,
-        "updatedAt": 1789837022898,
-        "finishedAt": 1789837022898,
-        "turns": 9,
-        "toolCalls": 8,
-        "usage": {
-          "input": 70338,
-          "output": 1203,
-          "cacheRead": 523008,
-          "cacheWrite": 0,
-          "cost": 1.2865380000000002
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 21,
-      "updatedAt": 1789837023056,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/6cecea85592801eb24132db1db699db02085ceec281cde1d1a7d132e87c4b137": {
-      "key": "topology/participants/6cecea85592801eb24132db1db699db02085ceec281cde1d1a7d132e87c4b137",
-      "value": {
-        "format": 1,
-        "id": "abb87bf683ec41d9b75490d11a81b551",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "16467",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789837049286,
-        "updatedAt": 1789837057347,
-        "finishedAt": 1789837057347,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 67217,
-          "output": 85,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 0.67642
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 4,
-      "updatedAt": 1789837057387,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/2505c1ef66f1643cc277e312e61feb6b2955bccbc1b0dc541628eb7544e92aa5": {
-      "key": "topology/participants/2505c1ef66f1643cc277e312e61feb6b2955bccbc1b0dc541628eb7544e92aa5",
-      "value": {
-        "format": 1,
-        "id": "eaf1dab2d4df4c9581847a6954da98fd",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "42995",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789837240708,
-        "updatedAt": 1789837308296,
-        "finishedAt": 1789837308296,
-        "turns": 8,
-        "toolCalls": 7,
-        "usage": {
-          "input": 86562,
-          "output": 1156,
-          "cacheRead": 578816,
-          "cacheWrite": 0,
-          "cost": 1.5022360000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 19,
-      "updatedAt": 1789837308541,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/56a30091e430fcb507ac7bdef2e7adcdc9c07826ea9f264aee04880eee07804b": {
-      "key": "topology/participants/56a30091e430fcb507ac7bdef2e7adcdc9c07826ea9f264aee04880eee07804b",
-      "value": {
-        "format": 1,
-        "id": "cf8beca721484f5eb1463843510c083c",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "60842",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789837362391,
-        "updatedAt": 1789837384519,
-        "finishedAt": 1789837384519,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 83190,
-          "output": 297,
-          "cacheRead": 164224,
-          "cacheWrite": 0,
-          "cost": 1.010974
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 8,
-      "updatedAt": 1789837384529,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/4887ea271e0f46fe1486e76858417909351b9bcd9d922cd420fce59524f8e166": {
-      "key": "topology/participants/4887ea271e0f46fe1486e76858417909351b9bcd9d922cd420fce59524f8e166",
-      "value": {
         "format": 1,
-        "id": "9886bcd53d574299a6cb622af001e7d0",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "13886",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789837748327,
-        "updatedAt": 1789837996736,
-        "finishedAt": 1789837996736,
-        "turns": 16,
-        "toolCalls": 15,
-        "usage": {
-          "input": 115961,
-          "output": 5501,
-          "cacheRead": 1620480,
-          "cacheWrite": 0,
-          "cost": 3.055140000000001
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "95cada88-6266-4613-ae46-e4d917b97c04",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978844294,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "91c9fdb3-fcb0-4ba5-a559-00c8c7d67297"
+        }
       },
-      "version": 34,
-      "updatedAt": 1789837996886,
+      "version": 2,
+      "updatedAt": 1789978834356,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/fed393ae93f0167e1d52046855480f83a2b5c0bb745e8010e256909333e403c2": {
-      "key": "topology/participants/fed393ae93f0167e1d52046855480f83a2b5c0bb745e8010e256909333e403c2",
+    "topology/control-seen/284b3f6216125f25a1103c156b8400ab6c3b45196893debdc358d1e69689427b": {
+      "key": "topology/control-seen/284b3f6216125f25a1103c156b8400ab6c3b45196893debdc358d1e69689427b",
       "value": {
         "format": 1,
-        "id": "61a250987e5a43a29ad65fff52e5f0a2",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "77636",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789838192810,
-        "updatedAt": 1789838232294,
-        "finishedAt": 1789838232294,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 121787,
-          "output": 476,
-          "cacheRead": 359808,
-          "cacheWrite": 0,
-          "cost": 1.601478
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "ccac8add-c96f-4013-a717-6f08a7a55d07",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978848121,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "c87db06f-b939-4736-ae46-9d2152a6f6df"
+        }
       },
-      "version": 12,
-      "updatedAt": 1789838232516,
+      "version": 2,
+      "updatedAt": 1789978838371,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/8672adb4b9876e09cb2f2300588e521a9c1a80dd592918286d2b7994d9533957": {
-      "key": "topology/participants/8672adb4b9876e09cb2f2300588e521a9c1a80dd592918286d2b7994d9533957",
+    "topology/control-seen/d8793632e0cc195a39084daef436034ea59aaa7db02a8e45575370fc5b926caf": {
+      "key": "topology/control-seen/d8793632e0cc195a39084daef436034ea59aaa7db02a8e45575370fc5b926caf",
       "value": {
         "format": 1,
-        "id": "6e7e0b9748de4f00897878c1eed2efa4",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "85504",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789838244984,
-        "updatedAt": 1789838267306,
-        "finishedAt": 1789838267306,
-        "turns": 2,
-        "toolCalls": 1,
-        "usage": {
-          "input": 117430,
-          "output": 184,
-          "cacheRead": 116992,
-          "cacheWrite": 0,
-          "cost": 1.3004920000000002
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "5a0e2a71-b8bc-4619-ae62-cd37621f22d4",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978851375,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "6c04a5b6-690a-4b60-8187-3d1b5cc25636"
+        }
       },
-      "version": 6,
-      "updatedAt": 1789838267463,
+      "version": 2,
+      "updatedAt": 1789978841628,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/73f0abc491ab96addf5e4a23595ca084441ae7e4119811e1dd266985d7e331ee": {
-      "key": "topology/participants/73f0abc491ab96addf5e4a23595ca084441ae7e4119811e1dd266985d7e331ee",
+    "topology/control-seen/a0f164ed0106bd26286c8fd140f68c73a715cb70486f491f5cd5a18962a938f0": {
+      "key": "topology/control-seen/a0f164ed0106bd26286c8fd140f68c73a715cb70486f491f5cd5a18962a938f0",
       "value": {
         "format": 1,
-        "id": "1ebcace7846144378551fb25b72d5db2",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "4240",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789838375743,
-        "updatedAt": 1789838491869,
-        "finishedAt": 1789838491869,
-        "turns": 10,
-        "toolCalls": 9,
-        "usage": {
-          "input": 134555,
-          "output": 2338,
-          "cacheRead": 1152128,
-          "cacheWrite": 0,
-          "cost": 2.6145780000000003
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "c9dbcaf0-4665-4a11-b8dd-89323d080ef9",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978874975,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "ec6df917-5547-4f86-bd5e-bd97c2c97a4f"
+        }
       },
-      "version": 21,
-      "updatedAt": 1789838492072,
+      "version": 2,
+      "updatedAt": 1789978865215,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/4b44fa9dc00d15419097fc1b3297c242b098ab7e4bfb84b327e01d473265f3a3": {
-      "key": "topology/participants/4b44fa9dc00d15419097fc1b3297c242b098ab7e4bfb84b327e01d473265f3a3",
+    "topology/control-seen/b198d06986094314019ee84d7bc03c4321aedeff923984e011e2103050bbb38e": {
+      "key": "topology/control-seen/b198d06986094314019ee84d7bc03c4321aedeff923984e011e2103050bbb38e",
       "value": {
         "format": 1,
-        "id": "9a1d2765bf2548f088ceac15736edb02",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "27600",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789838533049,
-        "updatedAt": 1789838584872,
-        "finishedAt": 1789838584872,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 132533,
-          "output": 874,
-          "cacheRead": 523136,
-          "cacheWrite": 0,
-          "cost": 1.892166
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "ea2267fe-a4b4-411e-a3ae-3ceb64102562",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978908581,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "a0249674-68d3-48a0-a764-a7464c28d126"
+        }
       },
-      "version": 15,
-      "updatedAt": 1789838585099,
+      "version": 2,
+      "updatedAt": 1789978898619,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/e1d8186be9b251af19b32188a53395cf424efbc589d29c2d15be4a51243ba972": {
-      "key": "topology/participants/e1d8186be9b251af19b32188a53395cf424efbc589d29c2d15be4a51243ba972",
+    "topology/control-seen/46208adea2d31c3e2a256b20835a7f7a17af3f4bb92db7d18ed9ca68b0d3b3d5": {
+      "key": "topology/control-seen/46208adea2d31c3e2a256b20835a7f7a17af3f4bb92db7d18ed9ca68b0d3b3d5",
       "value": {
         "format": 1,
-        "id": "c172a529360c427fb49251f1bb936326",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "56669",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789838741653,
-        "updatedAt": 1789838964138,
-        "finishedAt": 1789838964138,
-        "turns": 14,
-        "toolCalls": 13,
-        "usage": {
-          "input": 163882,
-          "output": 5243,
-          "cacheRead": 2057728,
-          "cacheWrite": 0,
-          "cost": 3.958698
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "995d807a-ed12-4b1e-8e05-1c10d10e240f",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978917711,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "c96b1d74-186a-4f57-b2e6-de94a0e41912"
+        }
       },
-      "version": 35,
-      "updatedAt": 1789838964381,
+      "version": 2,
+      "updatedAt": 1789978907892,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/f28f1fde9acfc51c771253c63a1133c65def59d001f3988dd12ae1ae78be832b": {
-      "key": "topology/participants/f28f1fde9acfc51c771253c63a1133c65def59d001f3988dd12ae1ae78be832b",
+    "topology/control-seen/0f3da26d43131e8378eb208e292cfa550cb698005fc1ea7b3b20d87490a60e94": {
+      "key": "topology/control-seen/0f3da26d43131e8378eb208e292cfa550cb698005fc1ea7b3b20d87490a60e94",
       "value": {
         "format": 1,
-        "id": "e402adedb8f44e739f61e4e16bdeecf6",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "5550",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839075817,
-        "updatedAt": 1789839131490,
-        "finishedAt": 1789839131490,
-        "turns": 7,
-        "toolCalls": 6,
-        "usage": {
-          "input": 34642,
-          "output": 527,
-          "cacheRead": 188544,
-          "cacheWrite": 0,
-          "cost": 0.561314
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "682dfbdb-12b7-4fc9-925e-5adc36abe4bf",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789978985286,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "160b12f9-3102-4c0e-9a1c-e7951810dc11"
+        }
       },
-      "version": 17,
-      "updatedAt": 1789839131696,
+      "version": 2,
+      "updatedAt": 1789978975422,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/e9f348542f7dea69a405c0e0fc26f78a67b70764771a559d67bb4bb2242c3b27": {
-      "key": "topology/participants/e9f348542f7dea69a405c0e0fc26f78a67b70764771a559d67bb4bb2242c3b27",
+    "topology/control-seen/44e550128f3161c476f8fa6e7593f2b8bc98dd2a8bb31cd969b64f9f1b174bb2": {
+      "key": "topology/control-seen/44e550128f3161c476f8fa6e7593f2b8bc98dd2a8bb31cd969b64f9f1b174bb2",
       "value": {
         "format": 1,
-        "id": "7cfd52f80b0047468d9fd8abf74c0f30",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "16710",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839150081,
-        "updatedAt": 1789839189723,
-        "finishedAt": 1789839189723,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 32110,
-          "output": 419,
-          "cacheRead": 91264,
-          "cacheWrite": 0,
-          "cost": 0.4333140000000001
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "66e2ee07-e2c5-4c93-b987-32de20804ec5",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979041517,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "a23a933f-ac27-46a8-9a2c-d8085872ca5e"
+        }
       },
-      "version": 9,
-      "updatedAt": 1789839189833,
+      "version": 2,
+      "updatedAt": 1789979031675,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/aabc39ad883231675eee1d23bc17b44ffc4711eec7d4a6dfb7f85fad635dc330": {
-      "key": "topology/participants/aabc39ad883231675eee1d23bc17b44ffc4711eec7d4a6dfb7f85fad635dc330",
+    "topology/control-seen/270b1b0eacf3ba330e0f2ea05dfba067be9f341ecf2792c5cd90eaa20ebbe5e6": {
+      "key": "topology/control-seen/270b1b0eacf3ba330e0f2ea05dfba067be9f341ecf2792c5cd90eaa20ebbe5e6",
       "value": {
         "format": 1,
-        "id": "bf7893b5b94d4a4587557851b6da3dab",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "28375",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839229860,
-        "updatedAt": 1789839249668,
-        "finishedAt": 1789839249668,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 31168,
-          "output": 214,
-          "cacheRead": 60544,
-          "cacheWrite": 0,
-          "cost": 0.382924
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "7bcb8f0a-17d1-42d0-a21f-e22935c48365",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979045131,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "1d44f666-8af8-41c3-8266-e961cdd1bed4"
+        }
       },
-      "version": 8,
-      "updatedAt": 1789839249821,
+      "version": 2,
+      "updatedAt": 1789979035189,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/74f07cb68ca1de60bb47772dcaa18d3e63f669545bbefdc501e905e0ca4ed247": {
-      "key": "topology/participants/74f07cb68ca1de60bb47772dcaa18d3e63f669545bbefdc501e905e0ca4ed247",
+    "topology/control-seen/8895218ff7ab32637e5413a8a45a523144e6f26614a5e395eb351a2e438730d8": {
+      "key": "topology/control-seen/8895218ff7ab32637e5413a8a45a523144e6f26614a5e395eb351a2e438730d8",
       "value": {
         "format": 1,
-        "id": "d22d26585ddf4d4bbba6946541aded1e",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "39438",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839306333,
-        "updatedAt": 1789839341858,
-        "finishedAt": 1789839341858,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 27116,
-          "output": 281,
-          "cacheRead": 95616,
-          "cacheWrite": 0,
-          "cost": 0.380826
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "383f0b52-2dda-480a-816e-96098748d85d",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979070592,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "0cf03fa3-120f-48c4-8419-1de51ae09130"
+        }
       },
-      "version": 9,
-      "updatedAt": 1789839342111,
+      "version": 2,
+      "updatedAt": 1789979060597,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/382db8a95349354612558916f4d77d6a33ea1b899cbd06a91747e16ef9e66a0b": {
-      "key": "topology/participants/382db8a95349354612558916f4d77d6a33ea1b899cbd06a91747e16ef9e66a0b",
+    "topology/control-seen/f06d40f2085d7afc3513a6a4de1472959f6eae7c5f270c6c598b2641c6a6f562": {
+      "key": "topology/control-seen/f06d40f2085d7afc3513a6a4de1472959f6eae7c5f270c6c598b2641c6a6f562",
       "value": {
         "format": 1,
-        "id": "be1e2bc808e94f52a3a7bbd3c88a7675",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "56090",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839423961,
-        "updatedAt": 1789839508982,
-        "finishedAt": 1789839508982,
-        "turns": 13,
-        "toolCalls": 12,
-        "usage": {
-          "input": 40395,
-          "output": 1168,
-          "cacheRead": 428928,
-          "cacheWrite": 0,
-          "cost": 0.8912780000000001
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "cbeef3c2-c139-4985-a04e-90fefea78945",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979075288,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "aacf9aa3-2b51-4993-be3a-f0be4797586f"
+        }
       },
-      "version": 24,
-      "updatedAt": 1789839509031,
+      "version": 2,
+      "updatedAt": 1789979065439,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/3fa571c7d1b28627cb25e7235ffb0ca9f9409f599ae891338404a199082c0be0": {
-      "key": "topology/participants/3fa571c7d1b28627cb25e7235ffb0ca9f9409f599ae891338404a199082c0be0",
+    "topology/control-seen/6ab835f74f755e9a6d171afbbab23e40615b3d7f28440d1cf04f8e63c2df2108": {
+      "key": "topology/control-seen/6ab835f74f755e9a6d171afbbab23e40615b3d7f28440d1cf04f8e63c2df2108",
       "value": {
         "format": 1,
-        "id": "380f164510e24b3b93d78287c2064a28",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "75206",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839552633,
-        "updatedAt": 1789839597086,
-        "finishedAt": 1789839597086,
-        "turns": 6,
-        "toolCalls": 5,
-        "usage": {
-          "input": 34451,
-          "output": 523,
-          "cacheRead": 163200,
-          "cacheWrite": 0,
-          "cost": 0.53386
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "7b9f4bd6-be42-448b-bc86-93ec9b80f07c",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979097818,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "9fbcb750-b3c1-4301-a57e-14d81c1e8087"
+        }
       },
-      "version": 14,
-      "updatedAt": 1789839597218,
+      "version": 2,
+      "updatedAt": 1789979087916,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/d11df84439e45c7d2488ab51d323cc925087e7bf284de62a5b75c84405b42cc8": {
-      "key": "topology/participants/d11df84439e45c7d2488ab51d323cc925087e7bf284de62a5b75c84405b42cc8",
+    "topology/control-seen/71f957ddbb856b09674ddb613d92117b0cc7710901b06291746f3bec70257a02": {
+      "key": "topology/control-seen/71f957ddbb856b09674ddb613d92117b0cc7710901b06291746f3bec70257a02",
       "value": {
         "format": 1,
-        "id": "e013800207f24d88946cd17d8d7d63aa",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "89085",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839649211,
-        "updatedAt": 1789839671825,
-        "finishedAt": 1789839671825,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 33167,
-          "output": 261,
-          "cacheRead": 64384,
-          "cacheWrite": 0,
-          "cost": 0.409104
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "46ae5f69-7d65-432c-a06a-906414d5a441",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979132657,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "8ef20ce8-c9f3-41f3-9a5a-9ad2a606b55e"
+        }
       },
-      "version": 9,
-      "updatedAt": 1789839671859,
+      "version": 2,
+      "updatedAt": 1789979122709,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/fd68b22101c633b58ed52e0670bbea59b874b0f310bd6fdaf5623924a99fb59f": {
-      "key": "topology/participants/fd68b22101c633b58ed52e0670bbea59b874b0f310bd6fdaf5623924a99fb59f",
+    "topology/control-seen/6615a3168d104279c86aff03deee03a383cde1ef0f55a2ed90679771da0fddec": {
+      "key": "topology/control-seen/6615a3168d104279c86aff03deee03a383cde1ef0f55a2ed90679771da0fddec",
       "value": {
         "format": 1,
-        "id": "1804548d425e42b298dee1446e5e6c2b",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "2747",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839740862,
-        "updatedAt": 1789839770541,
-        "finishedAt": 1789839770541,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 35927,
-          "output": 380,
-          "cacheRead": 104192,
-          "cacheWrite": 0,
-          "cost": 0.482462
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "5d07a85d-af69-4a73-9386-69d51eceebb2",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979170344,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "c4a5b275-3d0b-48db-9212-490bfffe9edd"
+        }
       },
-      "version": 10,
-      "updatedAt": 1789839770574,
+      "version": 2,
+      "updatedAt": 1789979160470,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/a06d3fe2e53cbbe2931ffd7bf8f3fbbd4e9f6b04e3f4281b875eb26940e0a81b": {
-      "key": "topology/participants/a06d3fe2e53cbbe2931ffd7bf8f3fbbd4e9f6b04e3f4281b875eb26940e0a81b",
+    "topology/control-seen/396217b288e06946a91847f54d1ac73c0126d3bedc5083ace72b22a0b0a16e8f": {
+      "key": "topology/control-seen/396217b288e06946a91847f54d1ac73c0126d3bedc5083ace72b22a0b0a16e8f",
       "value": {
         "format": 1,
-        "id": "73d1d3a985f54a8685856a8741718664",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "32041",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789839957513,
-        "updatedAt": 1789840015973,
-        "finishedAt": 1789840015973,
-        "turns": 6,
-        "toolCalls": 5,
-        "usage": {
-          "input": 33506,
-          "output": 793,
-          "cacheRead": 154880,
-          "cacheWrite": 0,
-          "cost": 0.52959
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "25501472-85d2-4d6d-ada5-0d3c61f3eca3",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979224063,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "15c61aa2-42cc-41c0-ac48-75fab89d7339"
+        }
       },
-      "version": 13,
-      "updatedAt": 1789840015990,
+      "version": 2,
+      "updatedAt": 1789979214129,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/d4b325f6f6f2c73b87add6fd632dde682eb026ac8d74042f3672f2127dc0c709": {
-      "key": "topology/participants/d4b325f6f6f2c73b87add6fd632dde682eb026ac8d74042f3672f2127dc0c709",
+    "topology/control-seen/0a2b97a25205ee36be1a613d33fafd9fbb85eb176e66912c95ac0781171c6eef": {
+      "key": "topology/control-seen/0a2b97a25205ee36be1a613d33fafd9fbb85eb176e66912c95ac0781171c6eef",
       "value": {
         "format": 1,
-        "id": "f25c68032643467eab510e13f54df31a",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "56221",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840133782,
-        "updatedAt": 1789840237814,
-        "finishedAt": 1789840237814,
-        "turns": 13,
-        "toolCalls": 12,
-        "usage": {
-          "input": 37549,
-          "output": 1593,
-          "cacheRead": 431744,
-          "cacheWrite": 0,
-          "cost": 0.886884
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "4c43b494-8ea1-4767-84cf-fca369857948",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979289919,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "9e947627-8cc4-4d90-9bc3-c39d298b8acc"
+        }
       },
-      "version": 28,
-      "updatedAt": 1789840238066,
+      "version": 2,
+      "updatedAt": 1789979280158,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/e62340df2523526784b7d0e4bca48239b752c9ab5a80a90be6b4cbd5c64ee487": {
-      "key": "topology/participants/e62340df2523526784b7d0e4bca48239b752c9ab5a80a90be6b4cbd5c64ee487",
+    "topology/control-seen/7ce78ca65fd19dbd14c5a7b63e2e5152ce41bf1198ec4be328f8f56acc28f30e": {
+      "key": "topology/control-seen/7ce78ca65fd19dbd14c5a7b63e2e5152ce41bf1198ec4be328f8f56acc28f30e",
       "value": {
         "format": 1,
-        "id": "f25305110bd4480288499083c34daac0",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "81083",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840305710,
-        "updatedAt": 1789840343553,
-        "finishedAt": 1789840343553,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 30377,
-          "output": 485,
-          "cacheRead": 136192,
-          "cacheWrite": 0,
-          "cost": 0.46421199999999996
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "645937c4-20de-42f3-85ea-575da20bba08",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979310321,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "3e5b55a6-4843-4571-86fc-78c5ddf9c386"
+        }
       },
-      "version": 11,
-      "updatedAt": 1789840343780,
+      "version": 2,
+      "updatedAt": 1789979300469,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/bed9b6435a81188b6075f564b9711b62828504e4cd5714280e0155fe0d1a2c19": {
-      "key": "topology/participants/bed9b6435a81188b6075f564b9711b62828504e4cd5714280e0155fe0d1a2c19",
+    "topology/control-seen/405eda6668e581f6e51096493d26ed001ec611c26958e34ca0c1b6b297f3dd64": {
+      "key": "topology/control-seen/405eda6668e581f6e51096493d26ed001ec611c26958e34ca0c1b6b297f3dd64",
       "value": {
         "format": 1,
-        "id": "212e6943bd2d46c69e3652c819fd028e",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "88258",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840353602,
-        "updatedAt": 1789840382527,
-        "finishedAt": 1789840382527,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 33997,
-          "output": 371,
-          "cacheRead": 129792,
-          "cacheWrite": 0,
-          "cost": 0.488312
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "1be2a631-a059-444d-9549-752195b336cd",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979322294,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "14229098-b877-45fb-9fc6-7671ee09d686"
+        }
       },
-      "version": 11,
-      "updatedAt": 1789840382633,
+      "version": 2,
+      "updatedAt": 1789979312529,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/b7b806842979ab950d1a27bf1c69875f22d900f9d0c95d37572a4cf03cd0b052": {
-      "key": "topology/participants/b7b806842979ab950d1a27bf1c69875f22d900f9d0c95d37572a4cf03cd0b052",
+    "topology/control-seen/c4562af04777ba4310a07460179fc7e66cec85e681b59fa493b627e0977b8c5d": {
+      "key": "topology/control-seen/c4562af04777ba4310a07460179fc7e66cec85e681b59fa493b627e0977b8c5d",
       "value": {
         "format": 1,
-        "id": "b83fcb831f52472b8f577a7070331b13",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "4338",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840463758,
-        "updatedAt": 1789840501128,
-        "finishedAt": 1789840501128,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 34702,
-          "output": 384,
-          "cacheRead": 132096,
-          "cacheWrite": 0,
-          "cost": 0.498316
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "1d9dd8d1-b4c9-4aea-b272-2d42ca9ae8f5",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979403108,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "dbc1f765-1e00-4edc-bbbd-7f6d78e60a57"
+        }
       },
-      "version": 12,
-      "updatedAt": 1789840501342,
+      "version": 2,
+      "updatedAt": 1789979393236,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/753a90c6e64f9cab1c534b6ee3785116121e7543ac96c0bb3c7543cb2b381294": {
-      "key": "topology/participants/753a90c6e64f9cab1c534b6ee3785116121e7543ac96c0bb3c7543cb2b381294",
+    "topology/control-seen/aa6918a4e2e46b6f0e0a937ca9e3e8ffc51f663c41ed8fd32689b0696960d5f3": {
+      "key": "topology/control-seen/aa6918a4e2e46b6f0e0a937ca9e3e8ffc51f663c41ed8fd32689b0696960d5f3",
       "value": {
         "format": 1,
-        "id": "95e4e6c9337c4f6eae28be055e338cb1",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "11065",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840506826,
-        "updatedAt": 1789840539595,
-        "finishedAt": 1789840539595,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 34099,
-          "output": 348,
-          "cacheRead": 98560,
-          "cacheWrite": 0,
-          "cost": 0.45695
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "69f9bd97-5b93-44df-972b-da47130d8ef6",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979466579,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "ca683832-d0ec-4f56-9933-43fd9d8e988a"
+        }
       },
-      "version": 9,
-      "updatedAt": 1789840539674,
+      "version": 2,
+      "updatedAt": 1789979456727,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/b15987141e970f7e740197076c1e657a158801cf560c9cdad16a40ccca4cac60": {
-      "key": "topology/participants/b15987141e970f7e740197076c1e657a158801cf560c9cdad16a40ccca4cac60",
+    "topology/control-seen/bccfe25e158c6d66edbce948a5c2d5b9510f131280e0c6db6138cdccaabd7d78": {
+      "key": "topology/control-seen/bccfe25e158c6d66edbce948a5c2d5b9510f131280e0c6db6138cdccaabd7d78",
       "value": {
         "format": 1,
-        "id": "08247a56c3b44240b005fe084fcf1834",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "17279",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840547458,
-        "updatedAt": 1789840570412,
-        "finishedAt": 1789840570412,
-        "turns": 3,
-        "toolCalls": 2,
-        "usage": {
-          "input": 33181,
-          "output": 189,
-          "cacheRead": 64896,
-          "cacheWrite": 0,
-          "cost": 0.406156
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "72dae034-cc10-4a23-a1cc-c3296945559d",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979527348,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "110f2263-6929-4383-ae14-d5fbfddf8cd2"
+        }
       },
-      "version": 8,
-      "updatedAt": 1789840570436,
+      "version": 2,
+      "updatedAt": 1789979517389,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/3bc0c88b2b8d656e87d23dc05e91760db9f009031d779f3618dc4866a241cf87": {
-      "key": "topology/participants/3bc0c88b2b8d656e87d23dc05e91760db9f009031d779f3618dc4866a241cf87",
+    "topology/control-seen/b3337b9249ce174dac0c457be33d1e66e6e1ab8b4794f608adef0bc7a965970f": {
+      "key": "topology/control-seen/b3337b9249ce174dac0c457be33d1e66e6e1ab8b4794f608adef0bc7a965970f",
       "value": {
         "format": 1,
-        "id": "cfbfe9e4cc9b4e679a4c44889fe70912",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "31082",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840646080,
-        "updatedAt": 1789840744637,
-        "finishedAt": 1789840744637,
-        "turns": 10,
-        "toolCalls": 9,
-        "usage": {
-          "input": 35897,
-          "output": 1507,
-          "cacheRead": 317824,
-          "cacheWrite": 0,
-          "cost": 0.752144
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "6d7706f7-7768-4f16-86af-0ca064714d2c",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979542645,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "2c5b7962-1ad8-4efa-bd72-fff9cdd6bbcf"
+        }
       },
-      "version": 19,
-      "updatedAt": 1789840744843,
+      "version": 2,
+      "updatedAt": 1789979532762,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/634b39e8893d4c84cb91e6e95079b0a3557ed6b88f32183630b8ab8992aef30b": {
-      "key": "topology/participants/634b39e8893d4c84cb91e6e95079b0a3557ed6b88f32183630b8ab8992aef30b",
+    "topology/control-seen/a6e00c337f5e9323886103fbd96f308f7bd8b6ae6be3f3f69a0e9e36f6696b1c": {
+      "key": "topology/control-seen/a6e00c337f5e9323886103fbd96f308f7bd8b6ae6be3f3f69a0e9e36f6696b1c",
       "value": {
         "format": 1,
-        "id": "d0d4a0820bca4fe491950cef99250c6b",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "46951",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840750605,
-        "updatedAt": 1789840758722,
-        "finishedAt": 1789840758722,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 27284,
-          "output": 87,
-          "cacheRead": 4224,
-          "cacheWrite": 0,
-          "cost": 0.28141400000000005
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "67653cc9-98c4-4a72-b6c2-33cb5e9b89d6",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979552458,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "0c206592-caa9-4f88-b379-2129e8b244fd"
+        }
       },
-      "version": 5,
-      "updatedAt": 1789840758949,
+      "version": 2,
+      "updatedAt": 1789979542608,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/0323478d598428af518aa36b463b820c105ad4aa5644fd94f5c07b2391206d05": {
-      "key": "topology/participants/0323478d598428af518aa36b463b820c105ad4aa5644fd94f5c07b2391206d05",
+    "topology/control-seen/a091406195a5f17557a98fd44e11ac149b425061862ecc01774a2edd11035f68": {
+      "key": "topology/control-seen/a091406195a5f17557a98fd44e11ac149b425061862ecc01774a2edd11035f68",
       "value": {
         "format": 1,
-        "id": "ec83228d205e4177a628b331e6d7193d",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "49071",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840765005,
-        "updatedAt": 1789840772890,
-        "finishedAt": 1789840772890,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 30391,
-          "output": 95,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 0.30866
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "173df7aa-e39f-4cc2-9f54-2146127f85a7",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979609388,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "9ab41d6c-c542-41c9-aae7-e4dc865b052a"
+        }
       },
-      "version": 4,
-      "updatedAt": 1789840772982,
+      "version": 2,
+      "updatedAt": 1789979599489,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/673ab449386c10a9a01b011f4c9ef2ec320500a30f540f8ff210cb8799ac9af2": {
-      "key": "topology/participants/673ab449386c10a9a01b011f4c9ef2ec320500a30f540f8ff210cb8799ac9af2",
+    "topology/control-seen/1476bdae610b9f0f498d8464e3676bde9606d7ed5da432f81aecec7539d08b21": {
+      "key": "topology/control-seen/1476bdae610b9f0f498d8464e3676bde9606d7ed5da432f81aecec7539d08b21",
       "value": {
         "format": 1,
-        "id": "9f57bf698ea74531bfa83c2997234255",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "75311",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789840957121,
-        "updatedAt": 1789841101675,
-        "finishedAt": 1789841101675,
-        "turns": 16,
-        "toolCalls": 15,
-        "usage": {
-          "input": 48801,
-          "output": 2599,
-          "cacheRead": 606080,
-          "cacheWrite": 0,
-          "cost": 1.2240399999999998
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "152ad19c-31a7-48b4-9378-894d5a3f1f83",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979622585,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "9c2c65fb-e24d-43b2-92d5-ff62b6800978"
+        }
       },
-      "version": 32,
-      "updatedAt": 1789841101840,
+      "version": 2,
+      "updatedAt": 1789979612805,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/95bca8b5e615bad8ccce13fc79f064ef3dcc0cbe5c7dde137751765e10b601be": {
-      "key": "topology/participants/95bca8b5e615bad8ccce13fc79f064ef3dcc0cbe5c7dde137751765e10b601be",
+    "topology/control-seen/bafe8242db2f91a03ac03a3b6f2b3b909de397d0ca83b9468adf4fe2a990c9f6": {
+      "key": "topology/control-seen/bafe8242db2f91a03ac03a3b6f2b3b909de397d0ca83b9468adf4fe2a990c9f6",
       "value": {
         "format": 1,
-        "id": "8a961bdbd01746fea5d3dddc841b2ba6",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "4416",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841151758,
-        "updatedAt": 1789841192485,
-        "finishedAt": 1789841192485,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 32341,
-          "output": 375,
-          "cacheRead": 135680,
-          "cacheWrite": 0,
-          "cost": 0.47784
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "cc6c1e73-987a-4275-84b7-5242fb4b2312",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979627573,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "3084b545-556e-41d3-aad6-eae8f886e8d4"
+        }
       },
-      "version": 9,
-      "updatedAt": 1789841192624,
+      "version": 2,
+      "updatedAt": 1789979617827,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/4a8856472882b7d0aa90a174249dc62b16d42e19bb996f83b715d67a9d0b8f15": {
-      "key": "topology/participants/4a8856472882b7d0aa90a174249dc62b16d42e19bb996f83b715d67a9d0b8f15",
+    "topology/control-seen/3cafddd503ba4febb5689edc36ced5168692e9dbea91135058e0d546a5175099": {
+      "key": "topology/control-seen/3cafddd503ba4febb5689edc36ced5168692e9dbea91135058e0d546a5175099",
       "value": {
         "format": 1,
-        "id": "61d59fae59d3401bbb0790a0cd57f53c",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "22374",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841278517,
-        "updatedAt": 1789841319759,
-        "finishedAt": 1789841319759,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 32560,
-          "output": 765,
-          "cacheRead": 136832,
-          "cacheWrite": 0,
-          "cost": 0.5006820000000001
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "a9389ba2-6741-4c28-bc7b-3584cd236201",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979666637,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "0b3c3519-28f6-4bad-ac11-8e7603a9b303"
+        }
       },
-      "version": 11,
-      "updatedAt": 1789841319928,
+      "version": 2,
+      "updatedAt": 1789979656795,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/83a54898d6e382f154df9226e3c8860541c6a3a5f5395d22e9f09f61a06d102f": {
-      "key": "topology/participants/83a54898d6e382f154df9226e3c8860541c6a3a5f5395d22e9f09f61a06d102f",
+    "topology/control-seen/1cf3db6fbf1d6e6f929552a7ccc5f2959f822a52662dd6473869cbbb3bd1b360": {
+      "key": "topology/control-seen/1cf3db6fbf1d6e6f929552a7ccc5f2959f822a52662dd6473869cbbb3bd1b360",
       "value": {
         "format": 1,
-        "id": "472cf278c60744cc90512c2c5e63edcc",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "29995",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841325758,
-        "updatedAt": 1789841334573,
-        "finishedAt": 1789841334573,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 25259,
-          "output": 89,
-          "cacheRead": 4224,
-          "cacheWrite": 0,
-          "cost": 0.26126400000000005
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "d3417ab8-77df-459f-8eae-f8a305e0dbdf",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979686094,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "33115006-c0ef-431d-9df7-9fede687ad61"
+        }
       },
-      "version": 4,
-      "updatedAt": 1789841334614,
+      "version": 2,
+      "updatedAt": 1789979676153,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/f1c251497e28b3ad6d63981d3e5472639c4f69cabdb7e1498a93fefb328e34ee": {
-      "key": "topology/participants/f1c251497e28b3ad6d63981d3e5472639c4f69cabdb7e1498a93fefb328e34ee",
+    "topology/control-seen/661a82f57750d7094b773aa8d2285b35d6757f988f6b272e625e15e723f2e9d9": {
+      "key": "topology/control-seen/661a82f57750d7094b773aa8d2285b35d6757f988f6b272e625e15e723f2e9d9",
       "value": {
         "format": 1,
-        "id": "f987ca06349e43e78bc6bc1bb592fedf",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "41450",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841408733,
-        "updatedAt": 1789841445560,
-        "finishedAt": 1789841445560,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 30122,
-          "output": 424,
-          "cacheRead": 132224,
-          "cacheWrite": 0,
-          "cost": 0.45464400000000005
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "6de92875-33d5-4e16-be16-3eba32b7bac7",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979692510,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "7e93f809-44c9-4652-9ba2-b88d3c5fd050"
+        }
       },
-      "version": 11,
-      "updatedAt": 1789841445593,
+      "version": 2,
+      "updatedAt": 1789979682687,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/f919d4febe7c77d9e4b6fb830181311cb35294a2a6da39b19ada742022eb17dc": {
-      "key": "topology/participants/f919d4febe7c77d9e4b6fb830181311cb35294a2a6da39b19ada742022eb17dc",
+    "topology/control-seen/2ff47eab98910c16b179ac5a8b1979dedc50eb0e2f2dce109803bd6edc68f7b3": {
+      "key": "topology/control-seen/2ff47eab98910c16b179ac5a8b1979dedc50eb0e2f2dce109803bd6edc68f7b3",
       "value": {
         "format": 1,
-        "id": "b2848ca6f33e4854ae0c5e3213aa770d",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "48561",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841454951,
-        "updatedAt": 1789841479139,
-        "finishedAt": 1789841479139,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 27824,
-          "output": 295,
-          "cacheRead": 96512,
-          "cacheWrite": 0,
-          "cost": 0.38950199999999996
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "fdaf0ddd-f930-40d8-998b-f2ca9cf9e414",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979729192,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "3d907184-0eb1-4efb-adc9-fd9cf0d85424"
+        }
       },
-      "version": 10,
-      "updatedAt": 1789841479186,
+      "version": 2,
+      "updatedAt": 1789979719383,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/5a22873b2b81c37b3f3b81e05596fd58d602f87fd8254a2c5326afa9bdf493bc": {
-      "key": "topology/participants/5a22873b2b81c37b3f3b81e05596fd58d602f87fd8254a2c5326afa9bdf493bc",
+    "topology/control-seen/0cf921cfce004f82ffcc55feb00c4bd7fa08f187fa0c1c23737aa4a98594a270": {
+      "key": "topology/control-seen/0cf921cfce004f82ffcc55feb00c4bd7fa08f187fa0c1c23737aa4a98594a270",
       "value": {
         "format": 1,
-        "id": "07456da78e994599be305af8e1370bd6",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "58467",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841523938,
-        "updatedAt": 1789841554656,
-        "finishedAt": 1789841554656,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 26659,
-          "output": 345,
-          "cacheRead": 93568,
-          "cacheWrite": 0,
-          "cost": 0.3774080000000001
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "f52c3962-7a5a-41a4-ba2f-7673ba0660d2",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979823757,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "ce83af27-a9da-4ec9-8e8d-4e6b1fa9450b"
+        }
       },
-      "version": 11,
-      "updatedAt": 1789841554756,
+      "version": 2,
+      "updatedAt": 1789979813897,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/dd852bfe8b582513565031e14f2a5ce4141cc2854b782d2c0ef406f453204ddc": {
-      "key": "topology/participants/dd852bfe8b582513565031e14f2a5ce4141cc2854b782d2c0ef406f453204ddc",
+    "topology/control-seen/e5d3215d3eee5bad60d110374f0f078456986d1d6f19c2b9bdd8782145649138": {
+      "key": "topology/control-seen/e5d3215d3eee5bad60d110374f0f078456986d1d6f19c2b9bdd8782145649138",
       "value": {
         "format": 1,
-        "id": "2d7cc4f3bf3744ebba0df9e13c0bfdb3",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "72318",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841620904,
-        "updatedAt": 1789841690702,
-        "finishedAt": 1789841690702,
-        "turns": 8,
-        "toolCalls": 7,
-        "usage": {
-          "input": 64846,
-          "output": 755,
-          "cacheRead": 349184,
-          "cacheWrite": 0,
-          "cost": 1.035394
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "35011bd1-5bd9-451e-90b9-b816e83ef5c0",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789979941533,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "6d82b050-f5a7-4463-b324-4a8a0e826a3b"
+        }
       },
-      "version": 17,
-      "updatedAt": 1789841690953,
+      "version": 2,
+      "updatedAt": 1789979931601,
       "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/7d4b9c5955361b6dee125eefa728f96d51472f1f20ee5e55d2526bc5f97119fc": {
-      "key": "topology/participants/7d4b9c5955361b6dee125eefa728f96d51472f1f20ee5e55d2526bc5f97119fc",
+    "topology/control-seen/26932e1325db2ba127eacf26909b016882dfa66defbdc25fefd40e1697dcb96c": {
+      "key": "topology/control-seen/26932e1325db2ba127eacf26909b016882dfa66defbdc25fefd40e1697dcb96c",
       "value": {
         "format": 1,
-        "id": "57893023d5994e95b8a5b79518503fe8",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "90707",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841748161,
-        "updatedAt": 1789841804857,
-        "finishedAt": 1789841804857,
-        "turns": 9,
-        "toolCalls": 8,
-        "usage": {
-          "input": 47781,
-          "output": 803,
-          "cacheRead": 284032,
-          "cacheWrite": 0,
-          "cost": 0.8019919999999999
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 15,
-      "updatedAt": 1789841804967,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/b3f157f27b7612f04c15325505e557cd1f4c7f5204be5e29659abeed9a194457": {
-      "key": "topology/participants/b3f157f27b7612f04c15325505e557cd1f4c7f5204be5e29659abeed9a194457",
-      "value": {
-        "format": 1,
-        "id": "a784bee60b4d40ef9cd4d4ffa98ffacf",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "6408",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841852469,
-        "updatedAt": 1789841903487,
-        "finishedAt": 1789841903487,
-        "turns": 8,
-        "toolCalls": 7,
-        "usage": {
-          "input": 29888,
-          "output": 713,
-          "cacheRead": 223360,
-          "cacheWrite": 0,
-          "cost": 0.5578900000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 16,
-      "updatedAt": 1789841903738,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/b238e89eb3a7c4abc386ae50124ad641931c3a30efda32a713d1d11669a8d495": {
-      "key": "topology/participants/b238e89eb3a7c4abc386ae50124ad641931c3a30efda32a713d1d11669a8d495",
-      "value": {
-        "format": 1,
-        "id": "b1c6a708eecc44df970e3ff21c80b00d",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "24585",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789841978497,
-        "updatedAt": 1789842022136,
-        "finishedAt": 1789842022136,
-        "turns": 5,
-        "toolCalls": 4,
-        "usage": {
-          "input": 29139,
-          "output": 608,
-          "cacheRead": 130560,
-          "cacheWrite": 0,
-          "cost": 0.4523500000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 13,
-      "updatedAt": 1789842022169,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/0f4e473410558ed25068e8cb6201b924417114aae03c6a826da65d313c94ebdd": {
-      "key": "topology/participants/0f4e473410558ed25068e8cb6201b924417114aae03c6a826da65d313c94ebdd",
-      "value": {
-        "format": 1,
-        "id": "c674703d769848199e06c529ee7cf5da",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "36655",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842061885,
-        "updatedAt": 1789842073125,
-        "finishedAt": 1789842073125,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 26656,
-          "output": 141,
-          "cacheRead": 4224,
-          "cacheWrite": 0,
-          "cost": 0.277834
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 5,
-      "updatedAt": 1789842073269,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/913c92b7e87f8c1249cf600a067ca64fa090cdd730be56172f00f6d8a5615a43": {
-      "key": "topology/participants/913c92b7e87f8c1249cf600a067ca64fa090cdd730be56172f00f6d8a5615a43",
-      "value": {
-        "format": 1,
-        "id": "81182a8e16454d4aa471831cef4bc66d",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "41868",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842100690,
-        "updatedAt": 1789842126421,
-        "finishedAt": 1789842126421,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 32188,
-          "output": 322,
-          "cacheRead": 105984,
-          "cacheWrite": 0,
-          "cost": 0.44396399999999997
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 10,
-      "updatedAt": 1789842126580,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/23ea50b8bd6228a6bb6b2900dbf4d2fb1d85eec393cb899c9ca936009acb36db": {
-      "key": "topology/participants/23ea50b8bd6228a6bb6b2900dbf4d2fb1d85eec393cb899c9ca936009acb36db",
-      "value": {
-        "format": 1,
-        "id": "b8e9001898a844998792a32e145ffa09",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "48308",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842145163,
-        "updatedAt": 1789842154008,
-        "finishedAt": 1789842154008,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 31674,
-          "output": 141,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "cost": 0.32379
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 5,
-      "updatedAt": 1789842154266,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/a99945d999310bc5d30d3402722af26bbeb830afc714bd516f9928a914b764e3": {
-      "key": "topology/participants/a99945d999310bc5d30d3402722af26bbeb830afc714bd516f9928a914b764e3",
-      "value": {
-        "format": 1,
-        "id": "8a1ccb88c23a4d29bc7fad27374beef6",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "60556",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842233140,
-        "updatedAt": 1789842279711,
-        "finishedAt": 1789842279711,
-        "turns": 6,
-        "toolCalls": 5,
-        "usage": {
-          "input": 34248,
-          "output": 798,
-          "cacheRead": 161536,
-          "cacheWrite": 0,
-          "cost": 0.5439160000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 13,
-      "updatedAt": 1789842279812,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/56470022403c4c0ab4eb2844f7249ed4e16b2539a26cef5e881f1ba2b98da91f": {
-      "key": "topology/participants/56470022403c4c0ab4eb2844f7249ed4e16b2539a26cef5e881f1ba2b98da91f",
-      "value": {
-        "format": 1,
-        "id": "2f220c6a13d6400c9aab33d49f684f5b",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "70525",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842301152,
-        "updatedAt": 1789842331548,
-        "finishedAt": 1789842331548,
-        "turns": 4,
-        "toolCalls": 3,
-        "usage": {
-          "input": 36404,
-          "output": 447,
-          "cacheRead": 116992,
-          "cacheWrite": 0,
-          "cost": 0.5033820000000001
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 10,
-      "updatedAt": 1789842331724,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/3fd150c7e64cbf756c37854bfe1487db834c57537ce31139661a6855c1464f9c": {
-      "key": "topology/participants/3fd150c7e64cbf756c37854bfe1487db834c57537ce31139661a6855c1464f9c",
-      "value": {
-        "format": 1,
-        "id": "7ea6cad1bffe41b79781224699dabcea",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "77630",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842351070,
-        "updatedAt": 1789842360148,
-        "finishedAt": 1789842360148,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 27983,
-          "output": 125,
-          "cacheRead": 4224,
-          "cacheWrite": 0,
-          "cost": 0.290304
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 5,
-      "updatedAt": 1789842360246,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/fd58934e071002c12fade6ce0df826e2979943c1ff469215ebb6e98870fbd4c5": {
-      "key": "topology/participants/fd58934e071002c12fade6ce0df826e2979943c1ff469215ebb6e98870fbd4c5",
-      "value": {
-        "format": 1,
-        "id": "a6e036c862be420498fac79453c6a596",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "82766",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842386862,
-        "updatedAt": 1789842490503,
-        "finishedAt": 1789842490503,
-        "turns": 11,
-        "toolCalls": 10,
-        "usage": {
-          "input": 38448,
-          "output": 955,
-          "cacheRead": 344064,
-          "cacheWrite": 0,
-          "cost": 0.7762940000000002
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 25,
-      "updatedAt": 1789842490550,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "topology/participants/7df2bb9a0a2fe3fd202052068d6163181e398c309b4bd953a4f4caba00afc2d3": {
-      "key": "topology/participants/7df2bb9a0a2fe3fd202052068d6163181e398c309b4bd953a4f4caba00afc2d3",
-      "value": {
-        "format": 1,
-        "id": "3a0a8fa9910d4b59acc61653b3a9771b",
-        "kind": "agent",
-        "rootId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerHostId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "ownerIdentityId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "parentId": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "1076",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789842502494,
-        "updatedAt": 1789842512740,
-        "finishedAt": 1789842512740,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 28141,
-          "output": 150,
-          "cacheRead": 4224,
-          "cacheWrite": 0,
-          "cost": 0.29313400000000006
-        },
-        "controlProtocol": "v1"
-      },
-      "version": 5,
-      "updatedAt": 1789842512857,
-      "updatedBy": {
-        "id": "session:01a0ba8d-a969-70d9-972a-1321ad5a27c0",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0ba8d-a969-70d9-972a-1321ad5a27c0"
-      }
-    },
-    "sessions/01a0bdbe-6af1-7294-9227-32044958962f": {
-      "key": "sessions/01a0bdbe-6af1-7294-9227-32044958962f",
-      "value": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "TRI-10",
-        "label": "TRI-10",
-        "kind": "peer",
-        "status": "running",
-        "runner": "pi",
-        "transport": "host",
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f",
-        "model": "zro/deepseek-v4.1-flash",
-        "thinking": "high",
-        "startedAt": 1789889769806,
-        "updatedAt": 1789892285141,
-        "pendingMessages": false,
-        "local": false
-      },
-      "version": 1433,
-      "updatedAt": 1789892285145,
-      "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "main",
-        "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
-      }
-    },
-    "topology/participants/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29": {
-      "key": "topology/participants/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29",
-      "value": {
-        "format": 1,
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "kind": "root",
-        "rootId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerHostId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerIdentityId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "main",
-        "status": "running",
-        "runner": "pi",
-        "transport": "host",
-        "capabilities": [
-          "steer",
-          "followUp",
-          "fabric"
-        ],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f",
-        "model": "zro/deepseek-v4.1-flash",
-        "thinking": "high",
-        "startedAt": 1789889769806,
-        "updatedAt": 1789892285141,
-        "pendingMessages": false,
-        "controlProtocol": "v1",
-        "label": "TRI-10"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "1f4a3988-b3a0-449f-919b-37b0583b33cb",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789980049645,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "06ba8850-ad3e-4e6a-bea1-96b15c3a7ae6"
+        }
       },
-      "version": 1433,
-      "updatedAt": 1789892285150,
+      "version": 2,
+      "updatedAt": 1789980039772,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/hosts/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29": {
-      "key": "topology/hosts/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29",
+    "topology/control-seen/1afecb4beac8866912cda2f1969905f9864285b5d7d5f98cd3c3a13676eae72d": {
+      "key": "topology/control-seen/1afecb4beac8866912cda2f1969905f9864285b5d7d5f98cd3c3a13676eae72d",
       "value": {
         "format": 1,
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "rootId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "identity": {
-          "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-          "name": "main",
-          "kind": "main",
-          "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
-        },
-        "startedAt": 1789889769807,
-        "updatedAt": 1789892285154,
-        "expiresAt": 1789892300154
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "cb55cb52-e89f-4e46-a764-352184b532a6",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789980123530,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "9f3b7cab-1cf4-427a-bee0-8eb59541e5a2"
+        }
       },
-      "version": 1433,
-      "updatedAt": 1789892285155,
+      "version": 2,
+      "updatedAt": 1789980113557,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/e76c3cc7b82a2859c140d8af6035c576c5d723e111f8e06329e76922044d7032": {
-      "key": "topology/participants/e76c3cc7b82a2859c140d8af6035c576c5d723e111f8e06329e76922044d7032",
+    "topology/control-seen/df1a43b18750b039e74b1c667e36279cb0f360e6db6c389d5a7f3be9b1cdec0b": {
+      "key": "topology/control-seen/df1a43b18750b039e74b1c667e36279cb0f360e6db6c389d5a7f3be9b1cdec0b",
       "value": {
         "format": 1,
-        "id": "bf6cb9e9640b4623bab085768bcb9b9e",
-        "kind": "agent",
-        "rootId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerHostId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerIdentityId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "parentId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "6717",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789889799739,
-        "updatedAt": 1789890669577,
-        "finishedAt": 1789890669577,
-        "turns": 22,
-        "toolCalls": 20,
-        "usage": {
-          "input": 61185,
-          "output": 3984,
-          "cacheRead": 792576,
-          "cacheWrite": 0,
-          "cost": 1.6036260000000002
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "eb3305a3-dc8e-4338-b670-05be1e0d011f",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789980190022,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "fab83132-72d6-4d49-91ce-442d686b7f12"
+        }
       },
-      "version": 40,
-      "updatedAt": 1789890669847,
+      "version": 2,
+      "updatedAt": 1789980180228,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/a6e35252ad866feded29827e19c9aa58e7e75cc55f78114d56e7e595edac93c2": {
-      "key": "topology/participants/a6e35252ad866feded29827e19c9aa58e7e75cc55f78114d56e7e595edac93c2",
+    "topology/control-seen/78dd6951f77731079b919b73a9a3639d1b66f0279b21321a86878edd9845f14c": {
+      "key": "topology/control-seen/78dd6951f77731079b919b73a9a3639d1b66f0279b21321a86878edd9845f14c",
       "value": {
         "format": 1,
-        "id": "3cc496954a5e4fbeaab69a6606800e0f",
-        "kind": "agent",
-        "rootId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerHostId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerIdentityId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "parentId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "48083",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789890739872,
-        "updatedAt": 1789890782360,
-        "finishedAt": 1789890782360,
-        "turns": 6,
-        "toolCalls": 5,
-        "usage": {
-          "input": 14348,
-          "output": 848,
-          "cacheRead": 75008,
-          "cacheWrite": 0,
-          "cost": 0.260888
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "0f8fe710-e8e2-48d3-bb76-052ff4f07576",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789980412708,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "9aaafe8d-3134-46cf-8656-e366d53b4429"
+        }
       },
-      "version": 12,
-      "updatedAt": 1789890782428,
+      "version": 2,
+      "updatedAt": 1789980402741,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/da693984c98fab02f120f32d68c221cea3b22982e6697ee05ce492cfcf968c14": {
-      "key": "topology/participants/da693984c98fab02f120f32d68c221cea3b22982e6697ee05ce492cfcf968c14",
+    "topology/control-seen/11d9e4b5b478375204ec81d2389ec4e681e8f0cc72ed48e9d3c756389091f3ca": {
+      "key": "topology/control-seen/11d9e4b5b478375204ec81d2389ec4e681e8f0cc72ed48e9d3c756389091f3ca",
       "value": {
         "format": 1,
-        "id": "13ec456a3155489ca349be101bf70154",
-        "kind": "agent",
-        "rootId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerHostId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerIdentityId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "parentId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "54978",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789890786118,
-        "updatedAt": 1789890793962,
-        "finishedAt": 1789890793962,
-        "turns": 1,
-        "toolCalls": 0,
-        "usage": {
-          "input": 7010,
-          "output": 114,
-          "cacheRead": 4352,
-          "cacheWrite": 0,
-          "cost": 0.080152
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "54aa7018-d8f2-4eb1-8723-fe20d2273340",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789980508976,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "5dccff41-3a87-4432-9b72-3f32ec3bc521"
+        }
       },
-      "version": 4,
-      "updatedAt": 1789890794003,
+      "version": 2,
+      "updatedAt": 1789980499121,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     },
-    "topology/participants/985f4f4bcfd2b2dda9dd72dd31ebfcac87f5ce56d01ab064fd802d3421e1672a": {
-      "key": "topology/participants/985f4f4bcfd2b2dda9dd72dd31ebfcac87f5ce56d01ab064fd802d3421e1672a",
+    "topology/control-seen/fa81e4e1fc7adb678c1983e8b95b0f614dbf574462ca77a4cfaa5fefbd190509": {
+      "key": "topology/control-seen/fa81e4e1fc7adb678c1983e8b95b0f614dbf574462ca77a4cfaa5fefbd190509",
       "value": {
         "format": 1,
-        "id": "7ee76b8a93f44b06840168f4f0dc7f75",
-        "kind": "agent",
-        "rootId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerHostId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "ownerIdentityId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "parentId": "session:01a0bdbe-6af1-7294-9227-32044958962f",
-        "name": "Prewalk trajectory executor",
-        "status": "completed",
-        "residency": "session",
-        "runner": "pi",
-        "transport": "process",
-        "capabilities": [],
-        "cwd": "/Users/adam2/projects/triagee",
-        "sessionId": "64477",
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
-        "startedAt": 1789890856952,
-        "updatedAt": 1789890872598,
-        "finishedAt": 1789890872598,
-        "turns": 2,
-        "toolCalls": 1,
-        "usage": {
-          "input": 24467,
-          "output": 318,
-          "cacheRead": 23936,
-          "cacheWrite": 0,
-          "cost": 0.28450600000000004
-        },
-        "controlProtocol": "v1"
+        "hostId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "commandId": "3e43da2e-a1e0-428d-b757-960d9d488f28",
+        "targetId": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+        "expiresAt": 1789980682284,
+        "acceptance": {
+          "accepted": true,
+          "messageId": "718c2b9d-3d0e-43e6-a7d6-d2da0598ae16"
+        }
       },
-      "version": 7,
-      "updatedAt": 1789890872839,
+      "version": 2,
+      "updatedAt": 1789980672504,
       "updatedBy": {
-        "id": "session:01a0bdbe-6af1-7294-9227-32044958962f",
+        "id": "session:01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
         "name": "main",
         "kind": "main",
-        "sessionId": "01a0bdbe-6af1-7294-9227-32044958962f"
+        "sessionId": "01a0c2ef-1d93-76f5-8f29-29c88ab16f03"
       }
     }
   },
   "versions": {
-    "topology/peer-seq": 10,
+    "topology/peer-seq": 26,
     "sessions/01a0b0ee-e7de-717b-a42e-96d3086cf35a": 185,
     "topology/participants/5980896adbd3e67cb3973124a417527c26effd32bec4ec87b86dc9c651c4ccc5": 186,
     "topology/participants/5258264cc6c31654a56e8dd2f3de3d70d2fc26fef5421d9d8d1d7de7f1b6fa91": 1,
@@ -3915,9 +1203,9 @@
     "topology/hosts/0d9791ba50bc6fb3bf9380fbd589b06ff01532190149dced9944b922c0d0ed8d": 3,
     "topology/participants/67d0617a2c689ba89157af4ae53fbfbf26e544b70a8a0bb0e68f1f26a06a5f54": 4,
     "topology/hosts/8fadfbd89c01ef4d1b7306b2265849b5981819840c44da5e6c63a8278f86ee97": 3,
-    "sessions/01a0b966-be89-77d8-a791-3dd6233050dd": 15138,
-    "topology/participants/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f": 15138,
-    "topology/hosts/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f": 15138,
+    "sessions/01a0b966-be89-77d8-a791-3dd6233050dd": 54938,
+    "topology/participants/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f": 54940,
+    "topology/hosts/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f": 54939,
     "topology/participants/f44cee9081b475158fd60fd8026d1dd1786369024c6812ceeb0f8b1de3fa88bc": 19,
     "topology/hosts/a5dfa1f4ca07e70309c3b9c20ac547b9169da3f39c6d549bc0f12ab434c1553a": 41,
     "topology/participants/0d5093ca84b95e4e5a6091d9a986a39492861b0ba0aefd298f9d6bbafacc836e": 9,
@@ -3926,9 +1214,9 @@
     "topology/hosts/559b7785cdc12388e81d6a2dab90b60e008e57a84a1486f0eac6a502c6232e01": 5,
     "topology/participants/b2afd370e9d74a8fbf04fcfe106eafd53fce8dcfb08dfd1034cdcd12b205c1ec": 12,
     "topology/hosts/99bc8f3eb1c47dba5b5cf7ac5147c3de054f998fbb2bd36d19333a39df547d17": 17,
-    "sessions/01a0b9a7-faeb-70f6-a922-d1320391b910": 14573,
-    "topology/participants/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09": 14573,
-    "topology/hosts/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09": 14573,
+    "sessions/01a0b9a7-faeb-70f6-a922-d1320391b910": 54375,
+    "topology/participants/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09": 54377,
+    "topology/hosts/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09": 54376,
     "topology/participants/97923f61ec83cfb2dfdc45d500075c2d1c6dbf10b10586f9066e80bc1aef9f78": 238,
     "topology/hosts/3ff73ba51fb9272f43d4396dba95d67451119f960bb375e1713f704c68a0a58c": 1044,
     "topology/participants/85ca699e57795e3d8e0e08f8808dd65477f10ab3ded2f02c65c60f39d2777f75": 64,
@@ -3948,14 +1236,14 @@
     "topology/hosts/84bd36488721124f75c0219e94022337c98c8c10079b07ab43f408cc382a0787": 3,
     "topology/participants/29f687871f6a1d018af1e6ab04c3f9c928a2ef293deacd6782667f1d2bf594bd": 5,
     "topology/hosts/52362c40aabca6f38935e3dc285d4945b3fbb7d5d186fa40b643538b68047c4e": 5,
-    "sessions/01a0b9f0-23c7-7433-aea3-f2fa02e1e395": 13644,
-    "topology/participants/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca": 13644,
-    "topology/hosts/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca": 13644,
+    "sessions/01a0b9f0-23c7-7433-aea3-f2fa02e1e395": 53444,
+    "topology/participants/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca": 53446,
+    "topology/hosts/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca": 53445,
     "topology/participants/0d34bb45e505dbc5831d803d911646f22cfd1783a7e82fea2de2ee4e986d5265": 107,
     "topology/hosts/9383114b91d3f74361b5ebb866ec2ef20bccdb1205df1d52675888489293c2bb": 379,
-    "sessions/01a0ba06-8246-72ed-97d9-49e3636cb836": 12988,
-    "topology/participants/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1": 12988,
-    "topology/hosts/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1": 12988,
+    "sessions/01a0ba06-8246-72ed-97d9-49e3636cb836": 52788,
+    "topology/participants/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1": 52790,
+    "topology/hosts/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1": 52789,
     "topology/participants/f53849d0d1121b6fcf7e23cea84d08f469d7201dc3f22624ff70fe3d361996cf": 6,
     "topology/hosts/e37f56e1d7e1cfe6e29e38386c1500f3c78dfff3a89ad18e6a021b9ddb8af940": 6,
     "topology/participants/97790b13b20d81d5247b5138d7ed1d74c6ae2c109d41b07ca1753ad4aa298732": 9,
@@ -3970,9 +1258,9 @@
     "topology/hosts/7e4ce1c987d299a168e0d1e327a4e3adc246ea3cda98fede7ad8e2347ec38ff6": 22,
     "topology/participants/4fa5d9fecc5010644b8f55a49d1cc54debc3ed4086b6d3c5d9775d726cb6e098": 5,
     "topology/hosts/190f90b9bc183dd731ee03652de72bf4a9f11a5a0590e7ff9f90565abc593a4a": 3,
-    "sessions/01a0ba8d-a969-70d9-972a-1321ad5a27c0": 12578,
-    "topology/participants/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c": 12577,
-    "topology/hosts/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c": 12578,
+    "sessions/01a0ba8d-a969-70d9-972a-1321ad5a27c0": 52385,
+    "topology/participants/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c": 52385,
+    "topology/hosts/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c": 52386,
     "topology/participants/1c712fd4a3718ee51310e901c7d712a248200d2e44a3ade2be8ef49c9b4127dc": 10,
     "topology/hosts/30d799ea4b9dcc011771c2e491e3d90f2f54dccef5734c46f406dc2cf6ba4a8f": 11,
     "topology/participants/1accab7b515096231ee9dceda0f07f2edcea3ed01e9677112121163b692ea862": 9,
@@ -4122,9 +1410,9 @@
     "topology/hosts/c82634f22ebc90f89a9f08ba1f2348fe233706a712f3d014174a51f0f297f782": 31,
     "topology/participants/8d9d3c6e59bd6910ee9424406acc423207117a7b146bb198f3229d6ce93af2b2": 12,
     "topology/hosts/cfb2b5cdade061e0d4a59e44f8e502af95c69992ae280ba02f414c506282d8e6": 19,
-    "sessions/01a0bdbe-6af1-7294-9227-32044958962f": 1433,
-    "topology/participants/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29": 1433,
-    "topology/hosts/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29": 1433,
+    "sessions/01a0bdbe-6af1-7294-9227-32044958962f": 1483,
+    "topology/participants/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29": 1484,
+    "topology/hosts/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29": 1484,
     "topology/participants/e76c3cc7b82a2859c140d8af6035c576c5d723e111f8e06329e76922044d7032": 40,
     "topology/hosts/756edc5e5fd0216d75a7a7c0797fffbeb52bd5771e884d21e0687ad5d9beaee6": 398,
     "topology/participants/85095741a090b660c176a1d27fbbd1013b04e767f6e9b665043988aec87f2107": 48,
@@ -4138,7 +1426,118 @@
     "topology/participants/da693984c98fab02f120f32d68c221cea3b22982e6697ee05ce492cfcf968c14": 4,
     "topology/hosts/0d71f413b251edb9b5b414892271ef542c62c309701f5b6114b1a5a7fa6797e4": 3,
     "topology/participants/985f4f4bcfd2b2dda9dd72dd31ebfcac87f5ce56d01ab064fd802d3421e1672a": 7,
-    "topology/hosts/edee1e67251343423c27b3c6fba54ec6ddb76cd572ad2dd3b1b04a9b54870f2e": 6
+    "topology/hosts/edee1e67251343423c27b3c6fba54ec6ddb76cd572ad2dd3b1b04a9b54870f2e": 6,
+    "topology/participants/cf27018c17793559d061ba77ced6af7ab9cb563dcabb1a2795da40e4c331a296": 6,
+    "topology/hosts/9b628171bcb2492941e82defd7c6839159bcb0ffad1cfeadda56825694893482": 7,
+    "sessions/01a0c297-e987-7401-ad2d-de682d582592": 1239,
+    "topology/participants/004e4b8fec69d2f12606a057a3903c306da30fad19aed961f65368a18c4637cf": 1240,
+    "topology/hosts/004e4b8fec69d2f12606a057a3903c306da30fad19aed961f65368a18c4637cf": 1240,
+    "topology/participants/c11f6ac6345e7c6f912865a996c19b0bc0366fa039cac58830e8f25d568ea9b4": 7,
+    "topology/hosts/54b4649fc6e7b028329795be4e9e9a30589c17f45e677358f2fe0869be37ed41": 9,
+    "topology/participants/f9949069c73e9efdb02149de4e2bfd8dcad8bc8d57bb226fc0076df9dad57777": 6,
+    "topology/hosts/7c99f3c7c18a5deb62a7189007d4b571c88e293e5037ec6685efb33af6aa4aec": 6,
+    "topology/participants/5e171dcd5a030743910dff14624889b922c4925096df1c97ea0b10248fe4db01": 8,
+    "topology/hosts/5dba20bf24e4acfcd3f0ae486fa5e83be805ba16c034a904025e8b30acb19698": 10,
+    "topology/participants/a9730b5674d76d89f11a75f5a5206e2b075912d8f4eb25888daf218f392ae1a7": 13,
+    "topology/hosts/6863ce5f4ac5a32f8eaf58e040a2eb2015a27a12b0ba49ed3dbcbc3e2546dab7": 33,
+    "topology/participants/d97e2f2429ef70d71168c62e185440a3e0c245d51e40ee3208c59fdb0c473889": 11,
+    "topology/hosts/ddbfe43b2899d865a4e54f4ed38e295dcc4e94dfd75272697e933dfc3a9da71f": 24,
+    "topology/participants/6ed03dd3254fa178f9ec04fcc6e4846fd5702495df924e52cb7c91c30e7180a9": 8,
+    "topology/hosts/628d9598bc6eca1ee277cd72696e2ee7b19b876bf27b7e7f86e3fc72bd62006a": 11,
+    "sessions/01a0c2ef-1d93-76f5-8f29-29c88ab16f03": 24264,
+    "topology/participants/0cab730f48fd4f71cf9b91ac60f52c698e615adf21a1e569210855a8b1efa4d2": 24268,
+    "topology/hosts/0cab730f48fd4f71cf9b91ac60f52c698e615adf21a1e569210855a8b1efa4d2": 24268,
+    "topology/participants/25cb5c669d47fbe88c47efd40c611af5a2619ecea48dfaa6929fed9cf0b32710": 16,
+    "topology/hosts/e435a6a242cf8760c7f2504b0234b48d07ea8416720c2cc6e7381e73a65f27aa": 72,
+    "topology/participants/94198d52d11e7c56c453810fb772656fb3c4c4da9419e72c82eb76e937c83d12": 10,
+    "topology/hosts/79c3ed0cb9909e3709d417c9ea0ac12eb2f384a984be97f24e5f62195c95ea34": 36,
+    "topology/participants/f13260c8695bd8fea2072d66ae6efb1b091b802a0a38d44c7708cc013234e067": 37,
+    "topology/hosts/82d75c35754e7af26c9a9ad9c147bb46961c1036d7d83a84ace92fc453fba009": 160,
+    "topology/participants/21b83d2a01c8c44e9845e4bc19a1f1b4c112814b73476d4b51681dbd0349c597": 6,
+    "topology/hosts/15fa5728b15b0447755c22883a00a34dbc8c90501d953e6fcd3ea96b73f20aff": 28,
+    "topology/participants/1ccb1a3e77b1d440782b63caa9d4bac01585739b32e4d84967ca9a56fe10d7f5": 19,
+    "topology/hosts/e403d3b16469596b42b34a83a29232e8624bc7dac3d2fb010617a9ae15ef0882": 86,
+    "topology/participants/38e89f8ba2629f661d3506c57ee5258d7e1c5684b6994d84451b73d81bc2c5b6": 146,
+    "topology/participants/34fed0181242008c7a259a97fe600fdc248de6f8ce594d4c5ec92bf91b1e9d6f": 98,
+    "topology/participants/13e75e3c29932970e519281eb5b0dbe1eba010ab79e6b9b1a9be7716cb17b09b": 91,
+    "topology/participants/7f801deb2297d3287bd8fc2a8072071d4af151b9ecf62cc9531a4fc7ed40d666": 57,
+    "topology/hosts/e10af1b50e882a801aaf6ab53a17201e98665f07d3ca5dec0a6aa5f60e371290": 291,
+    "topology/hosts/6fc5f2077feee224c23887035dbc63c2830ab243f045a4b082a20773841dfbc6": 250,
+    "topology/hosts/9c46bf7eb022beb98bbe15b285fc9100071dbfd09f78267c5f9cf7235acb3dcc": 336,
+    "topology/hosts/f5824e4c1e706f4db4afb28886d5c9687d4acdcd45893b0f2c1a07ddec007cde": 585,
+    "topology/control-seen/f8c0cc9f0900204e01f18f3c5eda67b8294a2aa3ccca57d68513653c363f1a32": 2,
+    "topology/control-seen/df15271bbfd0c0d9006448e116d70849143a91d77c4e7f80181e2fb9e7736e29": 2,
+    "topology/control-seen/c408471e1281bb3e54787fe877f0cb2b7b8899bfeb51f198d59c5f784761e9a9": 2,
+    "topology/control-seen/27bec95800a2337095cf5903143a06343b3e0a2cbbd36e361aa30c8f6f408a81": 2,
+    "topology/control-seen/aee5438a4c9b87955e6ad81024cc84f6d1f57245f890f0517ff04ffdb0aa863f": 2,
+    "topology/control-seen/284b3f6216125f25a1103c156b8400ab6c3b45196893debdc358d1e69689427b": 2,
+    "topology/control-seen/d8793632e0cc195a39084daef436034ea59aaa7db02a8e45575370fc5b926caf": 2,
+    "topology/control-seen/a0f164ed0106bd26286c8fd140f68c73a715cb70486f491f5cd5a18962a938f0": 2,
+    "topology/control-seen/b198d06986094314019ee84d7bc03c4321aedeff923984e011e2103050bbb38e": 2,
+    "topology/control-seen/46208adea2d31c3e2a256b20835a7f7a17af3f4bb92db7d18ed9ca68b0d3b3d5": 2,
+    "topology/control-seen/0f3da26d43131e8378eb208e292cfa550cb698005fc1ea7b3b20d87490a60e94": 2,
+    "topology/control-seen/44e550128f3161c476f8fa6e7593f2b8bc98dd2a8bb31cd969b64f9f1b174bb2": 2,
+    "topology/control-seen/270b1b0eacf3ba330e0f2ea05dfba067be9f341ecf2792c5cd90eaa20ebbe5e6": 2,
+    "topology/control-seen/8895218ff7ab32637e5413a8a45a523144e6f26614a5e395eb351a2e438730d8": 2,
+    "topology/control-seen/f06d40f2085d7afc3513a6a4de1472959f6eae7c5f270c6c598b2641c6a6f562": 2,
+    "topology/control-seen/6ab835f74f755e9a6d171afbbab23e40615b3d7f28440d1cf04f8e63c2df2108": 2,
+    "topology/control-seen/71f957ddbb856b09674ddb613d92117b0cc7710901b06291746f3bec70257a02": 2,
+    "topology/control-seen/6615a3168d104279c86aff03deee03a383cde1ef0f55a2ed90679771da0fddec": 2,
+    "topology/control-seen/396217b288e06946a91847f54d1ac73c0126d3bedc5083ace72b22a0b0a16e8f": 2,
+    "topology/control-seen/0a2b97a25205ee36be1a613d33fafd9fbb85eb176e66912c95ac0781171c6eef": 2,
+    "topology/control-seen/7ce78ca65fd19dbd14c5a7b63e2e5152ce41bf1198ec4be328f8f56acc28f30e": 2,
+    "topology/control-seen/405eda6668e581f6e51096493d26ed001ec611c26958e34ca0c1b6b297f3dd64": 2,
+    "topology/participants/b6a471a45e1931b68999103d9cc9de1aa743274ff2cbefe09604d5ab14bebaef": 62,
+    "topology/hosts/eebab48981b6cc832c4173fa11ed0f97313d983f94f00990f04a01b26e8d56a8": 179,
+    "topology/control-seen/c4562af04777ba4310a07460179fc7e66cec85e681b59fa493b627e0977b8c5d": 2,
+    "topology/control-seen/aa6918a4e2e46b6f0e0a937ca9e3e8ffc51f663c41ed8fd32689b0696960d5f3": 2,
+    "topology/control-seen/bccfe25e158c6d66edbce948a5c2d5b9510f131280e0c6db6138cdccaabd7d78": 2,
+    "topology/control-seen/b3337b9249ce174dac0c457be33d1e66e6e1ab8b4794f608adef0bc7a965970f": 2,
+    "topology/control-seen/a6e00c337f5e9323886103fbd96f308f7bd8b6ae6be3f3f69a0e9e36f6696b1c": 2,
+    "topology/control-seen/a091406195a5f17557a98fd44e11ac149b425061862ecc01774a2edd11035f68": 2,
+    "topology/control-seen/1476bdae610b9f0f498d8464e3676bde9606d7ed5da432f81aecec7539d08b21": 2,
+    "topology/control-seen/bafe8242db2f91a03ac03a3b6f2b3b909de397d0ca83b9468adf4fe2a990c9f6": 2,
+    "topology/control-seen/3cafddd503ba4febb5689edc36ced5168692e9dbea91135058e0d546a5175099": 2,
+    "topology/control-seen/1cf3db6fbf1d6e6f929552a7ccc5f2959f822a52662dd6473869cbbb3bd1b360": 2,
+    "topology/control-seen/661a82f57750d7094b773aa8d2285b35d6757f988f6b272e625e15e723f2e9d9": 2,
+    "topology/control-seen/2ff47eab98910c16b179ac5a8b1979dedc50eb0e2f2dce109803bd6edc68f7b3": 2,
+    "topology/control-seen/0cf921cfce004f82ffcc55feb00c4bd7fa08f187fa0c1c23737aa4a98594a270": 2,
+    "topology/control-seen/e5d3215d3eee5bad60d110374f0f078456986d1d6f19c2b9bdd8782145649138": 2,
+    "topology/participants/dd351809ee5ed5bc3163d9ece0824f13774847ad7b9107cf51839cacca0936c1": 38,
+    "topology/hosts/f58e51656c2d6defaf54efd016f14c3578605c3d220e2e85e4b73d12fb616a92": 106,
+    "topology/control-seen/26932e1325db2ba127eacf26909b016882dfa66defbdc25fefd40e1697dcb96c": 2,
+    "topology/control-seen/1afecb4beac8866912cda2f1969905f9864285b5d7d5f98cd3c3a13676eae72d": 2,
+    "topology/control-seen/df1a43b18750b039e74b1c667e36279cb0f360e6db6c389d5a7f3be9b1cdec0b": 2,
+    "topology/control-seen/78dd6951f77731079b919b73a9a3639d1b66f0279b21321a86878edd9845f14c": 2,
+    "topology/control-seen/11d9e4b5b478375204ec81d2389ec4e681e8f0cc72ed48e9d3c756389091f3ca": 2,
+    "topology/control-seen/fa81e4e1fc7adb678c1983e8b95b0f614dbf574462ca77a4cfaa5fefbd190509": 2,
+    "sessions/01a0c451-c7b6-762c-9aee-e6346cb87ec2": 1,
+    "topology/participants/6200a5f5b81bb07e30379b27e645fc7934e2dda674e3b62f4ad170707f86468d": 2,
+    "topology/hosts/6200a5f5b81bb07e30379b27e645fc7934e2dda674e3b62f4ad170707f86468d": 2,
+    "sessions/01a0c452-14ad-7528-aa07-952fa6bfb11b": 18282,
+    "topology/participants/31f6c64245d3495602996c541b15bc06d8c624d76c5a5de8aae62cf64de08e31": 18283,
+    "topology/hosts/31f6c64245d3495602996c541b15bc06d8c624d76c5a5de8aae62cf64de08e31": 18283,
+    "sessions/01a0c72d-a4c0-71a4-9949-f211c58fe73f": 4637,
+    "topology/participants/690ffc5d8305b760ce18bacb073da1dc087953ecf7f1e406e3291ccc9bf4ebfa": 4638,
+    "topology/hosts/690ffc5d8305b760ce18bacb073da1dc087953ecf7f1e406e3291ccc9bf4ebfa": 4638,
+    "sessions/01a0c7ed-7743-724d-9e97-50007a37f641": 6167,
+    "topology/participants/b85f52de830a9632b43e67bf37ab4a348ef53f7b3d4bb51312c762ae2009fda0": 6168,
+    "topology/hosts/b85f52de830a9632b43e67bf37ab4a348ef53f7b3d4bb51312c762ae2009fda0": 6168,
+    "sessions/01a0c80a-6ba7-71a4-9949-f213e15be47f": 3503,
+    "topology/participants/2e56b37f88b10e4c53869b6fc9c4dcaa3dc8b052f7605db2208b33e39f8e24d7": 3506,
+    "topology/hosts/2e56b37f88b10e4c53869b6fc9c4dcaa3dc8b052f7605db2208b33e39f8e24d7": 3506,
+    "sessions/01a0cc85-4673-726e-abc2-75941ebf3475": 5818,
+    "topology/participants/87d808c1d7e58a2abf621f6ea1980969c6067bcd33f41e2504d2aa5610c5d961": 5819,
+    "topology/hosts/87d808c1d7e58a2abf621f6ea1980969c6067bcd33f41e2504d2aa5610c5d961": 5819,
+    "sessions/01a0d751-6f43-7296-aa28-964f0320a24d": 55617,
+    "topology/participants/9066b4a89c0e30ac60009f1026589e5bfac86ef4dd6c143ba1bd21e3f2cb012c": 55619,
+    "topology/hosts/9066b4a89c0e30ac60009f1026589e5bfac86ef4dd6c143ba1bd21e3f2cb012c": 55620,
+    "sessions/01a0d779-b542-7296-aa28-9650d6d976c3": 59326,
+    "topology/participants/13a4215d77debfaa7a32ff2630652f3aa52134a5bef36881a63ddfee81822e42": 59328,
+    "topology/hosts/13a4215d77debfaa7a32ff2630652f3aa52134a5bef36881a63ddfee81822e42": 59329,
+    "sessions/01a0d83d-243d-7727-87d9-86226f6ae4bf": 68143,
+    "topology/participants/3f652e075b984540bd9392ff0aad8297709c6d5c92a9667933ea8ed86e44f205": 68145,
+    "topology/hosts/3f652e075b984540bd9392ff0aad8297709c6d5c92a9667933ea8ed86e44f205": 68146
   },
   "tombstoneOrder": [
     "topology/hosts/1b4200ddd31d21ce2676c8c972690c984a7cf20eaac7e604fde9638ed84a81f7",
@@ -4534,6 +1933,167 @@
     "topology/hosts/756edc5e5fd0216d75a7a7c0797fffbeb52bd5771e884d21e0687ad5d9beaee6",
     "topology/hosts/e1aeaf7ebcfe0b88b4186883d84289cc68b7f9b2955a944776dbe1a53fb019af",
     "topology/hosts/0d71f413b251edb9b5b414892271ef542c62c309701f5b6114b1a5a7fa6797e4",
-    "topology/hosts/edee1e67251343423c27b3c6fba54ec6ddb76cd572ad2dd3b1b04a9b54870f2e"
-  ]
+    "topology/hosts/edee1e67251343423c27b3c6fba54ec6ddb76cd572ad2dd3b1b04a9b54870f2e",
+    "topology/hosts/9b628171bcb2492941e82defd7c6839159bcb0ffad1cfeadda56825694893482",
+    "sessions/01a0bdbe-6af1-7294-9227-32044958962f",
+    "topology/participants/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29",
+    "topology/participants/985f4f4bcfd2b2dda9dd72dd31ebfcac87f5ce56d01ab064fd802d3421e1672a",
+    "topology/participants/a6e35252ad866feded29827e19c9aa58e7e75cc55f78114d56e7e595edac93c2",
+    "topology/participants/cf27018c17793559d061ba77ced6af7ab9cb563dcabb1a2795da40e4c331a296",
+    "topology/participants/da693984c98fab02f120f32d68c221cea3b22982e6697ee05ce492cfcf968c14",
+    "topology/participants/e76c3cc7b82a2859c140d8af6035c576c5d723e111f8e06329e76922044d7032",
+    "topology/hosts/3adaa995f404285aa7b8f4c1ac580d92422a7738428c97019a8d2ecef8ff6a29",
+    "topology/participants/0d5093ca84b95e4e5a6091d9a986a39492861b0ba0aefd298f9d6bbafacc836e",
+    "topology/participants/70d443825f5cf4451f6f667ff5b084580c89a5682efd4c925b055d1051d37290",
+    "topology/participants/b2afd370e9d74a8fbf04fcfe106eafd53fce8dcfb08dfd1034cdcd12b205c1ec",
+    "topology/participants/f44cee9081b475158fd60fd8026d1dd1786369024c6812ceeb0f8b1de3fa88bc",
+    "topology/participants/97923f61ec83cfb2dfdc45d500075c2d1c6dbf10b10586f9066e80bc1aef9f78",
+    "topology/participants/15c5e3ad32cc08046b5099d3916fadcb1b9efe1cdb03b45765c6f2bd86f8a12e",
+    "topology/participants/85ca699e57795e3d8e0e08f8808dd65477f10ab3ded2f02c65c60f39d2777f75",
+    "topology/participants/a7acfd0dcf1a97137d98ed528f439e36a7ea0eeb3ff87761a90ae908393f92b9",
+    "topology/participants/f53849d0d1121b6fcf7e23cea84d08f469d7201dc3f22624ff70fe3d361996cf",
+    "topology/participants/0d34bb45e505dbc5831d803d911646f22cfd1783a7e82fea2de2ee4e986d5265",
+    "topology/participants/4fa5d9fecc5010644b8f55a49d1cc54debc3ed4086b6d3c5d9775d726cb6e098",
+    "topology/participants/97790b13b20d81d5247b5138d7ed1d74c6ae2c109d41b07ca1753ad4aa298732",
+    "topology/participants/a15e7991949790f7b3bf1fe4e00400581dd8b4888ebcd7d3f808e19c3f5fdb86",
+    "topology/participants/a5903ed264f1b8cab1a960fefe9de3afe8d5b6889bda0de97adae4cab5cc0aaf",
+    "topology/participants/b0bd190c008b22d0e04b775a615ae127862da94582cf0d4c02c49ca79a336f2b",
+    "topology/participants/d385a02b8a43016f9db925b0029f9e51b8bcc9c3067de60f4dad5ee477faa26c",
+    "topology/participants/1accab7b515096231ee9dceda0f07f2edcea3ed01e9677112121163b692ea862",
+    "topology/participants/1c712fd4a3718ee51310e901c7d712a248200d2e44a3ade2be8ef49c9b4127dc",
+    "topology/participants/2c69847f8806522f9257a35cc7462c8ada31749aad065c9062230d87c650ee03",
+    "topology/participants/3f8dd9889e7a8999e7417ce8fd4240542dab919afac565053a382bb6e6e524cf",
+    "topology/participants/6cecea85592801eb24132db1db699db02085ceec281cde1d1a7d132e87c4b137",
+    "topology/participants/7d61c7a9a61a8045464e0f89543d2fd7e9053a9e9e7972fde159e62590b2473a",
+    "topology/participants/85908549f448c5fd03bc3c98b830f400b703c756ec3e5bca579d291eda4f966a",
+    "topology/participants/2505c1ef66f1643cc277e312e61feb6b2955bccbc1b0dc541628eb7544e92aa5",
+    "topology/participants/4887ea271e0f46fe1486e76858417909351b9bcd9d922cd420fce59524f8e166",
+    "topology/participants/56a30091e430fcb507ac7bdef2e7adcdc9c07826ea9f264aee04880eee07804b",
+    "topology/participants/4b44fa9dc00d15419097fc1b3297c242b098ab7e4bfb84b327e01d473265f3a3",
+    "topology/participants/73f0abc491ab96addf5e4a23595ca084441ae7e4119811e1dd266985d7e331ee",
+    "topology/participants/8672adb4b9876e09cb2f2300588e521a9c1a80dd592918286d2b7994d9533957",
+    "topology/participants/e1d8186be9b251af19b32188a53395cf424efbc589d29c2d15be4a51243ba972",
+    "topology/participants/fed393ae93f0167e1d52046855480f83a2b5c0bb745e8010e256909333e403c2",
+    "topology/participants/382db8a95349354612558916f4d77d6a33ea1b899cbd06a91747e16ef9e66a0b",
+    "topology/participants/3fa571c7d1b28627cb25e7235ffb0ca9f9409f599ae891338404a199082c0be0",
+    "topology/participants/74f07cb68ca1de60bb47772dcaa18d3e63f669545bbefdc501e905e0ca4ed247",
+    "topology/participants/aabc39ad883231675eee1d23bc17b44ffc4711eec7d4a6dfb7f85fad635dc330",
+    "topology/participants/d11df84439e45c7d2488ab51d323cc925087e7bf284de62a5b75c84405b42cc8",
+    "topology/participants/e9f348542f7dea69a405c0e0fc26f78a67b70764771a559d67bb4bb2242c3b27",
+    "topology/participants/f28f1fde9acfc51c771253c63a1133c65def59d001f3988dd12ae1ae78be832b",
+    "topology/participants/fd68b22101c633b58ed52e0670bbea59b874b0f310bd6fdaf5623924a99fb59f",
+    "topology/participants/0323478d598428af518aa36b463b820c105ad4aa5644fd94f5c07b2391206d05",
+    "topology/participants/3bc0c88b2b8d656e87d23dc05e91760db9f009031d779f3618dc4866a241cf87",
+    "topology/participants/634b39e8893d4c84cb91e6e95079b0a3557ed6b88f32183630b8ab8992aef30b",
+    "topology/participants/753a90c6e64f9cab1c534b6ee3785116121e7543ac96c0bb3c7543cb2b381294",
+    "topology/participants/a06d3fe2e53cbbe2931ffd7bf8f3fbbd4e9f6b04e3f4281b875eb26940e0a81b",
+    "topology/participants/b15987141e970f7e740197076c1e657a158801cf560c9cdad16a40ccca4cac60",
+    "topology/participants/b7b806842979ab950d1a27bf1c69875f22d900f9d0c95d37572a4cf03cd0b052",
+    "topology/participants/bed9b6435a81188b6075f564b9711b62828504e4cd5714280e0155fe0d1a2c19",
+    "topology/participants/d4b325f6f6f2c73b87add6fd632dde682eb026ac8d74042f3672f2127dc0c709",
+    "topology/participants/e62340df2523526784b7d0e4bca48239b752c9ab5a80a90be6b4cbd5c64ee487",
+    "topology/participants/4a8856472882b7d0aa90a174249dc62b16d42e19bb996f83b715d67a9d0b8f15",
+    "topology/participants/5a22873b2b81c37b3f3b81e05596fd58d602f87fd8254a2c5326afa9bdf493bc",
+    "topology/participants/673ab449386c10a9a01b011f4c9ef2ec320500a30f540f8ff210cb8799ac9af2",
+    "topology/participants/83a54898d6e382f154df9226e3c8860541c6a3a5f5395d22e9f09f61a06d102f",
+    "topology/participants/95bca8b5e615bad8ccce13fc79f064ef3dcc0cbe5c7dde137751765e10b601be",
+    "topology/participants/dd852bfe8b582513565031e14f2a5ce4141cc2854b782d2c0ef406f453204ddc",
+    "topology/participants/f1c251497e28b3ad6d63981d3e5472639c4f69cabdb7e1498a93fefb328e34ee",
+    "topology/participants/f919d4febe7c77d9e4b6fb830181311cb35294a2a6da39b19ada742022eb17dc",
+    "topology/participants/0f4e473410558ed25068e8cb6201b924417114aae03c6a826da65d313c94ebdd",
+    "topology/participants/23ea50b8bd6228a6bb6b2900dbf4d2fb1d85eec393cb899c9ca936009acb36db",
+    "topology/participants/3fd150c7e64cbf756c37854bfe1487db834c57537ce31139661a6855c1464f9c",
+    "topology/participants/56470022403c4c0ab4eb2844f7249ed4e16b2539a26cef5e881f1ba2b98da91f",
+    "topology/participants/7d4b9c5955361b6dee125eefa728f96d51472f1f20ee5e55d2526bc5f97119fc",
+    "topology/participants/7df2bb9a0a2fe3fd202052068d6163181e398c309b4bd953a4f4caba00afc2d3",
+    "topology/participants/913c92b7e87f8c1249cf600a067ca64fa090cdd730be56172f00f6d8a5615a43",
+    "topology/participants/a99945d999310bc5d30d3402722af26bbeb830afc714bd516f9928a914b764e3",
+    "topology/participants/b238e89eb3a7c4abc386ae50124ad641931c3a30efda32a713d1d11669a8d495",
+    "topology/participants/b3f157f27b7612f04c15325505e557cd1f4c7f5204be5e29659abeed9a194457",
+    "topology/participants/fd58934e071002c12fade6ce0df826e2979943c1ff469215ebb6e98870fbd4c5",
+    "topology/hosts/54b4649fc6e7b028329795be4e9e9a30589c17f45e677358f2fe0869be37ed41",
+    "topology/hosts/7c99f3c7c18a5deb62a7189007d4b571c88e293e5037ec6685efb33af6aa4aec",
+    "topology/hosts/5dba20bf24e4acfcd3f0ae486fa5e83be805ba16c034a904025e8b30acb19698",
+    "topology/hosts/6863ce5f4ac5a32f8eaf58e040a2eb2015a27a12b0ba49ed3dbcbc3e2546dab7",
+    "topology/hosts/ddbfe43b2899d865a4e54f4ed38e295dcc4e94dfd75272697e933dfc3a9da71f",
+    "topology/hosts/628d9598bc6eca1ee277cd72696e2ee7b19b876bf27b7e7f86e3fc72bd62006a",
+    "sessions/01a0c297-e987-7401-ad2d-de682d582592",
+    "topology/participants/004e4b8fec69d2f12606a057a3903c306da30fad19aed961f65368a18c4637cf",
+    "topology/participants/5e171dcd5a030743910dff14624889b922c4925096df1c97ea0b10248fe4db01",
+    "topology/participants/6ed03dd3254fa178f9ec04fcc6e4846fd5702495df924e52cb7c91c30e7180a9",
+    "topology/participants/a9730b5674d76d89f11a75f5a5206e2b075912d8f4eb25888daf218f392ae1a7",
+    "topology/participants/c11f6ac6345e7c6f912865a996c19b0bc0366fa039cac58830e8f25d568ea9b4",
+    "topology/participants/d97e2f2429ef70d71168c62e185440a3e0c245d51e40ee3208c59fdb0c473889",
+    "topology/participants/f9949069c73e9efdb02149de4e2bfd8dcad8bc8d57bb226fc0076df9dad57777",
+    "topology/hosts/004e4b8fec69d2f12606a057a3903c306da30fad19aed961f65368a18c4637cf",
+    "topology/hosts/e435a6a242cf8760c7f2504b0234b48d07ea8416720c2cc6e7381e73a65f27aa",
+    "topology/hosts/79c3ed0cb9909e3709d417c9ea0ac12eb2f384a984be97f24e5f62195c95ea34",
+    "topology/hosts/82d75c35754e7af26c9a9ad9c147bb46961c1036d7d83a84ace92fc453fba009",
+    "topology/hosts/15fa5728b15b0447755c22883a00a34dbc8c90501d953e6fcd3ea96b73f20aff",
+    "topology/hosts/e403d3b16469596b42b34a83a29232e8624bc7dac3d2fb010617a9ae15ef0882",
+    "topology/participants/1ccb1a3e77b1d440782b63caa9d4bac01585739b32e4d84967ca9a56fe10d7f5",
+    "topology/participants/21b83d2a01c8c44e9845e4bc19a1f1b4c112814b73476d4b51681dbd0349c597",
+    "topology/participants/25cb5c669d47fbe88c47efd40c611af5a2619ecea48dfaa6929fed9cf0b32710",
+    "topology/participants/94198d52d11e7c56c453810fb772656fb3c4c4da9419e72c82eb76e937c83d12",
+    "topology/participants/f13260c8695bd8fea2072d66ae6efb1b091b802a0a38d44c7708cc013234e067",
+    "topology/hosts/6fc5f2077feee224c23887035dbc63c2830ab243f045a4b082a20773841dfbc6",
+    "topology/hosts/e10af1b50e882a801aaf6ab53a17201e98665f07d3ca5dec0a6aa5f60e371290",
+    "topology/hosts/eebab48981b6cc832c4173fa11ed0f97313d983f94f00990f04a01b26e8d56a8",
+    "topology/hosts/9c46bf7eb022beb98bbe15b285fc9100071dbfd09f78267c5f9cf7235acb3dcc",
+    "topology/hosts/f58e51656c2d6defaf54efd016f14c3578605c3d220e2e85e4b73d12fb616a92",
+    "topology/hosts/f5824e4c1e706f4db4afb28886d5c9687d4acdcd45893b0f2c1a07ddec007cde",
+    "sessions/01a0c451-c7b6-762c-9aee-e6346cb87ec2",
+    "topology/participants/6200a5f5b81bb07e30379b27e645fc7934e2dda674e3b62f4ad170707f86468d",
+    "topology/hosts/6200a5f5b81bb07e30379b27e645fc7934e2dda674e3b62f4ad170707f86468d",
+    "sessions/01a0c72d-a4c0-71a4-9949-f211c58fe73f",
+    "topology/participants/690ffc5d8305b760ce18bacb073da1dc087953ecf7f1e406e3291ccc9bf4ebfa",
+    "topology/hosts/690ffc5d8305b760ce18bacb073da1dc087953ecf7f1e406e3291ccc9bf4ebfa",
+    "topology/participants/7f801deb2297d3287bd8fc2a8072071d4af151b9ecf62cc9531a4fc7ed40d666",
+    "topology/participants/13e75e3c29932970e519281eb5b0dbe1eba010ab79e6b9b1a9be7716cb17b09b",
+    "topology/participants/34fed0181242008c7a259a97fe600fdc248de6f8ce594d4c5ec92bf91b1e9d6f",
+    "topology/participants/b6a471a45e1931b68999103d9cc9de1aa743274ff2cbefe09604d5ab14bebaef",
+    "topology/participants/dd351809ee5ed5bc3163d9ece0824f13774847ad7b9107cf51839cacca0936c1",
+    "topology/participants/38e89f8ba2629f661d3506c57ee5258d7e1c5684b6994d84451b73d81bc2c5b6",
+    "sessions/01a0c80a-6ba7-71a4-9949-f213e15be47f",
+    "topology/participants/2e56b37f88b10e4c53869b6fc9c4dcaa3dc8b052f7605db2208b33e39f8e24d7",
+    "topology/hosts/2e56b37f88b10e4c53869b6fc9c4dcaa3dc8b052f7605db2208b33e39f8e24d7",
+    "sessions/01a0c7ed-7743-724d-9e97-50007a37f641",
+    "sessions/01a0c2ef-1d93-76f5-8f29-29c88ab16f03",
+    "sessions/01a0b966-be89-77d8-a791-3dd6233050dd",
+    "sessions/01a0c452-14ad-7528-aa07-952fa6bfb11b",
+    "sessions/01a0ba8d-a969-70d9-972a-1321ad5a27c0",
+    "sessions/01a0b9f0-23c7-7433-aea3-f2fa02e1e395",
+    "sessions/01a0b9a7-faeb-70f6-a922-d1320391b910",
+    "topology/participants/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f",
+    "topology/hosts/f3c827ba8bbab786efb7caeca64e8ee05f0e582e52fe26b9131fda975ca1c54f",
+    "sessions/01a0ba06-8246-72ed-97d9-49e3636cb836",
+    "topology/participants/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca",
+    "topology/hosts/860558c99d9a860c063ff42c84cc262734c8060e89e26da655da774e07d93eca",
+    "topology/participants/31f6c64245d3495602996c541b15bc06d8c624d76c5a5de8aae62cf64de08e31",
+    "topology/hosts/31f6c64245d3495602996c541b15bc06d8c624d76c5a5de8aae62cf64de08e31",
+    "topology/participants/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c",
+    "topology/hosts/383f0897ec323b1d3fec831ed00185b221522e01a4efdac3b9f5a3e213b4ec2c",
+    "topology/participants/b85f52de830a9632b43e67bf37ab4a348ef53f7b3d4bb51312c762ae2009fda0",
+    "topology/hosts/b85f52de830a9632b43e67bf37ab4a348ef53f7b3d4bb51312c762ae2009fda0",
+    "topology/participants/0cab730f48fd4f71cf9b91ac60f52c698e615adf21a1e569210855a8b1efa4d2",
+    "topology/hosts/0cab730f48fd4f71cf9b91ac60f52c698e615adf21a1e569210855a8b1efa4d2",
+    "topology/participants/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09",
+    "topology/hosts/f3609694486b79bfa4847bcd4bab1a1caaa121c74ea3b8b0f73acc46238bfb09",
+    "topology/participants/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1",
+    "topology/hosts/fc221c939b28d57f1cf0559964eba82f1f9fcb75b0c9c01073512b18270a86d1",
+    "sessions/01a0cc85-4673-726e-abc2-75941ebf3475",
+    "topology/participants/87d808c1d7e58a2abf621f6ea1980969c6067bcd33f41e2504d2aa5610c5d961",
+    "topology/hosts/87d808c1d7e58a2abf621f6ea1980969c6067bcd33f41e2504d2aa5610c5d961",
+    "sessions/01a0d751-6f43-7296-aa28-964f0320a24d",
+    "topology/participants/9066b4a89c0e30ac60009f1026589e5bfac86ef4dd6c143ba1bd21e3f2cb012c",
+    "topology/hosts/9066b4a89c0e30ac60009f1026589e5bfac86ef4dd6c143ba1bd21e3f2cb012c",
+    "sessions/01a0d779-b542-7296-aa28-9650d6d976c3",
+    "topology/participants/13a4215d77debfaa7a32ff2630652f3aa52134a5bef36881a63ddfee81822e42",
+    "topology/hosts/13a4215d77debfaa7a32ff2630652f3aa52134a5bef36881a63ddfee81822e42",
+    "sessions/01a0d83d-243d-7727-87d9-86226f6ae4bf",
+    "topology/participants/3f652e075b984540bd9392ff0aad8297709c6d5c92a9667933ea8ed86e44f205",
+    "topology/hosts/3f652e075b984540bd9392ff0aad8297709c6d5c92a9667933ea8ed86e44f205"
+  ],
+  "revisionFormat": 2,
+  "highWater": 70537
 }

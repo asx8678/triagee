@@ -5,7 +5,7 @@
     "thinking": "low",
     "mode": "trajectory",
     "alwaysRearm": true,
-    "enabled": true
+    "enabled": false
   },
   "compaction": {
     "thresholds": {
