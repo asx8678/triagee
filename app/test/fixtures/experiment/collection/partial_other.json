@@ -1,0 +1,29 @@
+{
+  "status_marker": "not-a-scan-id",
+  "images": [
+    {
+      "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "api_id": "44444444-4444-4444-8444-444444444444",
+      "owner": "fixture-owner",
+      "namespace": "fixture-ns",
+      "open": [
+        {
+          "vuln": "CVE-2021-44228",
+          "packageName": "log4j",
+          "packageVersion": "2.14.1",
+          "severity": "CRITICAL"
+        }
+      ],
+      "suppressed": []
+    },
+    {
+      "digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "api_id": "66666666-6666-4666-8666-666666666666",
+      "owner": "fixture-owner",
+      "namespace": "fixture-ns",
+      "omit_detail": true,
+      "open": [],
+      "suppressed": []
+    }
+  ]
+}

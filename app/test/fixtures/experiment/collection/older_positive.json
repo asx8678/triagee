@@ -1,0 +1,20 @@
+{
+  "status_marker": "observational-only",
+  "images": [
+    {
+      "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "api_id": "44444444-4444-4444-8444-444444444444",
+      "owner": "fixture-owner",
+      "namespace": "fixture-ns",
+      "open": [
+        {
+          "vuln": "CVE-2021-44228",
+          "packageName": "log4j",
+          "packageVersion": "2.14.1",
+          "severity": "CRITICAL"
+        }
+      ],
+      "suppressed": []
+    }
+  ]
+}

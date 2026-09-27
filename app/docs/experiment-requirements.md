@@ -1,8 +1,8 @@
 # Experiment requirements and acceptance ledger
 
-- **Ledger version:** 1.3 — third coding pass (W01c), 22 September 2026
+- **Ledger version:** 1.5 — W02a fixture foundation written, owned-database verification not run, 25 September 2026
 - **Plan:** [CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md](../../CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md) is the specification; this file is the living acceptance ledger it requires.
-- **Baseline:** HEAD `eef81e26b542325912e133059349ecf74bc2cdd0` (branch `main`) plus pre-existing uncommitted work and the two slices below.
+- **Baseline:** HEAD `d93c91c4711f7d08a15ab1f891b5120e658b34c8` (branch `main`). The plan and ledger 1.3 were written against `eef81e26b542325912e133059349ecf74bc2cdd0` plus then-uncommitted work. That work is now committed (ledger file last changed in `5304a33`). This audit did not re-run the W01 suites, so earlier `passed (fixture)` rows stay fixture evidence, not a new execution claim.
 - **Execution rules:** coordinator-only owned disposable databases via `./scripts/verify_owned_db.sh`; pinned `mise` toolchain; no shared `triage_test`, no `triage_dev`.
 
 ## 1. Slice records
@@ -85,14 +85,14 @@ Application environment (`:triage, Triage.AiTriage`) is the single in-process so
 
 | Gate | Contract | Status | Evidence |
 |---|---|---|---|
-| G01 | Approved read-only live source vocabulary and credentials | unresolved | none — no live source touched |
-| G02 | Exact register join evidence for the two pilot repositories | unresolved | none |
-| G03 | Register deployment coverage and mapping edges | unresolved | none |
-| G04 | Pending isolated Kiro runner documentation/configuration | unresolved | fake runner only |
-| G05 | Constrained updater tooling contract | unresolved | none |
-| G06 | Candidate verifier contract | unresolved | none |
-| G07 | Restricted publisher/SCM credential boundary | unresolved | none |
-| G08 | Pre-registered evaluation protocol incl. the majority-agreement denominator | unresolved | none |
+| G01 | Findings source: one approved endpoint, read-only auth, query/filter scope, timestamp semantics, coverage/completeness and bounded-response contract, including whether paging exists | unresolved | none — no live source touched. Offline adapter tests may proceed. |
+| G02 | Register: approved API/export, explicit repo/build/digest/workload/service/owner/manifest joins, immutable workload IDs, freshness and complete deployment-set semantics | unresolved | none |
+| G03 | Pilot repositories: two exact repository IDs, branches, ecosystem, package identity rules, manifest/lockfile paths, bump shape and owners. Do not infer npm/Mix from this app | unresolved | none |
+| G04 | Kiro: pinned CLI/engine/runner, auth, data-handling policy, effective no-tools configuration and verified isolation | unresolved | fake runner only; not isolation evidence |
+| G05 | Verification: build/smoke/CI job IDs, scanner and artifact identities, package/platform coverage, unsuppressed baseline/candidate scans and provenance | unresolved | none |
+| G06 | SCM / exceptions: target provider, branch policy, least-privilege publisher, PR restrictions, exception schema and approved activation process. Azure work items do not settle this | unresolved | none |
+| G07 | Review authority: provisioned human accounts, exact scopes, final-tag receipt verification and an independent dangerous-case adjudicator. Skip/self-declared actors do not qualify | unresolved | none |
+| G08 | Experiment protocol: cohort, baseline, strata, freshness/clock, effort, PR cap, accuracy and stop thresholds, resume authority | unresolved | none |
 
 Live activation of any W02+ capability remains blocked on these gates regardless of code readiness.
 
@@ -113,18 +113,18 @@ Statuses: `passed` = every applicable condition evidenced by an executable test 
 | A09 | W01c | Legacy v1 and nil-hash dismissals are readable, byte-identical and never promoted to current approvals; pre-generation advisory rows stay readable and uncertified | `workspace_evidence_currency_test.exs` "A09", `evidence_packet_test.exs`, `intel_generation_test.exs` | none | **passed (fixture)** for advisory and decision hashes (a real process restart is not simulated in-process) |
 | A10 | W01c | A material change in one scope does not uncover a sibling scope; queue membership stays scope-exact in both projections; identical material with different capture provenance hashes identically (no needless re-review) | `workspace_evidence_currency_test.exs` "A10", `evidence_packet_test.exs` | none | **passed (fixture)** |
 | A11 | W01a/W05 | Principal revalidated server-side; forged actor ignored; revoked session blocked before mutation | `auth_test.exs` | none | partial (W05 analyst identity pending) |
-| A12 | W01a/W05 | Stale/out-of-order/after-navigation/evidence-changed results discarded; drafts preserved; duplicates bounded | `daily_and_ai_live_test.exs` | none | partial (W05 durable runs) |
+| A12 | W01a/W05 | Current `WorkspaceLive` ignores `{:ai_assessment, _, _}` and reads `Triage.AiTriage.Runs` (durable, evidence-hashed, duplicate-bounded). Ledger 1.3 still described the earlier `start_async` path. W05 isolation, exact review binding and analyst-identity separation are not done. This audit did not re-run the live test | `daily_and_ai_live_test.exs` (not re-executed here) | none | partial — not upgraded |
 | A13 | W01a/W03/W05 | Empty/whitespace/short acceptance rationales rejected at both context levels; historical rows preserved | `workspace_test.exs`, `decisions_test.exs`, `review_actions_test.exs` | none | partial |
-| A14 | W02 | No live ingestion exists | to create | — | unresolved |
-| A15 | W02 | No live ingestion exists | to create | — | unresolved |
-| A16 | W02 | No live ingestion exists | to create | — | unresolved |
+| A14 | W02 | Fixture `Collection.Report` from `authorized_positive.json` is ingested with `content_fallback`, distinct fetch/ingest times, and nil source time unless explicitly supplied. `pending_attention/1` is a bounded context read, not a workspace UI. Packet live blockers are unchanged | `observations_test.exs` A14 | Main owned focused 47/0 and precommit 1383/2 skipped; not a live source | partial — fixture DB only; not UI, not live |
+| A15 | W02 | Partial, budget-cutoff, wrong-scope and stale fixture reports are stored without inventory writes. `pending_attention/1` is not the current pointer: a later partial, empty, wrong-scope, nil-time, or stale run must not hide an earlier unresolved positive. Same finding identity is returned once; higher severity wins, otherwise the earliest receipt. Not a UI or a resolution authority | `observations_test.exs` retention and severity tests | Main owned focused 47/0 and precommit 1383/2 skipped; not a live source | partial — fixture DB only; not UI, not live |
+| A16 | W02 | Run identity includes severity and coverage, not timestamps or list order, so escalation and partial-to-complete are new immutable receipts. Exact reordered replay stays one run. Unique index plus savepoint. The task test shares one sandbox connection and is not independent-transaction proof; the wrapper concurrency mode is pinned to the import test, so no second destructive probe was added | `observations_test.exs` A16 | Main owned focused 47/0 and precommit 1383/2 skipped; not independent-transaction proof | partial — fixture DB only; concurrency not independently proven |
 | A17 | W03 | Placement still identifies image/team/namespace/env, not a workload | to create | — | unresolved |
 | A18 | W03 | Ambiguous cases rely on human care only | to create | — | unresolved |
 | A19 | W04/W05 | Output schema is structural only; no guard/citation pipeline | to create | — | unresolved |
 | A20 | W05 | argv-only isolation; tools/filesystem not contained | to create | — | unresolved |
-| A21 | W04/W05 | Port deadline and process-tree teardown exist; no durable attempt records | to create | — | unresolved |
-| A22 | W04 | No persisted run intent | to create | — | unresolved |
-| A23 | W04/W09 | No pause/incident control | to create | — | unresolved |
+| A21 | W04/W05 | Review classification has `AiTriage.Worker` (`max_attempts: 1`, 150s timeout) and stored runs. That is not the plan's analysis-attempt recovery contract, and this audit did not re-prove process-tree teardown | to create for the W04/W05 contract | none | unresolved — existing jobs are not a pass |
+| A22 | W04 | `AiTriage.Runs.request/3` persists a review-classification identity before `Oban.insert!`. That is not W04's canonical analysis key, recommendation version or pause-checked job. Not re-tested here | to create for the W04 contract | none | unresolved — existing rows are not a pass |
+| A23 | W04/W09 | `Classifier.Control` / `Classifier.Event` store a classifier pause and incident audit. Not traced to the plan's shared publication/PR fail-closed control. Not a pass | to create | — | unresolved |
 | A24 | W01a/W09 | Reported `fixed` is band 1 "Reported fix awaiting verification"; label truthful; verification request is recognized band-2 work | `workspace_test.exs`, `workspace_progress_parity_test.exs`, `workspace_live_test.exs` | none | partial (W09 reconciliation) |
 | A25 | W01c/W03 | Advisory generation reads, exposure states, the v2 packet hash and the coverage rule are parity-tested across the Elixir projection and the SQL page; progress-mode divergence found and fixed in W01a | `workspace_query_test.exs`, `exposure_parity_test.exs`, `workspace_progress_parity_test.exs`, `workspace_evidence_currency_test.exs` | none | partial (register/selected-target cardinality stays W03) |
 | A26 | W04/W09 | No cohort/denominator records | to create | — | unresolved |
@@ -133,7 +133,7 @@ Statuses: `passed` = every applicable condition evidenced by an executable test 
 | A29 | W06 | No updater exists | to create | — | unresolved |
 | A30 | W06 | No updater exists | to create | — | unresolved |
 | A31 | W06 | No updater exists | to create | — | unresolved |
-| A32 | W02 | Collection production entry disabled; no live transport | to create | — | unresolved |
+| A32 | W02 | `Vocabulary.classify/1` admits only the four fixture-contract `Query` documents and denies mutation and every other document. That allowlist is not G01 and is not wired to a transport. `Collection.Live.run/0` and `mix triage.collect` are always disabled and do not prove redirects. `client_test.exs` remains the legacy redirect evidence. `Client.query/3` is unchanged and can still post `{ x }` | `vocabulary_test.exs` A32; `client_test.exs` redirect cases included in Main's focused run | Main owned focused 47/0 and precommit 1383/2 skipped; not G01 | partial — fixture vocabulary only; redirect acceptance deferred |
 | A33 | W07 | No verifier exists | to create | — | unresolved |
 | A34 | W07 | No verifier exists | to create | — | unresolved |
 | A35 | W07 | No verifier exists | to create | — | unresolved |
@@ -151,8 +151,30 @@ Boundary levels stay distinct: a fake runner cannot prove operating-system isola
 
 ## 5. Preserved work and drift warning
 
-The worktree carries unrelated pre-existing uncommitted work (daily timeline, daily components, workspace CSS, `IMPLEMENTATION_REPORT.md`, `.pi/` state, untracked AI/daily tests). Do not reset, stage, delete or reformat it. Subsequent agents must re-verify this list before editing; this ledger describes the tree as of the last CI run above.
+Re-verified at HEAD `d93c91c` on 25 September 2026. Dirty paths to preserve untouched: `.DS_Store`, `.pi/fabric.json`, `.pi/fabric/mesh/state.json`, untracked `.pi/fabric-pair.json`, untracked `app/docs/CLEANUP_PLAN.md`. Do not reset, stage, delete or reformat them. Daily feed, manual review, history and the Phoenix/Ecto architecture stay. Do not revert committed classifier, Oban, review-run, reporting or workspace work while closing W02.
 
-## 6. Next dependency-ready slice
+Ledger 1.3 gate rows G03–G07 did not match plan section 3 (updater/verifier/publisher were shifted onto G05–G07; pilot repositories and review authority were missing). Section 3 above is restored to the plan. All eight remain unresolved. No credentials were read.
 
-**W02** — approved live collection and observation ingestion (`collection/`, new `observations.ex`, a bounded `mix triage.collect` task; A14–A16, A32). Every real source call needs the G01 live-contract approval, so the next *offline-available* work is: (a) the lock/revision hardening the ticket-suite `NOWAIT` flake points at (a brief lock retry, or serializing the remaining async DB writers) plus the known `ReviewIntegrations` lifecycle flake; (b) the W03 register joins and selected-target cardinality that extend W01c's packet binding to exact workloads. W03–W09 follow; live activation stays blocked on G01–G08.
+`Collection.run/1`, `Config`, `Client.query/3` and `Transport` are unchanged. Added offline modules: `collection/fixture_contract.ex`, `collection/vocabulary.ex`, `collection/live.ex`, `observations.ex`, `observations/{run,observation,current}.ex`, `mix triage.collect`, and migration `20260925120000_source_runs_and_observations.exs`. `Evidence.Packet.live_blockers/0` is still `register_provenance_unavailable` and `scan_run_provenance_unavailable`. Known ticket `NOWAIT` and `ReviewIntegrations` lifecycle flakes were not re-run and are not this slice.
+
+## 6. W02a fixture foundation — written, not evidenced
+
+This is not a completed W02 package. `pending_attention/1` is a context API, not a human-visible UI integration. `Collection.Live.run/0` is always disabled and does not prove redirect handling; `client_test.exs` remains that legacy evidence. The fixture query allowlist is not a G01 approval. Live collection stays blocked on G01. This slice does not block independent offline work for W03+.
+
+Scope comes from `Triage.Collection.FixtureContract`, not from a payload `in_scope` flag. Run identity includes severity and coverage and does not clear packet live blockers. Attention identity is separate and is not the current-run pointer. `status_marker`, `source_observed_at`, `fetched_at` and `ingested_at` stay distinct; a missing source time stays nil. Paging contract is `none`. New tables only. No inventory, decision, case or exception writes.
+
+Main, not this worker, ran the owned wrapper from `app/` with `PATH=/opt/homebrew/opt/postgresql@18/bin:$PATH`. Focused command passed 47 tests, exit 0; disposable database `triage_test_ab_20260927171027_55879_focused` dropped, exit 0. Precommit passed 1383 tests, 2 skipped, exit 0; `triage_test_ab_20260927171045_56870_precommit` dropped, exit 0. Full precommit log: `/tmp/triage-w02a-precommit.log`. Wrapper guard tests passed. No `mix.lock` change. This is fixture-database evidence, not live approval, not a UI integration, and not independent-transaction proof. G01–G08 remain unresolved. W02 is not complete.
+
+Coordinator-only, from `app/`, never `triage_dev` or shared `triage_test`:
+
+```sh
+mise x -- mix help test
+./scripts/verify_owned_db_test.sh
+./scripts/verify_owned_db.sh focused \
+  test/triage/collection/vocabulary_test.exs \
+  test/triage/collection/client_test.exs \
+  test/triage/collection/config_test.exs \
+  test/triage/observations_test.exs
+```
+
+Isolation: the wrapper's generated `_ab_` partition only; additive migration; observations tests must not truncate shared inventory.

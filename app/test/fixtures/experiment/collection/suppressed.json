@@ -1,0 +1,20 @@
+{
+  "status_marker": "2026-09-03T12:00:00Z",
+  "images": [
+    {
+      "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "api_id": "55555555-5555-4555-8555-555555555555",
+      "owner": "fixture-owner",
+      "namespace": "fixture-ns",
+      "open": [],
+      "suppressed": [
+        {
+          "vuln": "CVE-2020-0001",
+          "packageName": "bash",
+          "packageVersion": "5.0",
+          "severity": "LOW"
+        }
+      ]
+    }
+  ]
+}
