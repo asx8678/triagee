@@ -167,9 +167,9 @@ defmodule TriageWeb.AssetsTest do
       refute workspace_css =~ "-:scope"
 
       for selector <- [
-            ".panel-body{",
-            ".inspector-body{",
-            ".modal-body{",
+            ".panel-body {",
+            ".inspector-body {",
+            ".modal-body {",
             "dialog.confirm { margin:auto; }",
             ".risk-metrics { display:grid;",
             ".risk-entry-main { display:grid;",
