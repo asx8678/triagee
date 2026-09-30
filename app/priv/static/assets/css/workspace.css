@@ -1478,3 +1478,71 @@ body:has(.approved-workspace) { margin:0; background:#0c1420; color-scheme:dark;
   :scope .cvss.cvss-critical { background:var(--red-soft); color:var(--red); border:1px solid var(--red-line); }
   :scope .cvss.cvss-high { background:var(--amber-soft); color:var(--amber); border:1px solid var(--amber-line); }
 }
+
+/* ===== Phone and tablet ===== */
+@scope (.approved-workspace) {
+  @media (max-width: 1100px) {
+    :scope .dashboard-grid { grid-template-columns:minmax(0,1fr); }
+    :scope .review-grid { grid-template-columns:240px minmax(0,1fr); }
+    :scope .review-content { grid-template-columns:minmax(0,1fr) 300px; }
+  }
+
+  @media (max-width: 760px) {
+    :scope #shell { height:auto; min-height:100dvh; }
+    :scope .topbar { height:auto; flex-wrap:wrap; gap:0 12px; padding:10px 16px 0; }
+    :scope .topmeta { margin-left:auto; }
+    :scope .topnav { order:3; width:100%; height:44px; margin:6px -16px 0; padding:0 8px; overflow-x:auto; }
+    :scope .topnav :is(button,a) { padding:0 10px; font-size:13.5px; }
+    :scope .subnav { padding:10px 16px; flex-wrap:wrap; }
+    :scope .subnav .scope-note { margin-left:0; width:100%; }
+    :scope .scopebar { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; padding:10px 16px; }
+    :scope .scopebar .fieldset, :scope .scopebar > div { display:grid; gap:4px; }
+    :scope .scopebar select { max-width:none; width:100%; }
+    :scope .scope-spacer { display:none; }
+    :scope .scopebar .demo-link, :scope .scopebar #reset-workspace-scope { align-self:center; }
+    :scope .coverage-status { justify-self:end; min-height:28px; padding:3px 10px; font-size:12px; }
+    :scope .page { padding:16px 16px 28px; overflow:visible; }
+
+    :scope .overview-heading { flex-direction:column; align-items:stretch; }
+    :scope .overview-heading .button-link { justify-content:center; }
+    :scope .metrics { grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+    :scope .metric { padding:12px 14px; }
+    :scope .metric .value { font-size:26px; }
+    :scope .team-active { min-width:110px; }
+
+    :scope .review-tools .tabs { overflow-x:auto; white-space:nowrap; flex-wrap:nowrap; }
+    :scope .review-content { display:flex; flex-direction:column; }
+    :scope .decision-column { border-left:0; border-bottom:1px solid var(--line); }
+    :scope .review-heading h2 { font-size:19px; }
+
+    /* Vulnerabilities rows become cards. */
+    :scope #workspace-inventory thead { display:none; }
+    :scope #workspace-inventory, :scope #workspace-inventory tbody { display:block; min-width:0; }
+    :scope #workspace-inventory tr { display:grid; grid-template-columns:36px minmax(0,1fr); gap:2px 8px; padding:12px 14px 12px 16px; border-bottom:1px solid var(--line); position:relative; }
+    :scope #workspace-inventory td { display:block; padding:0; border:0; min-width:0; max-width:none; }
+    :scope #workspace-inventory td.select-col { grid-row:span 5; padding-top:2px; }
+    :scope #workspace-inventory td:first-child::before { left:-16px; }
+    :scope #workspace-inventory td:nth-child(5) { font-size:12.5px; }
+    :scope #workspace-inventory td:nth-child(6) { display:none; }
+    :scope .toolbar input[type=search] { min-width:0; width:100%; }
+    :scope .toolbar > * { flex:1 1 140px; }
+    :scope .inventory-controls { flex-wrap:wrap; padding:0 8px; }
+    :scope .inventory-controls .tabs { overflow-x:auto; white-space:nowrap; }
+  }
+
+  :scope input[type=checkbox] { min-width:18px; min-height:18px; }
+  @media (prefers-reduced-motion: reduce) {
+    :scope *, :scope *::before, :scope *::after { transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+  }
+}
+@scope (.approved-workspace) {
+  @media (max-width: 760px) {
+    :scope #workspace-inventory td { height:auto; }
+    :scope #workspace-inventory td:first-child::before { display:none; }
+    :scope #workspace-inventory tr::before { content:""; position:absolute; left:0; top:12px; bottom:12px; width:3px; border-radius:0 3px 3px 0; background:var(--rail, transparent); }
+    :scope #workspace-inventory td.severity-col { padding-top:2px; }
+    :scope #workspace-inventory .subline { margin-top:2px; }
+    :scope .scopebar .demo-link { grid-column:1; }
+    :scope .scopebar .coverage-status { grid-column:2; justify-self:end; }
+  }
+}
