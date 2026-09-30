@@ -1,6 +1,11 @@
 defmodule Mix.Tasks.Triage.Reporting.Rotate do
   use Mix.Task
 
+  @moduledoc """
+  Rotates one read-only reporting token. Every input comes from `TRIAGE_REPORTING_*`
+  environment variables so no secret appears in shell history; see docs/GRAFANA_API.md.
+  """
+
   @shortdoc "Rotate one read-only reporting token from protected environment variables"
 
   @impl true

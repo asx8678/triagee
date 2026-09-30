@@ -18,7 +18,7 @@ defmodule TriageWeb.TimelineLive do
 
   alias Triage.Intel
   alias Triage.Timeline
-  alias TriageWeb.CaseLive
+  alias TriageWeb.CaseFormat
   alias TriageWeb.TimelineFilters
   alias TriageWeb.TimelineLive.{Bands, Chart, Drawer, Grid, Lanes}
 
@@ -91,7 +91,7 @@ defmodule TriageWeb.TimelineLive do
              update(
                socket,
                :expanded_cases,
-               &Map.put(&1, entry.id, CaseLive.Format.timeline_entries(data))
+               &Map.put(&1, entry.id, CaseFormat.timeline_entries(data))
              )}
 
           _ ->
@@ -227,7 +227,7 @@ defmodule TriageWeb.TimelineLive do
         %{
           id: id,
           case: data.case,
-          entries: CaseLive.Format.timeline_entries(data),
+          entries: CaseFormat.timeline_entries(data),
           history_truncated?: data.history_truncated?
         }
       end)

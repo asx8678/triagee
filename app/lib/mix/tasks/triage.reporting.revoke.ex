@@ -1,6 +1,11 @@
 defmodule Mix.Tasks.Triage.Reporting.Revoke do
   use Mix.Task
 
+  @moduledoc """
+  Revokes one reporting token, identified through `TRIAGE_REPORTING_*`
+  environment variables; see docs/GRAFANA_API.md.
+  """
+
   @shortdoc "Revoke one read-only reporting token by protected environment variable"
 
   @impl true

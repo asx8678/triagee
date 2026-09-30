@@ -17,6 +17,9 @@ defmodule Triage.Workspace do
   """
   defdelegate page(params, now \\ DateTime.utc_now()), to: Triage.Workspace.Query
 
+  @doc "Metrics, team counts and scope options in the `page/2` shape, with no CVE rows."
+  defdelegate summary(params, now \\ DateTime.utc_now()), to: Triage.Workspace.Query
+
   @doc """
   Full read-only scope projection, retained for domain callers. Supports `team`,
   `environment`, `cve`, `cves` (list), and `placement_ids` (list); empty lists

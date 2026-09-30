@@ -5,7 +5,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
   Aggregate totals are independent of the selected page; full case histories
   expand read-only in this panel without leaving the workspace.
 
-  The case history is rendered from `TriageWeb.CaseLive.Format.timeline_entries/1`,
+  The case history is rendered from `TriageWeb.CaseFormat.timeline_entries/1`,
   the same ordering the case detail page uses, so the drawer and the case page
   cannot describe different histories. Every block reports recorded rows: an
   assessment is not an approval, an imported suppression flag is not a local
@@ -14,7 +14,7 @@ defmodule TriageWeb.TimelineLive.Drawer do
 
   use TriageWeb, :html
 
-  import TriageWeb.CaseLive.Format, only: [event_label: 1, label: 1]
+  import TriageWeb.CaseFormat, only: [event_label: 1, label: 1]
 
   alias TriageWeb.FindingFilters
   alias TriageWeb.TimelineFilters

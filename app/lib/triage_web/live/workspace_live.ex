@@ -1,14 +1,24 @@
 defmodule TriageWeb.WorkspaceLive do
-  @moduledoc "Primary workspace over real inventory and advisory decisions."
+  @moduledoc """
+  Primary workspace over real inventory and advisory decisions.
+
+  This LiveView owns routing, shared state (drafts, selection, confirmations)
+  and the page shell. Page behaviour lives in plain modules it delegates to:
+  `Params` (URLs), `Review` (drafts, decisions, tickets, classification) and
+  `News` (public news and the research list). They are not LiveComponents, so
+  every event still passes `TriageWeb.Auth`'s per-event authorization hook.
+  """
   use TriageWeb, :live_view
-  alias Triage.Workspace
-  alias Triage.Workspace.{Commit, Drafts}
+  alias Triage.{Decisions, RiskDecisionHistory, Workspace}
   alias TriageWeb.{TimelineFilters, TimelineLive}
+  alias TriageWeb.WorkspaceLive.{News, Params, Review}
   import TriageWeb.WorkspaceComponents
   import TriageWeb.ExceptionsComponents
+  import Params, only: [nav_active?: 2]
+  import News, only: [research_dialog: 1]
 
-  @pages ~w(findings exceptions daily overview inventory review timeline news)
-  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview risk_q risk_status risk_team risk_environment risk_page focus_target)
+  # Pages that list no workspace CVEs: they need only the nav count and scope options.
+  @summary_pages ~w(daily exceptions news timeline)
 
   @impl true
   def mount(_params, _session, socket) do
@@ -17,7 +27,6 @@ defmodule TriageWeb.WorkspaceLive do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Triage.PubSub, "workspace:changes")
       Phoenix.PubSub.subscribe(Triage.PubSub, "review:classification")
-      Process.send_after(self(), :classification_tick, 2_000)
     end
 
     {:ok,
@@ -55,7 +64,8 @@ defmodule TriageWeb.WorkspaceLive do
        daily_data: nil,
        ai_assessing: false,
        ai_assessment: nil,
-       ai_assessment_error: nil
+       ai_assessment_error: nil,
+       classification_tick: false
      )}
   end
 
@@ -63,21 +73,21 @@ defmodule TriageWeb.WorkspaceLive do
   def handle_params(params, uri, socket) do
     raw_params = params
     timeline? = URI.parse(uri).path == "/timeline" or params["page"] == "timeline"
-    invalid_params = not valid_params?(raw_params)
+    invalid_params = not Params.valid_params?(raw_params)
 
     timeline_params =
       if Map.has_key?(params, "team"), do: Map.put(params, "owner", params["team"]), else: params
 
     params =
       params
-      |> normalize_timeline_params(timeline?)
-      |> normalize_valid_params()
-      |> normalize_timeline_params(timeline?)
-      |> normalize_inspect_deep_link()
-      |> preserve_invalid_focus(raw_params, invalid_params)
+      |> Params.normalize_timeline_params(timeline?)
+      |> Params.normalize_valid_params()
+      |> Params.normalize_timeline_params(timeline?)
+      |> Params.normalize_inspect_deep_link()
+      |> Params.preserve_invalid_focus(raw_params, invalid_params)
 
     socket = clear_changed_selection(socket, params)
-    page = if params["page"] in @pages, do: params["page"], else: "findings"
+    page = if params["page"] in Params.pages(), do: params["page"], else: "findings"
     params = Map.put(params, "page", page) |> pin_review_item(socket)
 
     {:noreply,
@@ -85,72 +95,16 @@ defmodule TriageWeb.WorkspaceLive do
      |> assign(
        params: params,
        timeline_params:
-         if(valid_params?(params), do: timeline_params, else: %{"filters" => "invalid"}),
+         if(Params.valid_params?(params), do: timeline_params, else: %{"filters" => "invalid"}),
        page: page,
-       page_title: page_title(page),
+       page_title: Params.page_title(page),
        queue_shown:
          if(params["item"] != socket.assigns[:item], do: false, else: socket.assigns.queue_shown),
        invalid_params: invalid_params,
        confirmation: nil
      )
      |> load()
-     |> maybe_load_news()}
-  end
-
-  defp history_scope_label("exceptions", params) do
-    Enum.map_join(
-      [{"risk_team", "All teams"}, {"risk_environment", "All environments"}],
-      " · ",
-      fn {key, fallback} ->
-        value = String.trim(params[key] || "")
-        if value == "", do: fallback, else: value
-      end
-    )
-  end
-
-  defp history_scope_label(_page, _params), do: "All teams · All environments"
-
-  defp page_title(page) do
-    cond do
-      page in ~w(findings review) -> "Review"
-      page == "exceptions" -> "Risk decisions"
-      page == "daily" -> "Timeline"
-      page == "inventory" -> "Vulnerabilities"
-      true -> String.capitalize(page)
-    end
-  end
-
-  defp normalize_valid_params(params) do
-    if valid_params?(params),
-      do: Map.take(params, @keys -- ~w(weeks tview)),
-      else: %{}
-  end
-
-  defp normalize_timeline_params(params, true) do
-    params
-    |> Map.put("page", "timeline")
-    |> Map.put("team", params["team"] || params["owner"] || "")
-  end
-
-  defp normalize_timeline_params(params, false), do: params
-
-  # T03/A002: the retired read-only inspector dialog is gone; its deep links
-  # (inspect=CVE) converge on the same shared actionable detail.
-  defp normalize_inspect_deep_link(%{"inspect" => cve} = params),
-    do:
-      params |> Map.put("page", "review") |> Map.put("item", cve) |> Map.drop(["inspect", "tab"])
-
-  defp normalize_inspect_deep_link(params), do: params
-
-  defp preserve_invalid_focus(_params, %{"focus_target" => value}, true),
-    do: %{"page" => "review", "focus_target" => value}
-
-  defp preserve_invalid_focus(params, _raw_params, _invalid?), do: params
-
-  defp valid_params?(params) do
-    Enum.all?(Map.take(params, @keys -- ~w(weeks tview)), fn {_k, v} ->
-      is_binary(v) and byte_size(v) <= 2000
-    end) and valid_views?(params)
+     |> News.maybe_load_news()}
   end
 
   defp pin_review_item(%{"page" => "review"} = params, %{assigns: %{page: "review", item: item}})
@@ -177,14 +131,18 @@ defmodule TriageWeb.WorkspaceLive do
     end
   end
 
-  defp load(socket) do
+  # Public only for the page modules, which reload after a commit.
+  @doc false
+  def load(socket) do
     params = socket.assigns.params
 
     # SQL selects complete CVEs before evidence hydration; no full-estate side path.
     page =
-      if socket.assigns.invalid_params,
-        do: empty_page(params),
-        else: Workspace.page(page_params(params))
+      cond do
+        socket.assigns.invalid_params -> empty_page(params)
+        socket.assigns.page in @summary_pages -> Workspace.summary(params)
+        true -> Workspace.page(page_params(params))
+      end
 
     page = exact_target_page(page, params)
 
@@ -205,36 +163,25 @@ defmodule TriageWeb.WorkspaceLive do
         nil
       end
 
-    exception_decisions =
+    # Built once per load, not on every render: filtering, grouping and the
+    # status tiles need the whole year's register, so paging stays in memory.
+    risk_history =
       if socket.assigns.page == "exceptions" do
-        now_dt = DateTime.utc_now()
-
-        import Ecto.Query
-
-        from(d in Triage.Decisions.Decision,
-          where:
-            d.decision in ["accepted_risk", "not_affected"] and
-              d.decided_at >= ^DateTime.add(now_dt, -365, :day) and d.decided_at <= ^now_dt,
-          order_by: [desc: d.decided_at, desc: d.id]
-        )
-        |> Triage.Repo.all()
-        |> Enum.map(&decisions_decorate(&1, now_dt))
-      else
-        []
+        now = DateTime.utc_now()
+        RiskDecisionHistory.build(Decisions.risk_register(now), params, now)
       end
 
     socket
     |> assign(Map.drop(page, [:matching]))
     |> assign(
-      manual_cves: Triage.ManualCves.list(),
       row_history: history,
-      exception_decisions: exception_decisions,
+      risk_history: risk_history,
       daily_data: daily_data,
       scope_form: scope_form(params),
       search_form: search_form(params)
     )
-    |> prepare_draft(page.row, page.matching)
-    |> load_classification()
+    |> Review.prepare_draft(page.row, page.matching)
+    |> Review.load_classification()
     |> load_timeline()
   end
 
@@ -253,49 +200,7 @@ defmodule TriageWeb.WorkspaceLive do
     |> Map.merge(%{"mode" => params["mode"] || "needs", "page" => "review"})
   end
 
-  defp page_params(%{"page" => "daily"} = params), do: params
-
-  defp page_params(%{"page" => "exceptions"} = params), do: params
-
   defp page_params(params), do: params
-
-  # Decisions.decorate/2 is private; this mirrors its projection for the
-  # read-only exceptions register (T06).
-  defp decisions_decorate(decision, now) do
-    %{
-      id: decision.id,
-      cve: decision.cve,
-      decision: decision.decision,
-      label: Triage.Decisions.label(decision.decision),
-      state: Triage.Decisions.state(decision, now),
-      reason: decision.reason,
-      actor: decision.actor,
-      decided_at: decision.decided_at,
-      expires_at: decision.expires_at,
-      placement_id: decision.placement_id,
-      supersedes_id: decision.supersedes_id,
-      work_owner: decision.work_owner,
-      due_on: decision.due_on,
-      metadata: decision.metadata,
-      operation_id: decision.operation_id
-    }
-  end
-
-  # Scores are loaded from durable jobs, never delivered as an unbound task result.
-  # This only reads; opening a page never starts Kiro or modifies a reviewer draft.
-  defp load_classification(socket) do
-    run =
-      if socket.assigns.row && socket.assigns.page in ~w(findings review),
-        do: Triage.AiTriage.Runs.latest(socket.assigns.row.cve, socket.assigns.params)
-
-    display = Triage.AiTriage.Runs.display(run)
-
-    assign(socket,
-      ai_assessing: display.assessing,
-      ai_assessment: display.assessment,
-      ai_assessment_error: display.error
-    )
-  end
 
   defp empty_page(params) do
     %{
@@ -353,173 +258,12 @@ defmodule TriageWeb.WorkspaceLive do
         as: :search
       )
 
-  defp prepare_draft(socket, nil, _matching) do
-    cve = socket.assigns.item
-
-    draft =
-      if cve,
-        do:
-          Map.get(socket.assigns.drafts, cve) ||
-            stored_draft(socket.assigns.current_principal, cve)
-
-    draft = if draft, do: Map.put(draft, :stale, stale_draft?(draft, cve)), else: nil
-
-    assign(socket,
-      draft: draft,
-      draft_error: draft_error?(draft),
-      decision_form: to_form(if(draft, do: draft.fields, else: %{}), as: :decision),
-      hidden_targets: if(draft, do: draft.targets, else: []),
-      pending_operation: if(draft, do: operation_summary(draft.operation, socket), else: nil),
-      ticket_evidence: nil
-    )
-  end
-
-  defp prepare_draft(socket, row, _matching) do
-    # Demo defaults are only a fresh preview. User edits, deselection and saved
-    # drafts are never overwritten, and opening the page never records a decision.
-    demo? = socket.assigns.demo_mode and socket.assigns.can_review
-
-    existing =
-      Map.get(socket.assigns.drafts, row.cve) ||
-        stored_draft(socket.assigns.current_principal, row.cve)
-
-    draft =
-      if is_nil(existing) or (demo? and not existing.dirty and not existing.saved),
-        do: fresh_draft(row, demo?),
-        else: existing
-
-    stale = stale_draft?(draft, row.cve)
-
-    draft = Map.put(draft, :stale, Map.get(draft, :stale, false) or stale)
-    visible_ids = Enum.map(row.scopes, & &1.id)
-
-    socket
-    |> assign(
-      drafts: Map.put(socket.assigns.drafts, row.cve, draft),
-      draft: draft,
-      draft_error: draft_error?(draft),
-      pending_operation:
-        if(draft.saved, do: nil, else: operation_summary(draft.operation, socket)),
-      ticket_evidence: nil,
-      decision_form: to_form(draft.fields, as: :decision),
-      hidden_targets: draft.targets -- visible_ids
-    )
-  end
-
-  defp fresh_draft(row, demo?) do
-    targets = if demo?, do: Enum.filter(row.scopes, & &1.active?), else: []
-
-    %{
-      fields: %{
-        "action" => if(demo?, do: "accepted_risk", else: ""),
-        "owner" => "",
-        "reason" => "",
-        "due_on" => if(demo?, do: Date.to_iso8601(Commit.default_due_on()), else: "")
-      },
-      targets: Enum.map(targets, & &1.id),
-      versions: Map.new(targets, &{&1.id, &1.fingerprint}),
-      operation: Ecto.UUID.generate(),
-      revision: nil,
-      persisted: false,
-      persistence_error: nil,
-      saved: false,
-      dirty: false,
-      stale: false
-    }
-  end
-
-  defp stale_draft?(%{dirty: false}, _cve), do: false
-
-  defp stale_draft?(draft, cve) do
-    # Exact CVE independent of display filters: hidden is not deleted.
-    current = Workspace.targets(%{"cve" => cve}) |> Map.new(&{&1.id, &1})
-
-    Enum.any?(draft.targets, fn id ->
-      case current[id] do
-        nil -> true
-        target -> not target.active? or draft.versions[id] != target.fingerprint
-      end
-    end)
-  end
-
-  defp operation_summary(id, socket) do
-    case Commit.operation(id, socket.assigns.current_principal) do
-      {:ok, summary} -> summary
-      _ -> nil
-    end
-  end
-
-  defp stored_draft(principal, cve) do
-    case Drafts.get(principal, cve) do
-      {:ok, draft} when is_map(draft) ->
-        Map.merge(draft, %{persisted: true, persistence_error: nil})
-
-      _ ->
-        nil
-    end
-  end
-
   @impl true
-  def handle_event(event, _, %{assigns: %{pending_operation: pending}} = socket)
-      when not is_nil(pending) and
-             event in ["draft", "target", "save", "reconcile", "cancel-decision"] do
-    {:noreply,
-     assign(socket,
-       error:
-         "An Azure operation already exists. Reconcile it; do not start or substitute another ticket."
-     )}
-  end
+  def handle_event(event, params, socket) when event in unquote(Review.events()),
+    do: Review.handle_event(event, params, socket)
 
-  def handle_event("reconcile-ticket", _, %{assigns: %{pending_operation: %{id: id}}} = socket),
-    do:
-      {:noreply,
-       finish_reconciliation(socket, Commit.reconcile(id, socket.assigns.current_principal))}
-
-  def handle_event(
-        "review-ticket-evidence",
-        _,
-        %{assigns: %{pending_operation: %{id: id}}} = socket
-      ) do
-    case Commit.operation(id, socket.assigns.current_principal) do
-      {:ok, operation} ->
-        targets =
-          Workspace.targets(%{"cve" => operation.cve})
-          |> Enum.filter(&(&1.id in operation.target_ids))
-
-        if Enum.sort(Enum.map(targets, & &1.id)) == Enum.sort(operation.target_ids) and
-             Enum.all?(targets, & &1.active?) do
-          {:noreply, assign(socket, ticket_evidence: targets)}
-        else
-          {:noreply,
-           assign(socket,
-             ticket_evidence: nil,
-             error:
-               "An original ticket target is missing or inactive. Contact an administrator; no replacement ticket was created."
-           )}
-        end
-
-      _ ->
-        {:noreply,
-         assign(socket,
-           error: "Only the original reviewer or an administrator can reconcile this operation."
-         )}
-    end
-  end
-
-  def handle_event(
-        "reconcile-ticket-current",
-        _,
-        %{assigns: %{pending_operation: %{id: id}, ticket_evidence: targets}} = socket
-      )
-      when is_list(targets) do
-    versions = Map.new(targets, &{&1.id, &1.fingerprint})
-
-    {:noreply,
-     finish_reconciliation(
-       socket,
-       Commit.reconcile(id, versions, socket.assigns.current_principal)
-     )}
-  end
+  def handle_event(event, params, socket) when event in unquote(News.events()),
+    do: News.handle_event(event, params, socket)
 
   def handle_event("filter", params, %{assigns: %{page: "timeline"}} = socket),
     do: TimelineLive.handle_event("filter", params, socket)
@@ -584,48 +328,6 @@ defmodule TriageWeb.WorkspaceLive do
      )}
   end
 
-  def handle_event("draft", %{"decision" => params}, socket) when is_map(params) do
-    fields =
-      Map.merge(socket.assigns.draft.fields, Map.take(params, ~w(action owner reason due_on)))
-
-    fields =
-      if fields["action"] == "accepted_risk" and
-           (socket.assigns.draft.fields["action"] != "accepted_risk" or
-              fields["due_on"] in [nil, ""]) do
-        Map.put(fields, "due_on", Date.to_iso8601(Commit.default_due_on()))
-      else
-        fields
-      end
-
-    {:noreply,
-     update_draft(socket, %{
-       fields: fields,
-       saved: false
-     })}
-  end
-
-  def handle_event("target", %{"id" => id}, %{assigns: %{row: row, draft: draft}} = socket)
-      when not is_nil(row) do
-    target = Enum.find(row.scopes, &(to_string(&1.id) == id and &1.active?))
-
-    if target do
-      ids =
-        if target.id in draft.targets,
-          do: List.delete(draft.targets, target.id),
-          else: draft.targets ++ [target.id]
-
-      # Newly selected targets require an explicit selection; never silently join on refresh.
-      {:noreply,
-       update_draft(socket, %{
-         targets: ids,
-         versions: Map.put_new(draft.versions, target.id, target.fingerprint),
-         saved: false
-       })}
-    else
-      {:noreply, socket}
-    end
-  end
-
   def handle_event("select", %{"cve" => cve}, socket) do
     selected = socket.assigns.selected
 
@@ -663,116 +365,6 @@ defmodule TriageWeb.WorkspaceLive do
     end
   end
 
-  def handle_event("save", %{"decision" => fields}, %{assigns: %{draft: %{}}} = socket)
-      when is_map(fields) do
-    socket =
-      update_draft(
-        socket,
-        %{
-          fields:
-            Map.merge(socket.assigns.draft.fields, Map.take(fields, ~w(action reason due_on)))
-        },
-        persist: false
-      )
-
-    # The authenticated commit injects the real actor server-side. Historical
-    # work requests remain supported by the domain, but Review offers only
-    # the three explicit actions below. Draft storage is independent of the
-    # decision transaction: an explicit commit may succeed even when autosave
-    # conflicted, but it must not acknowledge or overwrite that newer draft.
-    changeset =
-      Commit.form(Map.put(socket.assigns.draft.fields, "actor", "authenticated"))
-
-    cond do
-      socket.assigns.draft.fields["action"] not in Commit.review_actions() ->
-        {:noreply,
-         assign(socket,
-           error: "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
-         )}
-
-      socket.assigns.draft.stale ->
-        {:noreply,
-         assign(socket,
-           error:
-             "Evidence changed. Explicitly reload and review before saving; your draft is preserved."
-         )}
-
-      not changeset.valid? ->
-        {:noreply,
-         assign(socket,
-           error: "Complete the required fields. Your draft is unchanged.",
-           decision_form: to_form(%{changeset | action: :insert}, as: :decision)
-         )}
-
-      socket.assigns.hidden_targets != [] ->
-        {:noreply,
-         assign(socket,
-           error:
-             "Selected targets are hidden by the current scope. Restore the original scope before saving."
-         )}
-
-      socket.assigns.draft.targets == [] ->
-        {:noreply, assign(socket, error: "Select at least one affected scope.")}
-
-      # Decide from the draft's effective action after the merge, never the
-      # raw submitted fields: a payload that omits `action` must open the
-      # confirmation dialog rather than commit the retained action directly.
-      socket.assigns.draft.fields["action"] in ["accepted_risk", "create_ticket"] ->
-        {:noreply, assign(socket, confirmation: %{}, error: nil)}
-
-      true ->
-        {:noreply, commit(socket)}
-    end
-  end
-
-  def handle_event(
-        "confirm-ticket",
-        _,
-        %{assigns: %{confirmation: %{}, draft: %{fields: %{"action" => "create_ticket"}}}} =
-          socket
-      ),
-      do: {:noreply, commit(socket)}
-
-  def handle_event(
-        "confirm-risk",
-        _,
-        %{assigns: %{confirmation: %{}, draft: %{fields: %{"action" => "accepted_risk"}}}} =
-          socket
-      ),
-      do: {:noreply, commit(socket)}
-
-  def handle_event("cancel-decision", _, %{assigns: %{row: row}} = socket) when not is_nil(row) do
-    draft = socket.assigns.draft
-
-    case Drafts.delete(
-           socket.assigns.current_principal,
-           row.cve,
-           draft && draft.operation,
-           draft && draft[:revision]
-         ) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(
-           drafts: Map.delete(socket.assigns.drafts, row.cve),
-           stale_cves: MapSet.delete(socket.assigns.stale_cves, row.cve),
-           confirmation: nil,
-           error: nil,
-           message: nil,
-           draft_error: false
-         )
-         |> prepare_draft(row, [])
-         |> push_event("workspace-draft-cleared", %{})}
-
-      {:error, _} ->
-        {:noreply,
-         assign(socket,
-           error:
-             "Could not discard the stored draft. Your draft is preserved; retry when storage is available."
-         )}
-    end
-  end
-
   def handle_event("cancel-risk", _, socket), do: {:noreply, assign(socket, confirmation: nil)}
 
   def handle_event("queue-toggle", _, socket),
@@ -783,89 +375,11 @@ defmodule TriageWeb.WorkspaceLive do
 
   def handle_event("settings", _, socket), do: {:noreply, assign(socket, settings: true)}
 
-  def handle_event("refresh-news", _, socket) do
-    if socket.assigns.news_cves_loading or socket.assigns.news_headlines_loading,
-      do: {:noreply, socket},
-      else: {:noreply, start_news(socket)}
-  end
-
-  def handle_event("manual-close", _, socket), do: {:noreply, assign(socket, manual_open: false)}
-
-  def handle_event("manual-open", _, socket),
-    do: {:noreply, assign(socket, manual_open: not socket.assigns.manual_open)}
-
-  def handle_event("manual-fetch", %{"manual" => %{"cve" => cve}}, socket) do
-    if socket.assigns.manual_loading do
-      {:noreply, socket}
-    else
-      {:noreply,
-       socket
-       |> assign(
-         manual_loading: true,
-         manual_preview: nil,
-         manual_error: nil,
-         manual_form: to_form(%{"cve" => cve}, as: :manual)
-       )
-       |> start_async(:manual_fetch, fn -> Triage.ManualCves.fetch(cve) end)}
-    end
-  end
-
-  def handle_event("manual-save", _, %{assigns: %{manual_preview: nil}} = socket),
-    do: {:noreply, socket}
-
-  def handle_event("manual-save", _, socket) do
-    case Triage.ManualCves.save(socket.assigns.manual_preview) do
-      {:ok, _} ->
-        {:noreply,
-         assign(socket,
-           manual_preview: nil,
-           manual_cves: Triage.ManualCves.list(),
-           message: "CVE saved to your research list."
-         )}
-
-      {:error, _} ->
-        {:noreply, assign(socket, manual_error: "Could not save this CVE. Please try again.")}
-    end
-  end
-
   def handle_event("close-settings", _, socket), do: {:noreply, assign(socket, settings: false)}
-
-  def handle_event("reconcile", _, %{assigns: %{row: row}} = socket) when not is_nil(row) do
-    current =
-      Workspace.targets(
-        Map.merge(Map.take(socket.assigns.params, ~w(team environment)), %{"cve" => row.cve})
-      )
-
-    selected = socket.assigns.draft.targets
-
-    if Enum.all?(selected, fn id -> Enum.any?(current, &(&1.id == id and &1.active?)) end) do
-      {:noreply,
-       socket
-       |> update_draft(%{
-         versions: Map.new(current, &{&1.id, &1.fingerprint}),
-         operation: Ecto.UUID.generate(),
-         stale: false,
-         saved: false
-       })
-       |> assign(stale_cves: MapSet.delete(socket.assigns.stale_cves, row.cve))
-       |> load()
-       |> assign(
-         message:
-           "Current evidence reloaded. Target selection is unchanged; inspect it before saving."
-       )}
-    else
-      {:noreply,
-       assign(socket,
-         error:
-           "A selected target is no longer available in this scope. Restore scope or explicitly deselect it; no replacement was selected."
-       )}
-    end
-  end
 
   def handle_event("dismiss-action-toast", _, socket),
     do: {:noreply, assign(socket, action_toast: nil)}
 
-  @impl true
   def handle_event("daily-prev", %{"before" => cursor}, socket) do
     {:noreply,
      socket
@@ -876,175 +390,7 @@ defmodule TriageWeb.WorkspaceLive do
   def handle_event("daily-latest", _, socket),
     do: {:noreply, socket |> assign(:daily_before, nil) |> load()}
 
-  def handle_event("classify-now", _, %{assigns: %{row: row, can_review: true}} = socket)
-      when not is_nil(row) do
-    case Triage.AiTriage.Runs.request(
-           row.cve,
-           socket.assigns.params,
-           socket.assigns.current_principal
-         ) do
-      {:ok, _run} ->
-        {:noreply, load_classification(socket)}
-
-      {:error, reason} ->
-        message =
-          case reason do
-            :analysis_disabled ->
-              "Kiro classification is disabled. Configure TRIAGE_ANALYSIS_ENABLED and TRIAGE_KIRO_CLI, then restart."
-
-            :not_configured ->
-              "Kiro is not configured. Set TRIAGE_KIRO_CLI to your authenticated kiro-cli executable."
-
-            :prompt_too_large ->
-              "Full evidence exceeds the input limit. Narrow the team/environment scope; no evidence was dropped."
-
-            _ ->
-              "Classification could not start. Refresh the evidence and check your review permission."
-          end
-
-        {:noreply, assign(socket, ai_assessment_error: message)}
-    end
-  end
-
-  def handle_event("classify-now", _, socket),
-    do:
-      {:noreply,
-       assign(socket, ai_assessment_error: "Reviewer permission is required to classify.")}
-
-  # Existing clients use the same guarded, durable path after a code reload.
-  def handle_event("ai-analyze", params, socket), do: handle_event("classify-now", params, socket)
-
-  def handle_event("ai-dismiss", _, socket),
-    do: {:noreply, assign(socket, ai_assessment: nil, ai_assessment_error: nil)}
-
   def handle_event(_, _, socket), do: {:noreply, socket}
-
-  defp update_draft(%{assigns: %{draft: nil}} = socket, _changes), do: socket
-
-  # `persist: false` is for the commit path: the fields are about to become a
-  # decision, and re-storing the draft there must not turn a concurrent tab's
-  # newer saved revision into a blocking error. The post-commit cleanup still
-  # removes only this tab's own operation and revision.
-  defp update_draft(socket, changes, opts \\ []) do
-    draft = renew_saved_draft(socket, changes) |> Map.merge(changes)
-    draft = Map.put(draft, :dirty, not draft.saved)
-    draft = if draft.saved, do: Map.put(draft, :stale, false), else: draft
-
-    draft =
-      if Keyword.get(opts, :persist, true) do
-        {result, draft} = persist_draft(socket, draft)
-
-        Map.merge(draft, %{
-          persisted: persisted?(result) and not draft.saved,
-          persistence_error: persistence_message(result, draft)
-        })
-      else
-        # Submit/validation/confirmation are not storage acknowledgements.
-        # Retain failures, and retain a prior acknowledgement only if the
-        # exact content is unchanged. These flags travel with this CVE's draft.
-        previous = socket.assigns.draft
-
-        Map.put(
-          draft,
-          :persisted,
-          previous.persisted and draft_content(previous) == draft_content(draft)
-        )
-      end
-
-    assign(socket,
-      draft: draft,
-      drafts: Map.put(socket.assigns.drafts, socket.assigns.item, draft),
-      decision_form: to_form(draft.fields, as: :decision),
-      confirmation: nil,
-      draft_error: draft_error?(draft),
-      error: nil
-    )
-  end
-
-  # A committed draft cleans up only its own stored operation at the revision
-  # this tab last saw; an unsaved draft is stored under optimistic concurrency
-  # so a stale tab cannot overwrite newer work from another tab or device.
-  defp persist_draft(socket, %{saved: true} = draft) do
-    {Drafts.delete(
-       socket.assigns.current_principal,
-       socket.assigns.item,
-       draft.operation,
-       draft[:revision]
-     ), draft}
-  end
-
-  defp persist_draft(socket, draft) do
-    case Drafts.put(socket.assigns.current_principal, socket.assigns.item, draft) do
-      {:ok, revision} -> {:ok, Map.put(draft, :revision, revision)}
-      {:conflict, stored} -> {{:conflict, stored}, draft}
-      {:error, reason} -> {{:error, reason}, draft}
-    end
-  end
-
-  defp draft_content(draft), do: Map.take(draft, [:fields, :targets, :versions, :operation])
-  defp draft_error?(nil), do: false
-  defp draft_error?(draft), do: not is_nil(draft.persistence_error)
-
-  defp persisted?(:ok), do: true
-  defp persisted?(_other), do: false
-
-  defp persistence_message(:ok, _draft), do: nil
-
-  defp persistence_message({:conflict, _stored}, _draft),
-    do:
-      "Draft was changed in another tab or device. Your edits are kept only in this tab. Copy them before reloading to load the saved draft."
-
-  defp persistence_message(_error, %{saved: true}),
-    do:
-      "Decision committed, but draft cleanup failed. Its original operation is preserved; do not repeat the action."
-
-  defp persistence_message(_error, _draft),
-    do: "Draft could not be stored. Keep this tab open and retry; nothing was committed."
-
-  defp renew_saved_draft(socket, changes) do
-    draft = socket.assigns.draft
-
-    changed =
-      Map.take(Map.merge(draft, changes), [:fields, :targets]) !=
-        Map.take(draft, [:fields, :targets])
-
-    if draft.saved and changed do
-      %{
-        draft
-        | saved: false,
-          operation: Ecto.UUID.generate(),
-          stale: false,
-          versions: Map.new(socket.assigns.row.scopes, &{&1.id, &1.fingerprint})
-      }
-    else
-      draft
-    end
-  end
-
-  defp valid_views?(params) do
-    Enum.all?(
-      [
-        {"page", @pages},
-        {"mode", ~w(active all history needs urgent unknown accepted progress fixed)},
-        {"tab", ~w(summary assets history evidence)},
-        {"sort", ~w(priority age)},
-        {"severity", ~w(CRITICAL HIGH MEDIUM LOW)}
-      ],
-      fn {key, allowed} -> params[key] in [nil, ""] or params[key] in allowed end
-    ) and valid_focus_target?(params["focus_target"])
-  end
-
-  defp valid_focus_target?(nil), do: true
-  defp valid_focus_target?(""), do: true
-
-  defp valid_focus_target?(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {id, ""} when id > 0 -> true
-      _ -> false
-    end
-  end
-
-  defp valid_focus_target?(_value), do: false
 
   defp exact_target_page(page, %{"focus_target" => value}) when value != "" do
     target? = page.row && Enum.any?(page.row.scopes, &(to_string(&1.id) == value))
@@ -1074,15 +420,15 @@ defmodule TriageWeb.WorkspaceLive do
 
   def handle_info({:classification_changed, cve}, socket) do
     if socket.assigns.row && socket.assigns.row.cve == cve,
-      do: {:noreply, load_classification(socket)},
+      do: {:noreply, Review.load_classification(socket)},
       else: {:noreply, socket}
   end
 
   def handle_info(:classification_tick, socket) do
-    Process.send_after(self(), :classification_tick, 2_000)
+    socket = assign(socket, classification_tick: false)
 
     if socket.assigns.ai_assessing,
-      do: {:noreply, load_classification(socket)},
+      do: {:noreply, Review.load_classification(socket)},
       else: {:noreply, socket}
   end
 
@@ -1101,7 +447,7 @@ defmodule TriageWeb.WorkspaceLive do
         )
 
       socket = if socket.assigns.item == cve, do: assign(socket, draft: draft), else: socket
-      {:noreply, load_classification(socket)}
+      {:noreply, Review.load_classification(socket)}
     else
       drafts =
         if draft && draft.saved,
@@ -1118,224 +464,14 @@ defmodule TriageWeb.WorkspaceLive do
       else: {:noreply, socket}
   end
 
-  defp action_message(cve, %{"action" => "fixed"}),
-    do: "#{cve} reported fixed · deployment verification still needed"
-
-  defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}),
-    do: "#{cve} whitelisted until #{date}"
-
-  defp action_message(cve, _), do: "#{cve}: Azure DevOps ticket created — in progress"
-
-  defp commit(socket) do
-    %{draft: draft, item: cve} = socket.assigns
-
-    case Commit.save(
-           cve,
-           draft.targets,
-           draft.versions,
-           draft.operation,
-           draft.fields,
-           socket.assigns.current_principal
-         ) do
-      {:ok, _decisions} ->
-        toast_id = System.unique_integer([:positive])
-        Process.send_after(self(), {:dismiss_action_toast, toast_id}, 4000)
-
-        socket =
-          socket
-          |> update_draft(%{saved: true})
-          |> assign(
-            confirmation: nil,
-            action_toast: %{
-              id: toast_id,
-              action: draft.fields["action"],
-              text: action_message(cve, draft.fields)
-            },
-            params: Map.put(socket.assigns.params, "item", cve),
-            message: nil
-          )
-          |> load()
-          |> push_event("workspace-draft-cleared", %{})
-
-        socket
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        assign(socket,
-          confirmation: nil,
-          error: "Save failed. Your draft is unchanged.",
-          decision_form: to_form(changeset, as: :decision)
-        )
-
-      {:error, {kind, id}}
-      when kind in [:reconciliation_required, :operation_pending, :finalization_conflict] ->
-        pending_ticket(socket, id, kind)
-
-      {:error, {:ticket, message}} ->
-        assign(socket, error: message)
-
-      {:error, :past_date} ->
-        assign(socket,
-          confirmation: nil,
-          error: "Choose today or a future date (UTC). Your draft is unchanged."
-        )
-
-      {:error, {:dismissal_basis_invalid, _id, state}} ->
-        assign(socket,
-          confirmation: nil,
-          error:
-            "Exposure evidence is #{state} for a selected target; review the evidence before accepting risk. Your draft is unchanged."
-        )
-
-      {:error, _} ->
-        assign(socket,
-          confirmation: nil,
-          error:
-            "Evidence or a decision changed. Nothing was saved. Reload and review current evidence; your draft is unchanged."
-        )
-    end
-  end
-
-  def workspace_path(params, changes \\ %{}) do
-    query =
-      params
-      |> Map.merge(changes)
-      |> Map.take(@keys)
-      |> Map.filter(fn {_k, v} -> is_binary(v) and v != "" end)
-      |> URI.encode_query()
-
-    "/?" <> query
-  end
-
-  defp pending_ticket(socket, id, kind) do
-    pending =
-      operation_summary(id, socket) || %{id: id, state: "blocked", marker: nil, ticket_url: nil}
-
-    message =
-      case kind do
-        :finalization_conflict ->
-          "Azure ticket exists, but local evidence changed. Review current exact targets before finalizing the existing operation."
-
-        :operation_pending ->
-          "A ticket operation already claims these targets. Its original reviewer or an administrator must reconcile it."
-
-        _ ->
-          "Azure creation outcome is not yet confirmed. The durable operation is preserved. Reconcile it; never create a replacement ticket."
-      end
-
-    assign(socket,
-      pending_operation: pending,
-      ticket_evidence: nil,
-      confirmation: nil,
-      error: message
-    )
-  end
-
-  defp finish_reconciliation(socket, {:ok, _decisions}) do
-    socket
-    |> update_draft(%{saved: true})
-    |> assign(
-      pending_operation: nil,
-      ticket_evidence: nil,
-      confirmation: nil,
-      stale_cves: MapSet.delete(socket.assigns.stale_cves, socket.assigns.item),
-      message: "Existing Azure operation reconciled. No additional ticket was created."
-    )
-    |> load()
-    |> push_event("workspace-draft-cleared", %{})
-  end
-
-  defp finish_reconciliation(socket, {:error, {kind, id}})
-       when kind in [:reconciliation_required, :operation_pending, :finalization_conflict],
-       do: pending_ticket(socket, id, kind)
-
-  defp finish_reconciliation(socket, _),
-    do:
-      assign(socket,
-        error:
-          "Operation remains unresolved. Only its original reviewer or an administrator can reconcile; no replacement was created."
-      )
-
-  def nav_path(params, "timeline"),
-    do:
-      TimelineFilters.path(TimelineFilters.defaults(), %{
-        owner: params["team"],
-        environment: params["environment"]
-      })
-
-  def nav_path(params, "exceptions"),
-    do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => "exceptions"})
-
-  def nav_path(params, page),
-    do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => page})
-
-  defp nav_active?("findings", page), do: page in ~w(findings review)
-  defp nav_active?(nav_page, page), do: nav_page == page
-
-  def drill(params, mode, extra \\ %{}),
-    do:
-      workspace_path(
-        Map.take(params, ~w(team environment)),
-        Map.merge(
-          %{"page" => if(mode == "needs", do: "review", else: "inventory"), "mode" => mode},
-          extra
-        )
-      )
-
-  def review_path(params, cve),
-    do:
-      workspace_path(params, %{"page" => "review", "item" => cve, "inspect" => nil, "tab" => nil})
-
-  defp maybe_load_news(socket) do
-    if socket.assigns.can_review and socket.assigns.page == "news" and connected?(socket) and
-         not socket.assigns.news_started,
-       do: start_news(socket),
-       else: socket
-  end
-
-  defp start_news(socket) do
-    socket
-    |> assign(
-      news_started: true,
-      news_cves_loading: true,
-      news_headlines_loading: true,
-      news_cves_error: nil,
-      news_headlines_error: nil
-    )
-    |> start_async(:news_cves, fn -> Triage.SecurityNews.critical() end)
-    |> start_async(:news_headlines, fn -> Triage.SecurityNews.headlines() end)
-  end
-
   @impl true
-  def handle_async(:news_cves, {:ok, {:ok, result}}, socket),
-    do: {:noreply, assign(socket, news_cves: result, news_cves_loading: false)}
+  def handle_async(name, result, socket), do: News.handle_async(name, result, socket)
 
-  def handle_async(:news_headlines, {:ok, {:ok, result}}, socket),
-    do: {:noreply, assign(socket, news_headlines: result, news_headlines_loading: false)}
-
-  def handle_async(:news_cves, result, socket),
-    do: {:noreply, assign(socket, news_cves_loading: false, news_cves_error: news_error(result))}
-
-  def handle_async(:news_headlines, result, socket),
-    do:
-      {:noreply,
-       assign(socket, news_headlines_loading: false, news_headlines_error: news_error(result))}
-
-  def handle_async(:manual_fetch, {:ok, {:ok, row}}, socket),
-    do: {:noreply, assign(socket, manual_loading: false, manual_preview: row)}
-
-  def handle_async(:manual_fetch, {:ok, {:error, error}}, socket),
-    do: {:noreply, assign(socket, manual_loading: false, manual_error: error)}
-
-  def handle_async(:manual_fetch, {:exit, _}, socket),
-    do:
-      {:noreply,
-       assign(socket,
-         manual_loading: false,
-         manual_error: "NVD request failed. Please try again."
-       )}
-
-  defp news_error({:ok, {:error, message}}) when is_binary(message), do: message
-  defp news_error(_), do: "Source could not be refreshed. Please try again."
+  # Kept for existing callers (redirects, components); see `Params`.
+  defdelegate workspace_path(params, changes \\ %{}), to: Params
+  defdelegate nav_path(params, page), to: Params
+  defdelegate drill(params, mode, extra \\ %{}), to: Params
+  defdelegate review_path(params, cve), to: Params
 
   @impl true
   def render(assigns) do
@@ -1390,7 +526,7 @@ defmodule TriageWeb.WorkspaceLive do
           <span class="scope-label">Public intelligence</span><span>Global CVE news · Independent of your inventory</span>
         </div>
         <div :if={@page in ~w(exceptions daily)} id="workspace-history-scope" class="scopebar">
-          <span class="scope-label">History</span><span>{history_scope_label(@page, @params)}</span>
+          <span class="scope-label">History</span><span>{Params.history_scope_label(@page, @params)}</span>
           <span class="dataset"><span class="tag">{if @page == "exceptions",
             do: "Risk decision history",
             else: "Detections & actions"}</span></span>
@@ -1580,8 +716,8 @@ defmodule TriageWeb.WorkspaceLive do
           />
           <TriageWeb.SecurityNewsComponents.panel :if={@page == "news"} {assigns} />
           <.exceptions_register
-            :if={@page == "exceptions"}
-            decisions={@exception_decisions}
+            :if={@page == "exceptions" and @risk_history}
+            history={@risk_history}
             params={@params}
           />
         </main>
@@ -1600,73 +736,15 @@ defmodule TriageWeb.WorkspaceLive do
         draft={@draft}
         error={@error}
       />
-      <dialog
+      <.research_dialog
         :if={@manual_open}
-        id="manual-cves"
-        class="confirm manual-cves"
-        phx-hook="WorkspaceDialog"
-        data-close-event="manual-close"
-        aria-labelledby="manual-title"
-      >
-        <div class="confirmation-layout">
-          <header class="modal-head">
-            <h2 id="manual-title">Add CVE · Research list</h2>
-          </header>
-          <div class="modal-body">
-            <div class="panel-body">
-              <p class="muted">
-                Paste a CVE ID to fetch its description from NVD. Saved research CVEs do not count as affected inventory.
-              </p>
-              <.form
-                for={@manual_form}
-                id="manual-cve-form"
-                phx-submit="manual-fetch"
-                class="manual-cve-form"
-              >
-                <.input
-                  field={@manual_form[:cve]}
-                  label="CVE number"
-                  placeholder="CVE-2024-3094"
-                  required
-                  maxlength="40"
-                  disabled={@manual_loading}
-                />
-                <button type="submit" disabled={@manual_loading}>{if @manual_loading,
-                  do: "Fetching…",
-                  else: "Fetch from NVD"}</button>
-              </.form>
-              <p :if={@manual_error} id="manual-cve-error" class="form-error" role="alert">
-                {@manual_error}
-              </p>
-              <div :if={@manual_preview} id="manual-cve-preview">
-                <h3>{@manual_preview.external_id}</h3>
-                <p>{@manual_preview.summary}</p>
-                <p>
-                  <a
-                    href={"https://nvd.nist.gov/vuln/detail/" <> @manual_preview.external_id}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >Source: NVD</a>
-                </p>
-                <button :if={@can_review} id="manual-cve-save" phx-click="manual-save">Save to research list</button>
-              </div>
-            </div>
-            <div :if={@manual_cves != []} class="panel-body" id="manual-cve-list">
-              <details :for={cve <- @manual_cves} id={"research-#{cve.external_id}"}>
-                <summary>{cve.external_id}</summary>
-                <p>{cve.summary}</p>
-                <a
-                  href={"https://nvd.nist.gov/vuln/detail/" <> cve.external_id}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >Source: NVD</a>
-                <span class="muted"> · Fetched {time(cve.fetched_at)}</span>
-              </details>
-            </div>
-          </div>
-          <footer class="modal-foot"><button phx-click="manual-close">Close</button></footer>
-        </div>
-      </dialog>
+        form={@manual_form}
+        loading={@manual_loading}
+        error={@manual_error}
+        preview={@manual_preview}
+        cves={@manual_cves}
+        can_review={@can_review}
+      />
       <.settings_dialog :if={@settings} />
     </Layouts.app>
     """

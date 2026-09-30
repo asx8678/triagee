@@ -37,7 +37,7 @@ mise install
 # Start your local PostgreSQL service if needed.
 mise x -- mix setup
 mise x -- mix phx.server
-# http://127.0.0.1:4000
+# http://127.0.0.1:4005
 ```
 
 `mix setup` fetches dependencies, creates/migrates `triage_dev`, loads the offline
@@ -148,30 +148,23 @@ uses the separate [review actions](docs/REVIEW_ACTIONS.md) workflow and `ADO_*`
 configuration. Decision history
 also remains in the CVE inspector.
 
-## Historical workflows (retired screen URLs)
+## Retired screens
 
-The following describes the previous UI and retained backend capabilities, not
-additional currently accessible screens.
+The earlier standalone screens (Findings, CVE details, Action required, Guided
+review, Cases, Exceptions, What's new, Intel, Statistics, Replay, Imports and the
+separate classifier) have been removed. Their URLs (`/findings`, `/cves/:id`,
+`/triage`, `/cases`, `/whats-new`, `/intel`, `/statistics`, `/replay`, `/imports`,
+`/classifier`, ...) redirect into the matching workspace page and keep team,
+environment, search and severity filters. Their history remains in Git.
 
-- **Findings / CVE details:** inspect recorded inventory, scope, lifecycle and
-  cached intelligence. Unknown exposure is not evidence of safety.
-- **Action required (`/triage`):** pages scan 25 candidate CVEs in descending review-priority
-  order, with ascending CVE as the tie-breaker. Counts are page-local. Covered/ticketed candidates may leave an empty
-  page with a **Next page** link; continue until no next page remains. Details
-  load independently of the current page. **First page** resets the cursor.
-- **Guided review:** understand the CVE, verify teams/exposure, assess risk and
-  confirm an action. Local remediation planning creates no external ticket.
-- **Cases / previous assessments:** explicitly open scoped cases; evidence is
-  frozen and append-only. Review submissions bind to the case revision and
-  snapshot. Refresh evidence explicitly after source changes.
-- **Timeline (`/timeline`):** displays recorded history, with guided-review links
-  for actionable displayed CVEs, independently of action-queue pagination.
-- **Replay (`/replay`, `/replay/history`):** run a synthetic replay without changing
-  inventory; save a summary only when requested. See [PR7_CLI.md](PR7_CLI.md)
-  and [PR7_HISTORY.md](PR7_HISTORY.md).
-- **Imports (`/imports`):** preview an approved historical snapshot, then review
-  and explicitly confirm. Apply rechecks evidence under the import lock;
-  changed previews must be uploaded again. See [Domain/API guide](docs/DOMAIN_API.md#approved-historical-snapshot-import).
+The backend capabilities stay available without those screens:
+
+- **Cases:** scoped, frozen, append-only case evidence (`lib/triage/cases.ex`).
+- **Replay:** `mix triage.replay` runs a synthetic replay without changing
+  inventory. See [PR7_CLI.md](PR7_CLI.md) and [PR7_HISTORY.md](PR7_HISTORY.md).
+- **Imports:** `mix triage.import` previews an approved historical snapshot and
+  applies it only on explicit confirmation. See the
+  [Domain/API guide](docs/DOMAIN_API.md#approved-historical-snapshot-import).
 
 ### Decision policy
 
@@ -251,6 +244,12 @@ not a substitute for database-backed verification.
 - `lib/triage/cases/queue.ex`: read-only case projections and pagination.
 - `lib/triage/cases/evidence.ex`: canonical evidence payloads and stable hashes.
 - `lib/triage_web/live/`: UI state, navigation and explicit confirmations.
+- `lib/triage_web/live/workspace_live.ex`: the single workspace LiveView (routing,
+  shared state, page shell). Page behaviour lives in plain modules under
+  `workspace_live/`: `params.ex` (URLs and page names), `review.ex` (drafts,
+  decisions, tickets, classification) and `news.ex` (news and research list).
+- `dev/`: demo seeds and `mix triage.demo`, compiled in dev/test but never shipped
+  in production releases.
 
 ## Assets and reference data
 

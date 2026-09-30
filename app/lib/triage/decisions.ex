@@ -273,6 +273,22 @@ defmodule Triage.Decisions do
     |> Enum.map(&decorate(&1, DateTime.utc_now()))
   end
 
+  @doc """
+  Whitelist and not-affected decisions recorded in the `days` before `now`
+  (inclusive, never future ones), newest first. Older replacements stay listed.
+  """
+  @spec risk_register(DateTime.t(), pos_integer()) :: [map()]
+  def risk_register(now \\ DateTime.utc_now(), days \\ 365) do
+    from(d in Decision,
+      where:
+        d.decision in ["accepted_risk", "not_affected"] and
+          d.decided_at >= ^DateTime.add(now, -days, :day) and d.decided_at <= ^now,
+      order_by: [desc: d.decided_at, desc: d.id]
+    )
+    |> Repo.all()
+    |> Enum.map(&decorate(&1, now))
+  end
+
   @doc "`true` only when the decision still covers its advisory."
   @spec active?(map()) :: boolean()
   def active?(%{state: :active}), do: true

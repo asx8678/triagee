@@ -1,7 +1,7 @@
 defmodule TriageWeb.LegacyRouteCutoverTest do
   @moduledoc """
-  Public-route assertions deliberately use the real endpoint, never LegacyUICase.
-  The legacy harness preserves component/domain coverage, not public availability.
+  Retired screen URLs must redirect into the single workspace. The retired
+  LiveViews themselves have been deleted; only these bookmarks remain.
   """
   use TriageWeb.ConnCase, async: true
 
@@ -66,7 +66,7 @@ defmodule TriageWeb.LegacyRouteCutoverTest do
            }
   end
 
-  test "production mounts only workspace LiveViews, never the legacy test router" do
+  test "production mounts only workspace LiveViews" do
     routes = Phoenix.Router.routes(TriageWeb.Router)
     live_routes = Enum.filter(routes, &(&1.plug == Phoenix.LiveView.Plug))
 
@@ -80,44 +80,11 @@ defmodule TriageWeb.LegacyRouteCutoverTest do
       assert {TriageWeb.WorkspaceLive, _, _, _} = route.metadata.phoenix_live_view
     end
 
-    refute Enum.any?(routes, &(&1.plug == TriageWeb.LegacyUIRouter))
-
     for {path, _destination} <- @retired do
       info = Phoenix.Router.route_info(TriageWeb.Router, "GET", path, "www.example.com")
       assert info.plug == TriageWeb.WorkspaceRedirectController
       assert info.plug_opts == :show
     end
-  end
-
-  test "legacy harness keeps the complete retired LiveView route map only for regression tests" do
-    expected = %{
-      "/" => TriageWeb.FindingLive.Index,
-      "/findings" => TriageWeb.FindingLive.Index,
-      "/findings/:id" => TriageWeb.FindingLive.Show,
-      "/cves/:id" => TriageWeb.CveLive.Show,
-      "/triage" => TriageWeb.GuidedReviewLive,
-      "/triage/history" => TriageWeb.TriageLive,
-      "/triage/:cve" => TriageWeb.GuidedReviewLive,
-      "/cases" => TriageWeb.CaseLive.Index,
-      "/cases/:id" => TriageWeb.CaseLive.Show,
-      "/cases/:id/exception" => TriageWeb.ExceptionLive,
-      "/whats-new" => TriageWeb.WhatsNewLive,
-      "/timeline" => TriageWeb.TimelineLive,
-      "/intel" => TriageWeb.IntelLive,
-      "/statistics" => TriageWeb.StatisticsLive,
-      "/imports" => TriageWeb.ImportLive,
-      "/replay" => TriageWeb.ReplayLive,
-      "/replay/history" => TriageWeb.ReplayHistoryLive
-    }
-
-    actual =
-      Map.new(Phoenix.Router.routes(TriageWeb.LegacyUIRouter), fn route ->
-        assert route.plug == Phoenix.LiveView.Plug
-        {view, _, _, _} = route.metadata.phoenix_live_view
-        {route.path, view}
-      end)
-
-    assert actual == expected
   end
 
   defp redirected_query(conn, path) do

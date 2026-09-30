@@ -2,8 +2,8 @@ defmodule Triage.ReportingTest do
   use Triage.DataCase, async: false
 
   import Triage.Fixtures
-  alias Triage.{Reporting, Repo, Workspace}
   alias Triage.Decisions.Decision
+  alias Triage.{Repo, Reporting, Workspace}
 
   @now ~U[2026-09-23 12:00:00Z]
   @all %{token_id: 1, user_id: 1, label: "test", grants: :all}

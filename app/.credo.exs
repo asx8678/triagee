@@ -5,6 +5,11 @@
     %{
       name: "default",
       strict: true,
+      # dev/ holds the demo seeds, compiled everywhere except production.
+      files: %{
+        included: ["lib/", "dev/", "src/", "test/", "web/"],
+        excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
+      },
       checks: %{
         # `enabled` replaces Credo's defaults; `extra` merges these overrides.
         extra: [
@@ -36,13 +41,8 @@
                "lib/triage/reference_data.ex",
                "lib/triage/replay.ex",
                "lib/triage/replay/runs.ex",
-               "lib/triage/seeds.ex",
+               "dev/triage/seeds.ex",
                "lib/triage_web/finding_filters.ex",
-               "lib/triage_web/live/case_live/show.ex",
-               "lib/triage_web/live/exception_live.ex",
-               "lib/triage_web/live/finding_live/show.ex",
-               "lib/triage_web/live/import_live.ex",
-               "lib/triage_web/live/replay_live.ex",
                "test/triage/import_concurrency_test.exs"
              ]
            ]},
@@ -61,8 +61,6 @@
                "lib/triage/inventory.ex",
                "lib/triage/replay.ex",
                "lib/triage/risk.ex",
-               "lib/triage_web/live/case_live/show.ex",
-               "lib/triage_web/live/replay_live.ex",
                "test/support/fake_source.ex"
              ]
            ]}

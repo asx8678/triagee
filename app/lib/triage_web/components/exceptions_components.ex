@@ -4,14 +4,11 @@ defmodule TriageWeb.ExceptionsComponents do
   alias Triage.RiskDecisionHistory
   alias TriageWeb.WorkspaceLive, as: Routes
 
-  attr :decisions, :list, required: true
+  attr :history, :map, required: true, doc: "a `RiskDecisionHistory.build/3` result"
   attr :params, :map, required: true
 
   def exceptions_register(assigns) do
-    history = RiskDecisionHistory.build(assigns.decisions, assigns.params)
-
-    assigns =
-      assign(assigns, history: history, filter_form: to_form(history.filters, as: :risk_filters))
+    assigns = assign(assigns, filter_form: to_form(assigns.history.filters, as: :risk_filters))
 
     ~H"""
     <section class="risk-decisions" id="exceptions-register" aria-labelledby="exceptions-title">

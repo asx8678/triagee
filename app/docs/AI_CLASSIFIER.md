@@ -141,6 +141,6 @@ reasoning was collapsed with the complete explanation still available.
 
 No operational decision, SCM action or Azure request was made. Compilation,
 formatting and diff integrity passed. Strict Credo retains only the unrelated
-pre-existing nesting warning in `lib/triage/seeds/timeline_samples.ex:23`.
+former nesting warning in `dev/triage/seeds/timeline_samples.ex` (since resolved).
 Contour does not cover these Elixir changes; its empty findings are not used as
 correctness evidence.

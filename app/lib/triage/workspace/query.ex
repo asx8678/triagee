@@ -70,6 +70,31 @@ defmodule Triage.Workspace.Query do
     }
   end
 
+  @doc """
+  Scalar metrics, team counts and scope options only, from the same single SQL
+  aggregate as `page/2`. Hydrates no evidence, so pages that list no CVEs
+  (history, news, the observation chart) avoid the per-target projection.
+  """
+  def summary(params, now) do
+    result = query_result(Map.take(params, ~w(team environment)), "active", 0, now)
+
+    %{
+      page_rows: [],
+      total: 0,
+      metrics: metrics(result["metrics"]),
+      teams: Enum.map(result["teams"], &%{name: &1["name"], metrics: metrics(&1)}),
+      options: Workspace.options(),
+      mode: "active",
+      offset: 0,
+      item: nil,
+      row: nil,
+      targets: [],
+      matching: [],
+      inspector: nil,
+      inspector_targets: []
+    }
+  end
+
   defp query_result(params, mode, offset, now) do
     args = [
       params["team"] || "",

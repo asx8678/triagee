@@ -1,12 +1,15 @@
 defmodule TriageWeb.TimelineLiveTest do
   @moduledoc """
-  End-to-end tests for the read-only CVE timeline LiveView.
+  End-to-end tests for the read-only CVE observation timeline at `/timeline`
+  (rendered by `TriageWeb.TimelineLive` inside the workspace).
 
   Fixtures are dated relative to today, and every test starts from an empty
   inventory, so a count assertion can only be satisfied by the rows the test
   itself created.
   """
-  use TriageWeb.LegacyUICase, async: false
+  use TriageWeb.ConnCase, async: false
+
+  @moduletag authenticated: :viewer
 
   import Phoenix.LiveViewTest
   import Triage.Fixtures
@@ -280,7 +283,6 @@ defmodule TriageWeb.TimelineLiveTest do
       {:ok, view, html} = live(conn, ~p"/timeline")
       document = LazyHTML.from_document(html)
 
-      assert has_element?(view, "#nav-timeline[aria-current='page']")
       assert has_element?(view, "#tl-summary")
       assert has_element?(view, "#tl-bands")
       assert has_element?(view, "#tl-lanes-table")
@@ -434,19 +436,6 @@ defmodule TriageWeb.TimelineLiveTest do
       assert render(view) =~ "outside the selected window"
       # The finding has no in-window observation, so it is not a lane row.
       refute has_element?(view, "#tl-lane-CVE-2026-5099")
-    end
-
-    test "the team filter patches the window and keeps rendering rows", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/timeline")
-
-      view
-      |> form("#timeline-form", %{"owner" => "alpha"})
-      |> render_change()
-
-      # The form submits every field, so the patched URL states the whole view
-      # rather than only the field that changed.
-      assert_patch(view, "/timeline?owner=alpha&weeks=12")
-      assert has_element?(view, "#tl-lane-CVE-2026-5001")
     end
 
     test "the window size changes the number of bands", %{conn: conn} do

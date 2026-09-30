@@ -2,8 +2,7 @@ defmodule Triage.ReportingTokensTest do
   use Triage.DataCase, async: true
 
   import TriageWeb.ConnCase, only: [account_fixture: 1]
-  alias Triage.Accounts.ReportingTokens
-  alias Triage.Accounts.{ReportingToken, ReportingTokenScope, User}
+  alias Triage.Accounts.{ReportingToken, ReportingTokens, ReportingTokenScope, User}
 
   test "tokens are hashed, expiring, revocable and preserve exact scope pairs" do
     user = account_fixture(:viewer)

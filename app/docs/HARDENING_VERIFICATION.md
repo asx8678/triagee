@@ -51,7 +51,9 @@ Detailed local logs: `/tmp/triage-hardening.VqSBGq/`, notably
 
 Earlier failures were classified rather than ignored: legacy UI assertions run
 through a **test-only** endpoint/router while production cutover tests retain the
-actual authenticated redirect contract. Current manual-CVE/news/asset tests use
+actual authenticated redirect contract. (Later, the retired screens, that test-only
+endpoint/router and the tests that exercised only those screens were removed;
+the redirect contract tests remain.) Current manual-CVE/news/asset tests use
 the production endpoint. No failing test was wholesale removed or disabled. Query
 coverage tests compare SQL output with the original pure projection, including
 exact evidence-hash bytes, expiry, Unicode, large IDs and scoped/global decisions.

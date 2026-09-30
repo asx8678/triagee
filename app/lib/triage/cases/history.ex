@@ -49,7 +49,7 @@ defmodule Triage.Cases.History do
   end
 
   # Rank in SQL, not after loading all histories. The textual id tiebreak
-  # preserves CaseLive.Format.timeline_entries/1 ordering within each stream.
+  # preserves TriageWeb.CaseFormat.timeline_entries/1 ordering within each stream.
   defp latest(schema, fields, ids) do
     ranked =
       from(r in schema,

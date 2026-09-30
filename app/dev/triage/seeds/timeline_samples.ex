@@ -19,16 +19,16 @@ defmodule Triage.Seeds.TimelineSamples do
         # Serialize repeated seed runs, including the existence check.
         Repo.query!("SELECT pg_advisory_xact_lock(2099, 9028)")
 
-        for {cve, package, severity, detected, action, acted, cleared} <- @samples do
-          unless Repo.exists?(from(f in Inventory.Finding, where: f.cve == ^cve)) do
-            add_sample!(cve, package, severity, detected, action, acted, cleared)
-          end
-        end
-
-        :ok
+        Enum.each(@samples, &add_missing_sample!/1)
       end)
 
     :ok
+  end
+
+  defp add_missing_sample!({cve, package, severity, detected, action, acted, cleared}) do
+    unless Repo.exists?(from(f in Inventory.Finding, where: f.cve == ^cve)) do
+      add_sample!(cve, package, severity, detected, action, acted, cleared)
+    end
   end
 
   defp add_sample!(cve, package, severity, detected, action, acted, cleared) do

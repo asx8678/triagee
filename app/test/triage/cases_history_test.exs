@@ -3,7 +3,7 @@ defmodule Triage.CasesHistoryTest do
   import Triage.Fixtures
   alias Triage.Cases
   alias Triage.Cases.History
-  alias TriageWeb.CaseLive.Format
+  alias TriageWeb.CaseFormat, as: Format
 
   setup do
     Triage.DataCase.reset_inventory!()

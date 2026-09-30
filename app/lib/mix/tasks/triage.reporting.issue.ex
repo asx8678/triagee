@@ -1,6 +1,11 @@
 defmodule Mix.Tasks.Triage.Reporting.Issue do
   use Mix.Task
 
+  @moduledoc """
+  Issues one read-only reporting token. Every input comes from `TRIAGE_REPORTING_*`
+  environment variables so no secret appears in shell history; see docs/GRAFANA_API.md.
+  """
+
   @shortdoc "Issue one read-only reporting token from protected environment variables"
 
   @impl true

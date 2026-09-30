@@ -7,7 +7,9 @@ defmodule TriageWeb.TimelineReadabilityTest do
   presented as a local action, and a picture must never be the only carrier of
   meaning.
   """
-  use TriageWeb.LegacyUICase, async: false
+  use TriageWeb.ConnCase, async: false
+
+  @moduletag authenticated: :viewer
 
   import Triage.Fixtures
 

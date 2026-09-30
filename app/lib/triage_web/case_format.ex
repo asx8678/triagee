@@ -1,11 +1,10 @@
-defmodule TriageWeb.CaseLive.Format do
+defmodule TriageWeb.CaseFormat do
   @moduledoc """
-  Pure view-model formatting for the review case detail.
+  Pure view-model formatting for saved review cases.
 
   A frozen snapshot payload is normalized into plain display maps, and every
   stored value degrades to a visible placeholder instead of crashing a
-  template. Shared by `TriageWeb.CaseLive.Show` and its section components, so
-  how a stored value is displayed has one definition rather than two.
+  template. Used by the observation timeline's case history.
   """
 
   # The frozen snapshot payload is normalized into a plain display map so the
