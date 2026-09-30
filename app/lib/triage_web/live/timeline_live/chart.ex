@@ -321,16 +321,39 @@ defmodule TriageWeb.TimelineLive.Chart do
         </figcaption>
       </figure>
 
-      <p id="tl-chart-key" class="supporting">
-        Red dots record detection; the black line behind them carries the open state through
-        today. Every lane starts with a detection — a red dot at the window edge marks a CVE
-        detected before the window. Black dots record a whitelist decision and every observation
-        day it covers; the grey line behind the black dot runs while all displayed placements
-        stay whitelisted until expiry or a superseding decision. Partial whitelists do not grey
-        the whole CVE, and lane backgrounds stay white unless a whitelist or fix colors them.
-        Green dots record disappearance, not a verified fix. Missing observations do not prove
-        safety or continuous exposure.
-      </p>
+      <div id="tl-chart-key" class="tl-legend">
+        <ul aria-label="Chart key">
+          <li>
+            <svg viewBox="0 0 16 12" aria-hidden="true">
+              <g class="tl-c-point tl-c-open"><circle class="tl-c-chip" cx="8" cy="6" r="4" /></g>
+            </svg>Detected
+          </li>
+          <li>
+            <svg viewBox="0 0 28 12" aria-hidden="true">
+              <line class="tl-c-seg tl-c-seg-solid tl-c-open" x1="2" y1="6" x2="26" y2="6" />
+            </svg>Open through today
+          </li>
+          <li>
+            <svg viewBox="0 0 28 12" aria-hidden="true">
+              <line class="tl-c-seg tl-c-seg-solid tl-c-whitelisted" x1="2" y1="6" x2="26" y2="6" />
+              <g class="tl-c-whitelisted"><circle class="tl-c-chip" cx="6" cy="6" r="4" /></g>
+            </svg>Whitelisted
+          </li>
+          <li>
+            <svg viewBox="0 0 16 12" aria-hidden="true">
+              <g class="tl-c-point tl-c-ended"><circle class="tl-c-chip" cx="8" cy="6" r="4" /></g>
+            </svg>No longer detected
+          </li>
+          <li>
+            <svg viewBox="0 0 12 16" aria-hidden="true">
+              <line class="tl-c-today" x1="6" y1="1" x2="6" y2="15" />
+            </svg>Today
+          </li>
+        </ul>
+        <p class="supporting">
+          A detection at the left edge means the CVE was found before this window. A lane turns grey only when every displayed deployment is whitelisted, and "no longer detected" is a recorded scan result, not verified remediation.
+        </p>
+      </div>
     </section>
     """
   end

@@ -6,20 +6,17 @@ defmodule TriageWeb.SessionHTML do
     <Layouts.app flash={@flash} workspace={true}>
       <div id="login-page" class="auth-shell">
         <a href="#main-content" class="skip-link">Skip to sign in</a>
-        <header class="auth-header">
-          <img
-            src={~p"/images/triage-wordmark-v2.png"}
-            width="240"
-            height="35"
-            class="auth-logo"
-            alt="PTV Triage"
-          />
-        </header>
         <main id="main-content" class="auth-main" tabindex="-1">
+          <div class="auth-brand">
+            <svg aria-hidden="true" viewBox="0 0 32 32">
+              <path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3" />
+              <path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3" />
+            </svg>
+            <span>PTV Triage</span>
+          </div>
           <section id="login-panel" class="panel auth-panel" aria-labelledby="login-heading">
             <div class="auth-intro">
-              <p class="auth-eyebrow">Vulnerability review</p>
-              <h1 id="login-heading">Sign in</h1>
+              <h1 id="login-heading">Sign in to review vulnerabilities</h1>
               <p class="muted">
                 {if @skip_login?,
                   do: "Continue with a local development account, or sign in below.",
@@ -38,9 +35,9 @@ defmodule TriageWeb.SessionHTML do
                   Continue as local user
                 </button>
               </.form>
-              <p id="login-skip-note" class="muted">Development mode · no credentials needed</p>
+              <p id="login-skip-note" class="muted">Development only. No credentials needed.</p>
             </div>
-            <p :if={@skip_login?} class="auth-help muted">Or sign in with an account</p>
+            <p :if={@skip_login?} class="auth-divider"><span>or sign in with an account</span></p>
             <.form
               for={@form}
               id="login-form"
@@ -71,7 +68,7 @@ defmodule TriageWeb.SessionHTML do
             </p>
           </section>
         </main>
-        <footer class="auth-footer">PTV Triage · Authorized access only</footer>
+        <footer class="auth-footer">Authorized access only</footer>
       </div>
     </Layouts.app>
     """

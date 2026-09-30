@@ -58,13 +58,10 @@ defmodule TriageWeb.SecurityNewsComponents do
                     rel="noopener noreferrer"
                   >{row.id}</a><span class="subline">{row.published}</span>
                 </td>
-                <td><span class="red">{row.score}</span></td>
+                <td><span class={["cvss", cvss_class(row.score)]}>{row.score}</span></td>
                 <td>
-                  <details>
-                    <summary>
-                      {String.slice(row.description, 0, 150)}{if String.length(row.description) > 150,
-                        do: "…"}
-                    </summary><p>{row.description}</p>
+                  <details class="news-description">
+                    <summary title="Show the full description">{row.description}</summary>
                   </details>
                 </td>
               </tr>
@@ -110,4 +107,18 @@ defmodule TriageWeb.SecurityNewsComponents do
     </div>
     """
   end
+
+  # CVSS 9.0+ is critical; the list only holds critical scores, but the class
+  # follows the value rather than assuming it.
+  defp cvss_class(score) when is_number(score) and score >= 9.0, do: "cvss-critical"
+  defp cvss_class(score) when is_number(score) and score >= 7.0, do: "cvss-high"
+
+  defp cvss_class(score) when is_binary(score) do
+    case Float.parse(score) do
+      {value, _} -> cvss_class(value)
+      :error -> nil
+    end
+  end
+
+  defp cvss_class(_score), do: nil
 end
