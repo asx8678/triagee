@@ -49,12 +49,16 @@ defmodule TriageWeb.WorkspaceComponents do
   def overview(assigns) do
     assigns =
       assign(assigns,
-        urgent: assigns.targets |> Workspace.select("urgent") |> Workspace.rows() |> Enum.take(3)
+        urgent: assigns.targets |> Workspace.select("urgent") |> Workspace.rows() |> Enum.take(6),
+        max_active: assigns.teams |> Enum.map(& &1.metrics["active"].value) |> Enum.max(fn -> 0 end)
       )
 
     ~H"""
     <header class="overview-heading">
-      <h1>Overview</h1>
+      <div>
+        <h1>Overview</h1>
+        <p class="page-lede">What needs attention across the deployments in this scope.</p>
+      </div>
       <.link
         :if={@metrics["needs"].value > 0}
         id="start-review"
@@ -72,24 +76,24 @@ defmodule TriageWeb.WorkspaceComponents do
         :for={
           {mode, label, sub, class} <- [
             {"active", "Active CVEs", "Distinct vulnerabilities in this scope", ""},
-            {"needs", "Needs a decision", "Unreviewed or expired decisions", ""},
-            {"urgent", "Immediate priority", "Local review priority · not confirmed exploitation",
+            {"needs", "Needs a decision", "Not yet reviewed, or the decision expired", ""},
+            {"urgent", "Immediate priority", "Highest local review priority, not confirmed exploitation",
              "alert-top"},
-            {"unknown", "Unknown exposure", "Deployment scopes, not CVEs", ""}
+            {"unknown", "Unknown exposure", "Deployments whose exposure is not recorded", ""}
           ]
         }
         id={"metric-#{mode}"}
         class={["metric", class]}
         patch={Routes.drill(@params, mode)}
       >
-        <span class="metric-label">{label}<span aria-hidden="true">↗</span></span>
-        <span class="value">{@metrics[mode].value}</span><span class="sub">{sub}</span>
+        <span class="metric-label">{label}</span>
+        <span class="value metric-value">{@metrics[mode].value}</span><span class="sub">{sub}</span>
       </.link>
     </div>
     <details id="overview-data-note" class="data-note">
       <summary>About these numbers</summary>
       <p>
-        Counts use the latest recorded evidence, not live monitoring. Scan coverage is unverified. Unknown exposure counts deployment scopes; the other totals count distinct CVEs. Priority follows local policy and is not a claim of compromise.
+        Counts use the latest recorded evidence, not live monitoring. Scan coverage is unverified. Unknown exposure counts deployments; the other totals count distinct CVEs. Priority follows local policy and is not a claim of compromise.
       </p>
     </details>
     <div class="dashboard-grid">
@@ -98,11 +102,11 @@ defmodule TriageWeb.WorkspaceComponents do
           <h2 id="ownership-heading">By team</h2><span class="muted small">Active inventory</span>
         </div>
         <div class="table-wrap" tabindex="0" role="region" aria-label="Vulnerabilities by team">
-          <table class="data-table">
+          <table class="data-table team-table">
             <caption class="sr-only">Team counts are not additive</caption>
             <thead>
               <tr>
-                <th>Team</th><th>Active</th><th>Immediate</th><th>Needs decision</th><th>
+                <th>Team</th><th>Active</th><th>Needs decision</th><th>Immediate</th><th>
                   Unknown exposure
                 </th>
               </tr>
@@ -110,33 +114,40 @@ defmodule TriageWeb.WorkspaceComponents do
             <tbody>
               <tr :for={team <- @teams}>
                 <td><span class="team-name">{team_name(team.name)}</span></td>
-                <td>
-                  <.link patch={Routes.drill(@params, "active", %{"team" => team.name})}>{team.metrics[
-                    "active"
-                  ].value}</.link>
-                </td>
-                <td>
-                  <.link class="red" patch={Routes.drill(@params, "urgent", %{"team" => team.name})}>{team.metrics[
-                    "urgent"
-                  ].value}</.link>
+                <td class="team-active">
+                  <.link
+                    class="count-link"
+                    patch={Routes.drill(@params, "active", %{"team" => team.name})}
+                  >{team.metrics["active"].value}</.link><span class="team-bar" aria-hidden="true"><span style={"width: #{bar_width(team.metrics["active"].value, @max_active)}%"}></span></span>
                 </td>
                 <td>
                   <.link
                     id={"team-review-#{team.name}"}
+                    class={["count-link", team.metrics["needs"].value == 0 && "zero"]}
                     patch={Routes.drill(@params, "needs", %{"team" => team.name})}
                   >{team.metrics["needs"].value}</.link>
                 </td>
                 <td>
-                  <.link patch={Routes.drill(@params, "unknown", %{"team" => team.name})}>{team.metrics[
-                    "unknown"
-                  ].value} scopes</.link>
+                  <.link
+                    class={[
+                      "count-link",
+                      if(team.metrics["urgent"].value > 0, do: "urgent-count", else: "zero")
+                    ]}
+                    patch={Routes.drill(@params, "urgent", %{"team" => team.name})}
+                  >{team.metrics["urgent"].value}</.link>
+                </td>
+                <td>
+                  <.link
+                    class={["count-link", team.metrics["unknown"].value == 0 && "zero"]}
+                    patch={Routes.drill(@params, "unknown", %{"team" => team.name})}
+                  >{team.metrics["unknown"].value}</.link>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
         <p class="panel-foot">
-          A CVE can affect more than one team. Team totals cannot be added together.
+          A CVE can affect more than one team, so team totals do not add up to the overall count.
         </p>
       </section>
       <section class="panel priority-findings" aria-labelledby="priority-heading">
@@ -145,25 +156,17 @@ defmodule TriageWeb.WorkspaceComponents do
             Routes.drill(@params, "urgent")
           }>View all</.link>
         </div>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Priority findings">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>CVE / decision</th><th>Package</th><th>Severity</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr :for={row <- @urgent}>
-                <td>
-                  <.link class="cve-link" patch={Routes.review_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{work_status(
-                    row.scopes
-                  )}</span>
-                </td>
-                <td>{row.packages}</td><td><.severity value={row.severity} /></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ul class="priority-list">
+          <li :for={row <- @urgent} class={["priority-item", "sev-#{severity_key(row.severity)}"]}>
+            <div class="priority-main">
+              <.link class="cve-link cve-id" patch={Routes.review_path(@params, row.cve)}>{row.cve}</.link>
+              <span class="priority-package">{row.packages}</span>
+            </div>
+            <div class="priority-side">
+              <.severity value={row.severity} /><span class="subline">{work_status(row.scopes)}</span>
+            </div>
+          </li>
+        </ul>
         <p :if={@urgent == []} class="empty">
           No immediate-priority records in this scope. This is not evidence of safety.
         </p>
@@ -174,6 +177,9 @@ defmodule TriageWeb.WorkspaceComponents do
     </p>
     """
   end
+
+  defp bar_width(_value, 0), do: 0
+  defp bar_width(value, max), do: round(value / max * 100)
 
   attr :rows, :list, required: true
   attr :total, :integer, required: true
@@ -259,9 +265,9 @@ defmodule TriageWeb.WorkspaceComponents do
           }
         >Clear filters</.link>
       </.form>
-      <div :if={@selected != []} class="batchbar" role="status">
+      <div :if={@selected != []} class="batchbar floating" role="status">
         <strong>{length(@selected)} selected</strong><span class="muted">Up to 25 CVEs</span><span class="spacer" />
-        <button id="review-selected" phx-click="review-selected">Review selected</button><button
+        <button id="review-selected" class="primary" phx-click="review-selected">Review selected</button><button
           class="quiet"
           phx-click="clear-selection"
         >Clear selection</button>
@@ -280,8 +286,19 @@ defmodule TriageWeb.WorkspaceComponents do
           </caption>
           <thead>
             <tr>
-              <th>Select</th><th>Advisory / package</th><th>Affected</th><th>Why now</th><th>
-                Next action
+              <th class="select-col"><span class="sr-only">Select</span></th>
+              <th aria-sort={if @params["sort"] != "age", do: "descending", else: "none"}>
+                <.link
+                  class={["sort-link", @params["sort"] != "age" && "sorted"]}
+                  patch={Routes.workspace_path(@params, %{"sort" => nil, "offset" => nil})}
+                >Severity</.link>
+              </th>
+              <th>Advisory / package</th><th>Affected</th><th>Why now</th><th>Next action</th>
+              <th aria-sort={if @params["sort"] == "age", do: "ascending", else: "none"}>
+                <.link
+                  class={["sort-link", @params["sort"] == "age" && "sorted"]}
+                  patch={Routes.workspace_path(@params, %{"sort" => "age", "offset" => nil})}
+                >First seen</.link>
               </th>
             </tr>
           </thead>
@@ -290,11 +307,12 @@ defmodule TriageWeb.WorkspaceComponents do
               :for={row <- @rows}
               id={"inventory-#{row.cve}"}
               class={[
+                "sev-#{severity_key(row.severity)}",
                 whitelist_state(row) == "Whitelisted" && "whitelisted-row",
                 row.cve in @selected && "selected"
               ]}
             >
-              <td>
+              <td class="select-col">
                 <input
                   type="checkbox"
                   aria-label={"Select #{row.cve}"}
@@ -303,9 +321,9 @@ defmodule TriageWeb.WorkspaceComponents do
                   phx-value-cve={row.cve}
                 />
               </td>
+              <td class="severity-col"><.severity value={row.severity} /></td>
               <td>
-                <.link class="cve-link" patch={Routes.review_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{row.packages}</span>
-                <div class="row"><.severity value={row.severity} /></div>
+                <.link class="cve-link cve-id" patch={Routes.review_path(@params, row.cve)}>{row.cve}</.link><span class="subline">{row.packages}</span>
                 <span
                   :if={Enum.any?(row.scopes, &Enum.any?(&1.findings, fn f -> f.suppressed end))}
                   class="subline"
@@ -318,10 +336,7 @@ defmodule TriageWeb.WorkspaceComponents do
                 |> Enum.join(", ")}<span class="subline">{row.scopes
                 |> Enum.map(& &1.placement.environment)
                 |> Enum.uniq()
-                |> Enum.join(", ")} · {length(row.scopes)} {if length(row.scopes) ==
-                                                                 1,
-                                                               do: "scope",
-                                                               else: "scopes"}</span>
+                |> Enum.join(", ")}, {deployment_count(row.scopes)}</span>
               </td>
               <td class="why-now">{why_now(row)}</td>
               <td>
@@ -334,6 +349,7 @@ defmodule TriageWeb.WorkspaceComponents do
                   rel="noopener noreferrer"
                 >Azure DevOps ticket</a>
               </td>
+              <td class="age-col">{age(row.first_seen) || "Unknown"}</td>
             </tr>
           </tbody>
         </table>
