@@ -464,6 +464,22 @@ defmodule TriageWeb.WorkspaceLive do
       else: {:noreply, socket}
   end
 
+  # News fetches public sources and only reviewers may refresh it.
+  defp nav_items(can_review?) do
+    [
+      {"overview", "Overview"},
+      {"findings", "Review"},
+      {"inventory", "Vulnerabilities"},
+      {"exceptions", "Risk decisions"},
+      {"daily", "Timeline"}
+    ] ++ if(can_review?, do: [{"news", "News"}], else: [])
+  end
+
+  defp initials(%{user: %{email: email}}) when is_binary(email),
+    do: email |> String.first() |> String.upcase()
+
+  defp initials(_scope), do: "?"
+
   @impl true
   def handle_async(name, result, socket), do: News.handle_async(name, result, socket)
 
@@ -485,28 +501,39 @@ defmodule TriageWeb.WorkspaceLive do
         data-dirty={Enum.any?(@drafts, fn {_id, d} -> not d.saved and d.dirty end) |> to_string()}
       >
         <header class="topbar">
-          <.link patch={nav_path(@params, "overview")} class="brand"><svg
-            aria-hidden="true"
-            viewBox="0 0 32 32"
-          ><path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3"/><path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3"/></svg>PTV Triage</.link>
+          <.link patch={nav_path(@params, "overview")} class="brand" aria-label="PTV Triage overview">
+            <svg aria-hidden="true" viewBox="0 0 32 32">
+              <path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3" />
+              <path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3" />
+            </svg>
+            <span>PTV Triage</span>
+          </.link>
           <nav class="topnav" aria-label="Primary">
             <.link
-              :for={
-                {page, label} <- [
-                  {"findings", "Review"},
-                  {"exceptions", "Risk decisions"},
-                  {"daily", "Timeline"}
-                ]
-              }
+              :for={{page, label} <- nav_items(@can_review)}
               id={"workspace-nav-#{page}"}
               patch={nav_path(@params, page)}
               class={[nav_active?(page, @page) && "active"]}
               aria-current={if nav_active?(page, @page), do: "page"}
             >
-              {label}<span :if={page == "findings"} class="nav-count">{@metrics["needs"].value}</span>
+              {label}<span
+                :if={page == "findings"}
+                class="nav-count"
+                title="CVEs that need a decision"
+              >{@metrics["needs"].value}</span>
             </.link>
           </nav>
           <div class="topmeta">
+            <button
+              id="workspace-settings"
+              type="button"
+              class="icon-button"
+              phx-click="settings"
+              aria-label="Data & help"
+              title="Data & help"
+            >
+              <span aria-hidden="true">?</span>
+            </button>
             <details
               id="workspace-account"
               class="account-dropdown"
@@ -516,20 +543,35 @@ defmodule TriageWeb.WorkspaceLive do
               }
               phx-key="Escape"
             >
-              <summary>Account</summary>
+              <summary title="Account">
+                <span class="avatar" aria-hidden="true">{initials(@current_scope)}</span>
+                <span class="sr-only">Account</span>
+              </summary>
               <div class="account-popover"><Layouts.account current_scope={@current_scope} /></div>
             </details>
-            <button id="workspace-settings" phx-click="settings"><span class="settings-text">Data &amp; help</span></button>
           </div>
         </header>
-        <div :if={@page == "news"} class="scopebar">
-          <span class="scope-label">Public intelligence</span><span>Global CVE news · Independent of your inventory</span>
-        </div>
-        <div :if={@page in ~w(exceptions daily)} id="workspace-history-scope" class="scopebar">
-          <span class="scope-label">History</span><span>{Params.history_scope_label(@page, @params)}</span>
-          <span class="dataset"><span class="tag">{if @page == "exceptions",
-            do: "Risk decision history",
-            else: "Detections & actions"}</span></span>
+        <nav :if={@page in ~w(daily timeline)} class="subnav" aria-label="Timeline views">
+          <.link
+            id="timeline-view-history"
+            patch={nav_path(@params, "daily")}
+            class={[@page == "daily" && "active"]}
+            aria-current={if @page == "daily", do: "page"}
+          >Detections and actions</.link>
+          <.link
+            id="timeline-view-chart"
+            patch={nav_path(@params, "timeline")}
+            class={[@page == "timeline" && "active"]}
+            aria-current={if @page == "timeline", do: "page"}
+          >Observation chart</.link>
+          <span :if={@page == "daily"} id="workspace-history-scope" class="scope-note">
+            History for <strong>{Params.history_scope_label(@page, @params)}</strong>
+          </span>
+        </nav>
+        <div :if={@page == "exceptions"} id="workspace-history-scope" class="scopebar">
+          <span class="scope-note">
+            History for <strong>{Params.history_scope_label(@page, @params)}</strong>
+          </span>
         </div>
         <.form
           :if={@page not in ~w(news exceptions daily)}
@@ -538,7 +580,6 @@ defmodule TriageWeb.WorkspaceLive do
           class="scopebar"
           phx-change="scope"
         >
-          <span class="scope-label">Scope</span>
           <.input
             field={@scope_form[:team]}
             type="select"
@@ -553,9 +594,6 @@ defmodule TriageWeb.WorkspaceLive do
             aria-label="Environment"
             options={[{"All environments", ""} | Enum.map(@options.environments, &{&1, &1})]}
           />
-          <span class="dataset"><span class="tag">{if @page == "timeline",
-            do: "Recorded history",
-            else: "Operational inventory"}</span></span>
           <.link
             :if={@params["team"] not in [nil, ""] or @params["environment"] not in [nil, ""]}
             id="reset-workspace-scope"
@@ -566,10 +604,11 @@ defmodule TriageWeb.WorkspaceLive do
                 else: workspace_path(@params, %{"team" => nil, "environment" => nil, "offset" => nil})
             }
           >Reset scope</.link>
+          <span class="scope-spacer"></span>
           <.link
             :if={@demo_mode}
             id="demo-mode"
-            class="tag"
+            class="link demo-link"
             title="Demo defaults: active deployments in the current scope and Whitelist temporarily are preselected. Your reason and confirmation are still required."
             patch={
               workspace_path(%{}, %{
@@ -578,8 +617,15 @@ defmodule TriageWeb.WorkspaceLive do
                 "item" => "CVE-2099-9101"
               })
             }
-          >Demo mode · examples</.link>
-          <button type="button" class="freshness quiet" phx-click="settings">Coverage unverified</button>
+          >Demo examples</.link>
+          <button
+            type="button"
+            class="coverage-status"
+            phx-click="settings"
+            title="Counts come from recorded scans. Whether every production deployment is scanned is not verified."
+          >
+            <span class="status-dot" aria-hidden="true"></span>Coverage unverified
+          </button>
         </.form>
         <main
           id="main-content"
@@ -721,9 +767,6 @@ defmodule TriageWeb.WorkspaceLive do
             params={@params}
           />
         </main>
-        <footer class="bottom-status">
-          <span>Recorded evidence · coverage unverified</span><span class="right">Decisions apply to selected deployments only</span>
-        </footer>
       </div>
       <.risk_confirmation
         :if={@can_review && @confirmation && @draft.fields["action"] == "accepted_risk"}

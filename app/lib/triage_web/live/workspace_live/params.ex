@@ -127,6 +127,7 @@ defmodule TriageWeb.WorkspaceLive.Params do
     do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => page})
 
   def nav_active?("findings", page), do: page in ~w(findings review)
+  def nav_active?("daily", page), do: page in ~w(daily timeline)
   def nav_active?(nav_page, page), do: nav_page == page
 
   def drill(params, mode, extra \\ %{}),
