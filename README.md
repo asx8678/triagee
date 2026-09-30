@@ -10,12 +10,9 @@ configuration and quality checks.
 - [Isolated database verification](app/OWNED_DB_VERIFICATION.md)
 - [Public CVE reference data](app/REAL_CVES.md)
 - [Standalone Kubernetes deployment](app/docs/KUBERNETES.md)
-- [Legacy collector reference](tmp/cve-collector/README.md) and
-  [integration notes](tmp/cve-collector/INTEGRATION_NOTES.md)
-- [Original architecture input](architecture%283%29.md): historical product and
-  safety requirements, **not** a description of the current runtime. The shipped
-  application uses Phoenix, not the original proposed Go stack.
 
-Completed execution logs, old status snapshots and superseded plans have been
-removed; their history remains in Git. Historical test results do not certify the
+Historical design inputs (the original architecture, implementation plans and
+bundles, design baselines and the legacy collector) have been removed. They remain
+in Git history; the tag `archive/pre-cleanup` marks the last commit containing
+them. Completed execution logs and old status snapshots were removed earlier. Historical test results do not certify the
 current application. Keep ongoing operational guidance with the application.

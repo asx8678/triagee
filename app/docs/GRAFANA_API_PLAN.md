@@ -25,10 +25,7 @@ Recommended first integration: Grafana Infinity with server-side/backend parsing
 ### Scope sources and precedence
 
 - Current owner request: implement the approved first-release reporting slice for Grafana. This is not production deployment or authorization to execute the larger redesign.
-- [Existing reporting contract](../../triagee-implementation-bundle/spec/06_GRAFANA_CONTRACT.md), [product scope](../../triagee-implementation-bundle/spec/01_PRODUCT_SCOPE.md), and [M3/T11 work](../../triagee-implementation-bundle/spec/04_IMPLEMENTATION_PLAN.md).
-- [Existing acceptance catalog](../../triagee-implementation-bundle/qa/ACCEPTANCE.md): especially A047–A049 and A052.
-- [Proposed reporting schema](../../triagee-implementation-bundle/contracts/reporting-target.schema.json): a design input, NOT an implemented or published API. Its example `placement_ids` link is not currently supported by WorkspaceLive.
-- [Broader experiment plan](../../CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md): retain its human-authority, read-only integration and loopback/security boundaries. This API does not complete its collection, AI or remediation work packages.
+- Historical inputs, removed from the tree and available at Git tag `archive/pre-cleanup`: the reporting contract, product scope and M3/T11 plan (`triagee-implementation-bundle/spec/`), its acceptance catalog (A047–A049, A052), a proposed reporting schema (a design input, NOT an implemented API), and the broader experiment plan (`CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md`). Its human-authority, read-only integration and loopback/security boundaries still apply; this API does not complete its collection, AI or remediation work packages.
 - [Deployment](DEPLOYMENT.md), [domain contracts](DOMAIN_API.md), and [owned database verification](../OWNED_DB_VERIFICATION.md).
 
 Do not resurrect old navigation/design requirements while implementing this API. Do not claim the broader M2/M3 or experiment milestones complete because a reporting adapter exists.

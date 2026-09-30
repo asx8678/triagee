@@ -1,7 +1,7 @@
 # Experiment requirements and acceptance ledger
 
 - **Ledger version:** 1.3 — third coding pass (W01c), 22 September 2026
-- **Plan:** [CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md](../../CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md) is the specification; this file is the living acceptance ledger it requires.
+- **Plan:** `CVE_TRIAGE_REMEDIATION_IMPLEMENTATION_PLAN.md` (removed from the tree; see Git tag `archive/pre-cleanup`) was the specification; this file is the living acceptance ledger it requires.
 - **Baseline:** HEAD `eef81e26b542325912e133059349ecf74bc2cdd0` (branch `main`) plus pre-existing uncommitted work and the two slices below.
 - **Execution rules:** coordinator-only owned disposable databases via `./scripts/verify_owned_db.sh`; pinned `mise` toolchain; no shared `triage_test`, no `triage_dev`.
 
