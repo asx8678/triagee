@@ -261,6 +261,18 @@ layout loads generated `priv/static/assets/css/tailwind.css` followed by
 `source(none)` plus the explicit `lib/` source keeps dependency/build/evidence
 files out of Tailwind scanning; the development watcher uses the same profile.
 
+On macOS, `mix tailwind triage` (and so `mix setup`, `mix test` and `mix ci`) can
+fail with `exited with 137` right after the download: macOS kills the downloaded
+CLI because it rejects its code signature (`codesign -v` reports an invalid
+signature). Sign the cached binary locally once, then rerun:
+
+```sh
+codesign --force -s - _build/tailwind-macos-*
+```
+
+The binary lives in the ignored `_build/` directory, so this changes no tracked
+file. Repeat it after a Tailwind version bump or after deleting `_build/`.
+
 Phoenix vendor scripts are copied from fetched dependencies pinned in `mix.lock`,
 not a browser CDN. The root loads those deferred scripts before the tracked
 `priv/static/assets/js/app.js` LiveSocket bootstrap. Generated vendor assets and
