@@ -9,7 +9,7 @@ defmodule TriageWeb.WorkspaceComponents do
   defp draft_status(%{saved: true}), do: "Decision saved"
   defp draft_status(%{dirty: false}), do: "No unsaved changes"
   defp draft_status(%{persisted: true}), do: "Draft saved to your account"
-  defp draft_status(_draft), do: "Draft NOT saved · keep this tab open"
+  defp draft_status(_draft), do: "Draft not saved. Keep this tab open."
 
   defp decision_blocker(%{draft: nil}), do: nil
 
@@ -50,7 +50,8 @@ defmodule TriageWeb.WorkspaceComponents do
     assigns =
       assign(assigns,
         urgent: assigns.targets |> Workspace.select("urgent") |> Workspace.rows() |> Enum.take(6),
-        max_active: assigns.teams |> Enum.map(& &1.metrics["active"].value) |> Enum.max(fn -> 0 end)
+        max_active:
+          assigns.teams |> Enum.map(& &1.metrics["active"].value) |> Enum.max(fn -> 0 end)
       )
 
     ~H"""
@@ -77,8 +78,8 @@ defmodule TriageWeb.WorkspaceComponents do
           {mode, label, sub, class} <- [
             {"active", "Active CVEs", "Distinct vulnerabilities in this scope", ""},
             {"needs", "Needs a decision", "Not yet reviewed, or the decision expired", ""},
-            {"urgent", "Immediate priority", "Highest local review priority, not confirmed exploitation",
-             "alert-top"},
+            {"urgent", "Immediate priority",
+             "Highest local review priority, not confirmed exploitation", "alert-top"},
             {"unknown", "Unknown exposure", "Deployments whose exposure is not recorded", ""}
           ]
         }
@@ -277,7 +278,7 @@ defmodule TriageWeb.WorkspaceComponents do
         <span :if={@mode in ["unknown", "urgent"]}>{if @mode == "unknown",
           do: "Unknown exposure",
           else: "Immediate priority"}</span>
-        <span class="spacer" /><span>Local inventory only</span>
+        <span class="spacer" /><span>Your deployments only</span>
       </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Vulnerability results">
         <table id="workspace-inventory" class="data-table">
@@ -293,7 +294,7 @@ defmodule TriageWeb.WorkspaceComponents do
                   patch={Routes.workspace_path(@params, %{"sort" => nil, "offset" => nil})}
                 >Severity</.link>
               </th>
-              <th>Advisory / package</th><th>Affected</th><th>Why now</th><th>Next action</th>
+              <th>Advisory / package</th><th>Affected</th><th>Flagged because</th><th>Next action</th>
               <th aria-sort={if @params["sort"] == "age", do: "ascending", else: "none"}>
                 <.link
                   class={["sort-link", @params["sort"] == "age" && "sorted"]}
@@ -327,7 +328,7 @@ defmodule TriageWeb.WorkspaceComponents do
                 <span
                   :if={Enum.any?(row.scopes, &Enum.any?(&1.findings, fn f -> f.suppressed end))}
                   class="subline"
-                >Scanner-suppressed · approval unknown</span>
+                >Suppressed by the scanner; approval not recorded</span>
               </td>
               <td>
                 {row.scopes
@@ -411,9 +412,9 @@ defmodule TriageWeb.WorkspaceComponents do
             class={[@mode == mode && "active"]}
             aria-current={if @mode == mode, do: "page"}
           >{label}<span :if={tab_count(@metrics, mode)} class="tab-count">{tab_count(
-              @metrics,
-              mode
-            )}</span></.link>
+            @metrics,
+            mode
+          )}</span></.link>
         </nav><button
           id="review-queue-toggle"
           class="queue-toggle quiet"
@@ -494,7 +495,7 @@ defmodule TriageWeb.WorkspaceComponents do
               Read-only viewer. A reviewer or administrator must make decisions.
             </p>
             <h3 class="decision-title">Decision</h3>
-            <p class="form-note" id="why-now">Why now: {why_now(@row)}</p>
+            <p class="form-note" id="why-now">Flagged because: {why_now(@row)}</p>
             <ol class="decision-steps">
               <li class={["decision-step", @draft.targets != [] && "done"]}>
                 <span class="step-title">Deployments</span>
@@ -677,6 +678,7 @@ defmodule TriageWeb.WorkspaceComponents do
 
   defp tab_count(metrics, mode) do
     key = if mode == "needs", do: "needs", else: mode
+
     case metrics[key] do
       %{value: value} when is_integer(value) and value > 0 -> value
       _ -> nil
@@ -689,7 +691,8 @@ defmodule TriageWeb.WorkspaceComponents do
   defp deployment_count([_one]), do: "1 deployment"
   defp deployment_count(scopes), do: "#{length(scopes)} deployments"
 
-  defp internet_facing?(scopes), do: Enum.any?(scopes, &(&1.active? and &1.exposure == "internet_exposed"))
+  defp internet_facing?(scopes),
+    do: Enum.any?(scopes, &(&1.active? and &1.exposure == "internet_exposed"))
 
   defp age(nil), do: nil
 
@@ -750,7 +753,7 @@ defmodule TriageWeb.WorkspaceComponents do
             <td>
               <strong>{team_name(scope.placement.owner)}</strong><br />{scope.placement.environment}
             </td><td>
-              {scope.image.repository}<br /><span class="mono">Placement {scope.id} · {scope.placement.namespace}</span>
+              {scope.image.repository}<br /><span class="subline">Deployment {scope.id} in {scope.placement.namespace}</span>
             </td><td>{exposure(scope.exposure)}<br /><small>{work_status([scope])}</small></td>
           </tr>
         </tbody>
@@ -775,7 +778,7 @@ defmodule TriageWeb.WorkspaceComponents do
         <header class="modal-head">
           <h2 id="risk-title">Whitelist temporarily?</h2>
         </header><div class="modal-body">
-          <strong>{@row.cve} · {length(@draft.targets)} exact targets</strong><.scope_table targets={
+          <strong>{@row.cve}: {length(@draft.targets)} selected deployments</strong><.scope_table targets={
             Enum.filter(@row.scopes, &(&1.id in @draft.targets))
           } /><p>{@draft.fields["reason"]}</p><p>
             Valid through {@draft.fields["due_on"]}, UTC; expires at the following midnight.
@@ -1096,7 +1099,9 @@ defmodule TriageWeb.WorkspaceComponents do
           {if @assessing, do: "Classifying…", else: "Classify now"}
         </button>
       </div>
-      <p class="classification-scope">{@cve} · All deployments in the current Review scope</p>
+      <p class="classification-scope">
+        Covers every deployment of {@cve} in the current team and environment.
+      </p>
       <p :if={not @can_review} class="form-note">
         Reviewer access is required to start classification.
       </p>
@@ -1197,7 +1202,7 @@ defmodule TriageWeb.WorkspaceComponents do
     cond do
       row.risk && row.risk.reasons != [] -> hd(row.risk.reasons)
       Enum.any?(row.scopes, &(!&1.active?)) -> "No longer observed in local inventory"
-      true -> "No recorded attention reason; coverage is unverified"
+      true -> "No recorded reason. Scan coverage is unverified."
     end
   end
 
@@ -1205,22 +1210,22 @@ defmodule TriageWeb.WorkspaceComponents do
   defp next_action(row) do
     cond do
       ticket_url(row) ->
-        "Ticket created · track existing work"
+        "Ticket created. Track the existing work."
 
       fixed_scopes?(row.scopes) ->
-        "Reported fix · verification needed, not a verified deployment"
+        "Fix reported, not yet verified in deployment"
 
       whitelist_state(row) in ["Whitelisted", "Partially whitelisted"] ->
-        "Risk accepted · review at expiry"
+        "Risk accepted. Review it when it expires."
 
       Enum.any?(row.scopes, &(&1.covered? and &1.decision.decision in Decisions.work_actions())) ->
-        "Work in progress · follow up with the owner"
+        "In progress. Follow up with the owner."
 
       Enum.any?(row.scopes, &(!&1.active?)) ->
-        "Historical record · no current action"
+        "History only. No action needed."
 
       true ->
-        "Choose an action for exact scopes"
+        "Choose an action for these deployments"
     end
   end
 

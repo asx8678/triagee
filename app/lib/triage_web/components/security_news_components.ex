@@ -8,7 +8,7 @@ defmodule TriageWeb.SecurityNewsComponents do
       <div class="news-heading">
         <div>
           <h1>CVE news</h1><p class="muted">
-            Critical CVEs published in {Calendar.strftime(Date.utc_today(), "%B %Y")} · Global advisories, not confirmed local exposure.
+            Critical CVEs published in {Calendar.strftime(Date.utc_today(), "%B %Y")}. These are global advisories, not confirmed exposure in your deployments.
           </p>
         </div>
         <button
@@ -31,7 +31,7 @@ defmodule TriageWeb.SecurityNewsComponents do
             {@news_cves_error} <span :if={@news_cves}>Previously fetched results remain below.</span>
           </p>
           <p :if={@news_cves} class="muted">
-            {length(@news_cves.rows)} advisories · CVSS v3/v4 critical · Fetched {Calendar.strftime(
+            {length(@news_cves.rows)} critical advisories (CVSS v3 or v4). Fetched {Calendar.strftime(
               @news_cves.fetched_at,
               "%d %b %H:%M UTC"
             )}
@@ -87,7 +87,7 @@ defmodule TriageWeb.SecurityNewsComponents do
             <span :if={@news_headlines}>Previously fetched headlines remain below.</span>
           </p>
           <p :if={@news_headlines} class="muted">
-            Recent publisher headlines · Fetched {Calendar.strftime(
+            Recent publisher headlines. Fetched {Calendar.strftime(
               @news_headlines.fetched_at,
               "%d %b %H:%M UTC"
             )}

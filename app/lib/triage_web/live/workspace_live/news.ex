@@ -127,7 +127,7 @@ defmodule TriageWeb.WorkspaceLive.News do
     >
       <div class="confirmation-layout">
         <header class="modal-head">
-          <h2 id="manual-title">Add CVE · Research list</h2>
+          <h2 id="manual-title">Research a CVE</h2>
         </header>
         <div class="modal-body">
           <div class="panel-body">
@@ -177,7 +177,7 @@ defmodule TriageWeb.WorkspaceLive.News do
                 target="_blank"
                 rel="noopener noreferrer"
               >Source: NVD</a>
-              <span class="muted"> · Fetched {time(cve.fetched_at)}</span>
+              <span class="muted">Fetched {time(cve.fetched_at)}</span>
             </details>
           </div>
         </div>

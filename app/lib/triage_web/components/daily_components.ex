@@ -20,7 +20,7 @@ defmodule TriageWeb.DailyComponents do
             One history per CVE: detection first, then the actions taken and the time to first action.
           </p>
         </div>
-        <p class="daily-meta">{@total_cves} CVEs · latest activity first · all times UTC</p>
+        <p class="daily-meta">{@total_cves} CVEs, latest activity first. Times are UTC.</p>
       </header>
       <details id="timeline-timing-help" class="timeline-timing-help">
         <summary>How response time is measured</summary>
@@ -34,7 +34,7 @@ defmodule TriageWeb.DailyComponents do
         </p>
       </details>
       <div class="timeline-page-summary">
-        <span>{@event_count} recorded steps · each CVE history runs oldest to newest</span>
+        <span>{@event_count} recorded steps. Each CVE history runs oldest to newest.</span>
         <button :if={@earlier?} id="timeline-latest" type="button" phx-click="daily-latest">Back to latest activity</button>
       </div>
       <div :if={@days == []} class="daily-empty">
@@ -81,7 +81,7 @@ defmodule TriageWeb.DailyComponents do
                   <dd><.recorded_time value={entry.first_detected_at} /></dd>
                 </div>
                 <div>
-                  <dt>First action · any deployment</dt>
+                  <dt>First action, any deployment</dt>
                   <dd :if={entry.first_action}>
                     <.recorded_time value={entry.first_action.at} />
                   </dd>

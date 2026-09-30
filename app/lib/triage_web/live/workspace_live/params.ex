@@ -22,17 +22,13 @@ defmodule TriageWeb.WorkspaceLive.Params do
   def pages, do: @pages
 
   def history_scope_label("exceptions", params) do
-    Enum.map_join(
-      [{"risk_team", "All teams"}, {"risk_environment", "All environments"}],
-      " · ",
-      fn {key, fallback} ->
-        value = String.trim(params[key] || "")
-        if value == "", do: fallback, else: value
-      end
-    )
+    team = String.trim(params["risk_team"] || "")
+    environment = String.trim(params["risk_environment"] || "")
+
+    "#{if team == "", do: "all teams", else: team} in #{if environment == "", do: "all environments", else: environment}"
   end
 
-  def history_scope_label(_page, _params), do: "All teams · All environments"
+  def history_scope_label(_page, _params), do: "all teams in all environments"
 
   def page_title(page) do
     cond do

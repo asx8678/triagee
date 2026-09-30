@@ -96,7 +96,7 @@ defmodule TriageWeb.ExceptionsComponents do
                                                                                           else:
                                                                                             "decisions"}
           <span>· {@history.records} underlying records</span></span>
-          <span>Newest first · dates in UTC</span>
+          <span>Newest first. Dates are UTC.</span>
         </div>
 
         <ul
@@ -249,7 +249,7 @@ defmodule TriageWeb.ExceptionsComponents do
   defp action_label("not_affected"), do: "Not affected"
   defp reason(%{reason: ""}), do: "No reason saved in this older record."
   defp reason(d), do: d.reason
-  defp scope_count(%{legacy?: true}), do: "All deployments · legacy"
+  defp scope_count(%{legacy?: true}), do: "All deployments (older record)"
 
   defp scope_count(d) do
     count = d.scopes |> Enum.map(& &1.placement_id) |> Enum.uniq() |> length()

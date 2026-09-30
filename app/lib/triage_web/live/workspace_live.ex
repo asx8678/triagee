@@ -676,7 +676,7 @@ defmodule TriageWeb.WorkspaceLive do
             class="workspace-notice"
             aria-live="polite"
           >
-            <h2>Existing Azure operation · {@pending_operation.state}</h2>
+            <h2>Existing Azure ticket operation: {@pending_operation.state}</h2>
             <p>
               Operation <code>{@pending_operation.id}</code>
               is durable. Do not create a replacement ticket.

@@ -126,7 +126,7 @@ defmodule TriageWeb.Layouts do
   def account(assigns) do
     ~H"""
     <div :if={@current_scope} id="account-menu" class="row wrap">
-      <span id="verified-identity">{@current_scope.user.email} · {@current_scope.user.role}</span>
+      <span id="verified-identity">{@current_scope.user.email} ({@current_scope.user.role})</span>
       <.form for={to_form(%{})} id="logout-form" action={~p"/logout"} method="delete">
         <button id="logout-button" type="submit">Sign out</button>
       </.form>

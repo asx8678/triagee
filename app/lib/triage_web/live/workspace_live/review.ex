@@ -545,7 +545,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
   end
 
   defp action_message(cve, %{"action" => "fixed"}),
-    do: "#{cve} reported fixed · deployment verification still needed"
+    do: "#{cve} marked fixed. The deployment still needs verification."
 
   defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}),
     do: "#{cve} whitelisted until #{date}"
