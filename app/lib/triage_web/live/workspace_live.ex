@@ -30,7 +30,7 @@ defmodule TriageWeb.WorkspaceLive do
 
     {:ok,
      assign(socket,
-       page_title: "Overview",
+       page_title: "Triage",
        demo_mode: Application.get_env(:triage, :demo_mode, false),
        drafts: %{},
        stale_cves: MapSet.new(),
@@ -63,6 +63,9 @@ defmodule TriageWeb.WorkspaceLive do
     timeline_params =
       if Map.has_key?(params, "team"), do: Map.put(params, "owner", params["team"]), else: params
 
+    # Timeline normalisation runs twice on purpose: first to map `owner` onto
+    # `team` before unknown keys are dropped, then to restore the Timeline page
+    # after invalid parameters or a retired page reset it.
     params =
       params
       |> Params.normalize_timeline_params(timeline?)
@@ -150,6 +153,7 @@ defmodule TriageWeb.WorkspaceLive do
     socket
     |> assign(Map.drop(page, [:matching]))
     |> assign(
+      page_title: browser_title(socket.assigns.page, page.row),
       row_history: history,
       daily_data: daily_data,
       scope_form: scope_form(params),
@@ -208,6 +212,10 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   defp load_timeline(socket), do: socket
+
+  # The browser tab names the open CVE so several tabs stay distinguishable.
+  defp browser_title(page, %{cve: cve}) when page in ~w(findings review), do: cve
+  defp browser_title(page, _row), do: Params.page_title(page)
 
   defp scope_form(params),
     do:
@@ -353,6 +361,17 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp nav_items, do: [{"findings", "Triage"}, {"daily", "Timeline"}]
 
+  # Drafts are stored as they change; only one the server could not store
+  # would be lost by leaving, so only that one asks before the page unloads.
+  defp unstored_draft?({_cve, draft}),
+    do: draft.dirty and not draft.saved and not Map.get(draft, :persisted, false)
+
+  defp ticket_state("pending"), do: "waiting for Azure DevOps"
+  defp ticket_state("unknown"), do: "Azure DevOps did not confirm it"
+  defp ticket_state("remote_created"), do: "created in Azure DevOps, not yet recorded here"
+  defp ticket_state("blocked"), do: "needs the reviewer who started it or an administrator"
+  defp ticket_state(state), do: state
+
   defp initials(%{user: %{email: email}}) when is_binary(email),
     do: email |> String.first() |> String.upcase()
 
@@ -367,12 +386,12 @@ defmodule TriageWeb.WorkspaceLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} workspace>
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
       <a href="#main-content" class="skip-link">Skip to content</a>
       <div
         id="shell"
         phx-hook="WorkspaceDraftGuard"
-        data-dirty={Enum.any?(@drafts, fn {_id, d} -> not d.saved and d.dirty end) |> to_string()}
+        data-dirty={Enum.any?(@drafts, &unstored_draft?/1) |> to_string()}
       >
         <header class="topbar">
           <.link patch={nav_path(@params, "findings")} class="brand" aria-label="PTV Triage">
@@ -502,7 +521,7 @@ defmodule TriageWeb.WorkspaceLive do
             id="workspace-page-title"
             class="sr-only"
           >
-            {@page_title}
+            {Params.page_title(@page)}
           </h1>
           <p :if={@invalid_params} class="form-error" role="alert">
             Invalid filters. No records loaded.
@@ -527,7 +546,7 @@ defmodule TriageWeb.WorkspaceLive do
             class="workspace-notice"
             role="alert"
           >
-            Workspace changed. Your draft and original evidence are preserved. Reload current evidence explicitly before committing.
+            This CVE changed while you were working on it. Your draft is kept. Reload the CVE before saving.
           </p>
           <p :if={@message} class="workspace-notice" role="status">{@message}</p>
           <section
@@ -536,37 +555,40 @@ defmodule TriageWeb.WorkspaceLive do
             class="workspace-notice"
             aria-live="polite"
           >
-            <h2>Existing Azure ticket operation: {@pending_operation.state}</h2>
-            <p>
-              Operation <code>{@pending_operation.id}</code>
-              is durable. Do not create a replacement ticket.
-            </p>
-            <p :if={@pending_operation.marker}>
-              Recovery marker: <code>{@pending_operation.marker}</code>
-            </p>
+            <h2>
+              A ticket request for this CVE is still open: {ticket_state(@pending_operation.state)}
+            </h2>
+            <p>Don't create another ticket. Check this one instead.</p>
+            <details>
+              <summary>Technical details</summary>
+              <p>Request ID <code>{@pending_operation.id}</code></p>
+              <p :if={@pending_operation.marker}>
+                Search marker in Azure DevOps: <code>{@pending_operation.marker}</code>
+              </p>
+            </details>
             <a
               :if={@pending_operation.ticket_url}
               href={@pending_operation.ticket_url}
               target="_blank"
               rel="noopener noreferrer"
-            >Open existing ticket</a>
+            >Open the ticket</a>
             <p :if={@error} role="alert">{@error}</p>
             <button
               :if={@can_review && @pending_operation.state != "blocked"}
               id="reconcile-ticket"
               phx-click="reconcile-ticket"
-            >Check and reconcile existing ticket</button>
+            >Check the ticket request</button>
             <button
               :if={@can_review && @pending_operation.state == "remote_created"}
               id="review-ticket-evidence"
               phx-click="review-ticket-evidence"
-            >Review current evidence for this ticket</button>
+            >Review the current deployments</button>
             <div :if={@ticket_evidence} id="ticket-current-evidence">
               <p>
-                Explicitly accept this current evidence for the original ticket targets. The original request remains recorded.
+                Confirm these current deployments for the ticket. The original request stays recorded.
               </p>
               <.scope_table targets={@ticket_evidence} />
-              <button id="reconcile-ticket-current" phx-click="reconcile-ticket-current">Accept reviewed evidence and finalize existing ticket</button>
+              <button id="reconcile-ticket-current" phx-click="reconcile-ticket-current">Confirm and finish the ticket request</button>
             </div>
           </section>
           <.review

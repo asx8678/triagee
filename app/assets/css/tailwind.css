@@ -2,7 +2,7 @@
  *
  * This file is the *source*. `mix tailwind triage` compiles it into
  * `priv/static/assets/css/tailwind.css`, which the root layout loads before
- * `css/app.css`. `mix assets.setup` runs that build, so the shipped stylesheet
+ * `css/workspace.css`. `mix assets.setup` runs that build, so the shipped stylesheet
  * is reproducible from a clean checkout instead of being a frozen artifact with
  * no way to regenerate it.
  *

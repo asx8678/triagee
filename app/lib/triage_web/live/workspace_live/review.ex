@@ -10,7 +10,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3]
   alias Triage.Workspace
   alias Triage.Workspace.{Commit, Drafts}
-  alias TriageWeb.WorkspaceLive
+  alias TriageWeb.{WorkspaceComponents, WorkspaceLive}
 
   @events ~w(reconcile-ticket review-ticket-evidence reconcile-ticket-current draft target save confirm-ticket confirm-risk cancel-decision reconcile classify-now classify-all ai-analyze ai-dismiss)
   def events, do: @events
@@ -21,7 +21,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
     {:noreply,
      assign(socket,
        error:
-         "An Azure operation already exists. Reconcile it; do not start or substitute another ticket."
+         "A ticket request for this CVE is still open. Check it first; don't create another ticket."
      )}
   end
 
@@ -49,14 +49,15 @@ defmodule TriageWeb.WorkspaceLive.Review do
            assign(socket,
              ticket_evidence: nil,
              error:
-               "An original ticket target is missing or inactive. Contact an administrator; no replacement ticket was created."
+               "A deployment in the original ticket request is missing or no longer observed. Ask an administrator; no new ticket was created."
            )}
         end
 
       _ ->
         {:noreply,
          assign(socket,
-           error: "Only the original reviewer or an administrator can reconcile this operation."
+           error:
+             "Only the reviewer who started this ticket request, or an administrator, can check it."
          )}
     end
   end
@@ -142,20 +143,20 @@ defmodule TriageWeb.WorkspaceLive.Review do
       socket.assigns.draft.fields["action"] not in Commit.review_actions() ->
         {:noreply,
          assign(socket,
-           error: "Choose Mark as fixed, Whitelist temporarily, or Create Azure DevOps ticket."
+           error: "Choose Create ticket, Mark as fixed or Whitelist."
          )}
 
       socket.assigns.draft.stale ->
         {:noreply,
          assign(socket,
            error:
-             "Evidence changed. Explicitly reload and review before saving; your draft is preserved."
+             "This CVE changed after you started. Reload it and check before saving; your draft is kept."
          )}
 
       not changeset.valid? ->
         {:noreply,
          assign(socket,
-           error: "Complete the required fields. Your draft is unchanged.",
+           error: "Fill in the required fields. Your draft is kept.",
            decision_form: to_form(%{changeset | action: :insert}, as: :decision)
          )}
 
@@ -163,11 +164,11 @@ defmodule TriageWeb.WorkspaceLive.Review do
         {:noreply,
          assign(socket,
            error:
-             "Selected targets are hidden by the current scope. Restore the original scope before saving."
+             "Some ticked deployments are hidden by the team or environment filter. Clear the filter before saving."
          )}
 
       socket.assigns.draft.targets == [] ->
-        {:noreply, assign(socket, error: "Select at least one affected scope.")}
+        {:noreply, assign(socket, error: "Tick at least one deployment.")}
 
       # Decide from the draft's effective action after the merge, never the
       # raw submitted fields: a payload that omits `action` must open the
@@ -222,8 +223,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
       {:error, _} ->
         {:noreply,
          assign(socket,
-           error:
-             "Could not discard the stored draft. Your draft is preserved; retry when storage is available."
+           error: "Couldn't discard the draft. It is still saved; try again in a moment."
          )}
     end
   end
@@ -248,14 +248,13 @@ defmodule TriageWeb.WorkspaceLive.Review do
        |> assign(stale_cves: MapSet.delete(socket.assigns.stale_cves, row.cve))
        |> WorkspaceLive.load()
        |> assign(
-         message:
-           "Current evidence reloaded. Target selection is unchanged; inspect it before saving."
+         message: "CVE reloaded. Your ticked deployments are unchanged; check them before saving."
        )}
     else
       {:noreply,
        assign(socket,
          error:
-           "A selected target is no longer available in this scope. Restore scope or explicitly deselect it; no replacement was selected."
+           "A ticked deployment is no longer in this team and environment. Clear the filter or untick it; nothing else was ticked."
        )}
     end
   end
@@ -277,8 +276,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
 
   def handle_event("classify-now", _, socket),
     do:
-      {:noreply,
-       assign(socket, ai_assessment_error: "Reviewer permission is required to classify.")}
+      {:noreply, assign(socket, ai_assessment_error: "Reviewer access is required to classify.")}
 
   # Queues one guarded run per critical CVE in scope; suggestions only.
   def handle_event("classify-all", _, %{assigns: %{can_review: true}} = socket) do
@@ -301,7 +299,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
   def handle_event("classify-all", _, socket),
     do:
       {:noreply,
-       assign(socket, classify_all: %{error: "Reviewer permission is required to classify."})}
+       assign(socket, classify_all: %{error: "Reviewer access is required to classify."})}
 
   # Existing clients use the same guarded, durable path after a code reload.
   def handle_event("ai-analyze", params, socket), do: handle_event("classify-now", params, socket)
@@ -320,10 +318,10 @@ defmodule TriageWeb.WorkspaceLive.Review do
 
   defp classify_error(:prompt_too_large),
     do:
-      "Full evidence exceeds the input limit. Narrow the team/environment scope; no evidence was dropped."
+      "This CVE has too much evidence for one classification. Pick a team or environment and try again."
 
   defp classify_error(_reason),
-    do: "Classification could not start. Refresh the evidence and check your review permission."
+    do: "Classification couldn't start. Reload the CVE and check that you have reviewer access."
 
   @doc """
   AI state of each listed CVE in the current scope: `:classifying` while a run
@@ -443,8 +441,12 @@ defmodule TriageWeb.WorkspaceLive.Review do
     )
   end
 
+  # Demo defaults tick only deployments that still need a decision, and
+  # preselect Whitelist only when there is one; a CVE that is already decided
+  # opens with nothing chosen.
   defp fresh_draft(row, demo?) do
-    targets = if demo?, do: Enum.filter(row.scopes, & &1.active?), else: []
+    targets = if demo?, do: Enum.filter(row.scopes, &(&1.active? and not &1.covered?)), else: []
+    demo? = demo? and targets != []
 
     %{
       fields: %{
@@ -569,14 +571,13 @@ defmodule TriageWeb.WorkspaceLive.Review do
 
   defp persistence_message({:conflict, _stored}, _draft),
     do:
-      "Draft was changed in another tab or device. Your edits are kept only in this tab. Copy them before reloading to load the saved draft."
+      "This draft was changed in another tab or on another device. Your edits are only in this tab; copy them before reloading."
 
   defp persistence_message(_error, %{saved: true}),
-    do:
-      "Decision committed, but draft cleanup failed. Its original operation is preserved; do not repeat the action."
+    do: "Decision saved, but the draft couldn't be cleared. Don't repeat the action."
 
   defp persistence_message(_error, _draft),
-    do: "Draft could not be stored. Keep this tab open and retry; nothing was committed."
+    do: "Your draft couldn't be saved. Keep this tab open and try again; nothing was decided."
 
   defp renew_saved_draft(socket, changes) do
     draft = socket.assigns.draft
@@ -599,12 +600,16 @@ defmodule TriageWeb.WorkspaceLive.Review do
   end
 
   defp action_message(cve, %{"action" => "fixed"}),
-    do: "#{cve} marked fixed. The deployment still needs verification."
+    do: "#{cve} marked as fixed. The fix still needs to be verified."
 
-  defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}),
-    do: "#{cve} whitelisted until #{date}"
+  defp action_message(cve, %{"action" => "accepted_risk", "due_on" => date}) do
+    case Date.from_iso8601(date || "") do
+      {:ok, date} -> "#{cve} whitelisted until #{WorkspaceComponents.format_date(date)}."
+      _ -> "#{cve} whitelisted."
+    end
+  end
 
-  defp action_message(cve, _), do: "#{cve}: Azure DevOps ticket created — in progress"
+  defp action_message(cve, _), do: "Azure DevOps ticket created for #{cve}."
 
   defp commit(socket) do
     %{draft: draft, item: cve} = socket.assigns
@@ -642,7 +647,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket,
           confirmation: nil,
-          error: "Save failed. Your draft is unchanged.",
+          error: "Couldn't save. Your draft is kept.",
           decision_form: to_form(changeset, as: :decision)
         )
 
@@ -656,24 +661,29 @@ defmodule TriageWeb.WorkspaceLive.Review do
       {:error, :past_date} ->
         assign(socket,
           confirmation: nil,
-          error: "Choose today or a future date (UTC). Your draft is unchanged."
+          error: "Pick today or a later date (UTC). Your draft is kept."
         )
 
       {:error, {:dismissal_basis_invalid, _id, state}} ->
         assign(socket,
           confirmation: nil,
           error:
-            "Exposure evidence is #{state} for a selected target; review the evidence before accepting risk. Your draft is unchanged."
+            "The exposure information for a ticked deployment is #{exposure_problem(state)}. Check it before whitelisting. Your draft is kept."
         )
 
       {:error, _} ->
         assign(socket,
           confirmation: nil,
           error:
-            "Evidence or a decision changed. Nothing was saved. Reload and review current evidence; your draft is unchanged."
+            "This CVE or its decisions changed, so nothing was saved. Reload the CVE and check it; your draft is kept."
         )
     end
   end
+
+  defp exposure_problem(:expired), do: "out of date"
+  defp exposure_problem(:future_dated), do: "dated in the future"
+  defp exposure_problem(:conflicting), do: "conflicting"
+  defp exposure_problem(state), do: to_string(state)
 
   defp pending_ticket(socket, id, kind) do
     pending =
@@ -682,13 +692,13 @@ defmodule TriageWeb.WorkspaceLive.Review do
     message =
       case kind do
         :finalization_conflict ->
-          "Azure ticket exists, but local evidence changed. Review current exact targets before finalizing the existing operation."
+          "The Azure DevOps ticket exists, but this CVE changed since. Check the current deployments, then finish the existing request."
 
         :operation_pending ->
-          "A ticket operation already claims these targets. Its original reviewer or an administrator must reconcile it."
+          "A ticket request already covers these deployments. The reviewer who started it, or an administrator, must check it."
 
         _ ->
-          "Azure creation outcome is not yet confirmed. The durable operation is preserved. Reconcile it; never create a replacement ticket."
+          "Azure DevOps hasn't confirmed the ticket yet. The request is kept; check it instead of creating another ticket."
       end
 
     assign(socket,
@@ -707,7 +717,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
       ticket_evidence: nil,
       confirmation: nil,
       stale_cves: MapSet.delete(socket.assigns.stale_cves, socket.assigns.item),
-      message: "Existing Azure operation reconciled. No additional ticket was created."
+      message: "Ticket request checked and recorded. No new ticket was created."
     )
     |> WorkspaceLive.load()
     |> push_event("workspace-draft-cleared", %{})
@@ -721,6 +731,6 @@ defmodule TriageWeb.WorkspaceLive.Review do
     do:
       assign(socket,
         error:
-          "Operation remains unresolved. Only its original reviewer or an administrator can reconcile; no replacement was created."
+          "The ticket request is still open. Only the reviewer who started it, or an administrator, can check it; no new ticket was created."
       )
 end

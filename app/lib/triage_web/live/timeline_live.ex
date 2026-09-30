@@ -263,7 +263,7 @@ defmodule TriageWeb.TimelineLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} active_page="timeline">
+    <Layouts.app flash={@flash}>
       <.panel {assigns} />
     </Layouts.app>
     """

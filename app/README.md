@@ -66,15 +66,16 @@ flags are retired. See [setup, scoring and safety](docs/AI_CLASSIFIER.md).
 
 ## Presentation demo
 
-Development preselects **Whitelist** and the CVE's active deployments in the
-current scope, so the **Whitelist** button starts enabled. A reason and confirmation
-are still required; existing drafts are preserved. Set `TRIAGE_DEMO_MODE=false`
+Development preselects **Whitelist** and ticks the CVE's active deployments that
+still need a decision in the current scope; a CVE that is already decided opens
+with nothing chosen. **Whitelist** is enabled once a reason is written, and a
+confirmation follows; existing drafts are preserved. Set `TRIAGE_DEMO_MODE=false`
 for neutral defaults (the default in test/production).
 
 Load the expanded fictional estate with
 `mise x -- mix triage.demo --database triage_dev`: 30 CVEs, 18 workloads and
 54 placements across seven teams and three environments. No reset or external
-calls. Use **Demo mode · examples** in the scope bar or the
+calls. Use **Demo examples** in the scope bar or the
 [presentation walkthrough](docs/DEMO.md).
 
 ## Single workspace UI
@@ -82,19 +83,23 @@ calls. Use **Demo mode · examples** in the scope bar or the
 The homepage `/` is the workspace; `/workspace` is an alias for the same UI.
 The navigation has two pages, **Triage** and **Timeline**:
 
-- **Triage** (`/?page=findings`, with `/?page=review` for one CVE): three counts
-  at the top (**Need a decision**, **Active CVEs**, **Whitelisted**) also pick
-  the list shown beneath them. The list is searchable by CVE or package; each row
-  shows severity, whether the affected deployments are **External**
+- **Triage** (`/?page=findings`, with `/?page=review` for one CVE): a tab row
+  (**Need a decision**, **Whitelisted**, **All active**, each with its count)
+  picks the list; **All active** includes the other two. The list is searchable
+  by CVE or package and is one Tab stop (the arrow keys move between rows); each
+  row shows severity, whether the affected deployments are **External**
   (internet-facing), **Internal** or of unknown exposure, and the latest AI state.
-  Whitelisted rows show their expiry. The selected CVE shows its description and
-  fixed version, **Your infrastructure** (each deployment's exposure, team,
-  environment, service, package version and status), AI classification and the
-  decision history. The decision offers **Whitelist**, **Mark as fixed** or
-  **Create ticket** for the ticked deployments. A whitelist needs a reason and an
-  end date (three months by default) and is confirmed in a dialog; it applies
-  through the selected date and expires at the following midnight UTC. AI
-  classification is optional and never blocks a manual decision.
+  Whitelisted rows show the last day their whitelist applies. The selected CVE
+  shows its description, installed and fixed versions, **Your infrastructure**
+  (each deployment's exposure, team, environment, service and status), AI
+  classification and the decision history. Beside it, the decision panel first
+  shows any **Current decision**, then offers **Create ticket**, **Mark as fixed**
+  or **Whitelist** for the ticked deployments; its button stays disabled and lists
+  what is still missing. A whitelist needs a reason and an end date (three months
+  by default) and is confirmed in a dialog; it applies through the selected date
+  and expires at the following midnight UTC. AI classification is optional and
+  never blocks a manual decision; **Classify all critical with AI** appears only
+  when classification is configured.
 - **Timeline** (`/?page=daily`): one history per CVE, ordered from detection
   through whitelisting, work actions, marked fixes, and scanner observations.
   Each CVE shows its first detection, first recorded action on any deployment,

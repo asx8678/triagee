@@ -3,7 +3,7 @@ defmodule TriageWeb.SessionHTML do
 
   def new(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} workspace={true}>
+    <Layouts.app flash={@flash}>
       <div id="login-page" class="auth-shell">
         <a href="#main-content" class="skip-link">Skip to sign in</a>
         <main id="main-content" class="auth-main" tabindex="-1">

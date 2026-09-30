@@ -39,8 +39,6 @@ are not authentication. Keep the [loopback runtime](../LOCAL_RUNTIME.md) boundar
 Local fixed/risk-acceptance saves do not call external adapters. Explicit
 create_ticket does: review the preview and uncertainty policy before confirming.
 The separate legacy guided-review adapter uses `TRIAGE_AZURE_*`, not `ADO_*`.
-Public news/research lookups described in [README](../README.md) are also network
-features, not enabled background collection.
 
 ## Retained requirements and verification gaps
 

@@ -2,16 +2,17 @@
 
 ## Ready-to-present defaults
 
-Development starts with `TRIAGE_DEMO_MODE=true` by default. Fresh Review pages
-preselect **Whitelist temporarily**, a three-month expiry and all active
-placements of that CVE **inside the current team/environment scope**. The
-**Whitelist now** button is enabled immediately. You can deselect placements
-or choose either of the other two actions.
+Development starts with `TRIAGE_DEMO_MODE=true` by default. A CVE opened without
+a draft preselects **Whitelist**, a three-month expiry and ticks its active
+deployments that still need a decision **inside the current team/environment
+scope**. A CVE whose deployments are all decided already opens with nothing
+chosen. **Whitelist** is enabled once you write a reason. You can untick
+deployments or choose either of the other two actions.
 
 Opening a page does not save a decision, fabricate a reason, run Kiro or create
 an Azure ticket. Whitelisting still requires your reason and an explicit
 confirmation. Existing saved drafts—including a deliberate empty selection—are
-preserved. Use **Discard draft** to start over with the new demo defaults.
+preserved. Use **Discard draft** to start over with the demo defaults.
 Viewers remain read-only. `TRIAGE_DEMO_MODE=false` restores neutral defaults;
 test and production default to false. Restart Phoenix after changing the flag.
 
@@ -59,14 +60,14 @@ are started. Existing sample and user data are retained.
 ## Five-minute walkthrough
 
 1. **Start here:** `/?page=review&team=demo-payments&item=CVE-2099-9101`.
-   Show the public checkout API and three preselected environments. Narrow to
+   Show the public checkout API and three ticked environments. Narrow to
    `environment=prod` before typing a reason to demonstrate precise scope.
 2. **Classify with AI:** run real Kiro on this explicitly fictional case. Scores and
    reasoning come from Kiro, not canned seed output. The normal analysis setup
    still applies; demo mode does not enable external providers.
 3. **Whitelist:** enter a presentation reason and use **Whitelist**. Review
    the affected deployments in the confirmation dialog before applying it.
-4. **Compare the lists:** Need a decision, Active CVEs and Whitelisted all
+4. **Compare the lists:** Need a decision, Whitelisted and All active all
    contain examples. `CVE-2099-9108` has an open production deployment, a
    staging work item and a whitelisted development deployment.
 5. **Tell a lifecycle story:** `CVE-2099-9113` has an expired exception;
@@ -82,13 +83,14 @@ warnings are not hidden for presentation.
 
 ## Acceptance checks
 
-- Demo defaults are scoped, active-only, reversible and read-only for viewers.
+- Demo defaults are scoped, cover only active deployments that still need a
+  decision, are reversible and are read-only for viewers.
 - Manual deselection and edited drafts survive reload and scope changes.
 - Whitelist reason/confirmation and the three-action limit remain enforced.
 - Seed tests cover quantity, labeling, queue coverage, lifecycle variety,
   unchanged presenter edits and unrelated-data preservation.
 - Runtime tests prove dev-on, test/prod-off defaults and strict boolean parsing.
 - Verified locally: 21 focused checks and the full owned-database precommit
-  suite (1,311 passed, 2 skipped). The real browser showed the enabled whitelist
-  button, three selected deployments, seven demo teams and no automatically
-  saved draft or decision.
+  suite (1,311 passed, 2 skipped). The real browser showed Whitelist preselected,
+  three ticked deployments, seven demo teams and no automatically saved draft or
+  decision. (Whitelist now also waits for a reason before it is enabled.)

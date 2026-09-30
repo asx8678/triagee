@@ -1,56 +1,4 @@
 // Same-origin Phoenix distributions are loaded before this file by root.html.heex.
-// Hooks never own assessment form DOM and never store evidence or drafts.
-// Saved views are browser-local preferences, never an authorization boundary.
-const SavedQueueFilters = {
-  mounted() {
-    const key = "triage.saved-queue-filters.v1";
-    const allowed = ["q", "team", "severity", "kev", "exposure"];
-    const select = this.el.querySelector("select");
-    const feedback = this.el.querySelector('[role="status"]');
-    const clean = (filters) => Object.fromEntries(allowed.flatMap(name =>
-      typeof filters?.[name] === "string" && filters[name].length <= 200
-        ? [[name, filters[name]]] : []));
-    let views = [];
-    try {
-      const stored = JSON.parse(localStorage.getItem(key) || "[]");
-      if (Array.isArray(stored)) views = stored.filter(v => typeof v?.name === "string" && v.name.length <= 80)
-        .slice(0, 20).map(v => ({name: v.name, filters: clean(v.filters)}));
-    } catch (_) { feedback.textContent = "Saved views unavailable or invalid; filters still work."; }
-    const render = () => {
-      select.replaceChildren(new Option("Choose saved filters", ""));
-      views.forEach((view, index) => select.add(new Option(view.name, String(index))));
-    };
-    const persist = (next) => {
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-        views = next;
-        render();
-        feedback.textContent = "Saved views updated on this browser.";
-      } catch (_) { feedback.textContent = "Browser storage unavailable; changes were not saved."; }
-    };
-    this.click = (event) => {
-      const action = event.target.dataset.savedAction;
-      if (action === "save") {
-        const name = this.el.querySelector("input").value.trim();
-        if (!name || name.length > 80) { feedback.textContent = "Enter a name (1–80 characters)."; return; }
-        const next = views.filter(v => v.name !== name);
-        if (next.length >= 20) { feedback.textContent = "Delete a saved view first (limit 20)."; return; }
-        const filters = clean(Object.fromEntries(new URLSearchParams(location.search)));
-        persist([...next, {name, filters}]);
-      } else if (select.value !== "" && views[Number(select.value)]) {
-        const index = Number(select.value);
-        if (action === "load") this.pushEvent("filter_queue", views[index].filters);
-        if (action === "delete") persist(views.filter((_, i) => i !== index));
-      }
-    };
-    this.el.addEventListener("click", this.click);
-    render();
-  },
-  destroyed() { this.el.removeEventListener("click", this.click); }
-};
-
-const draftMessage = "Leave this case and discard unsaved assessment changes?";
-
 const TimelineWidth = {
   mounted() {
     this.measure = () => {
@@ -95,126 +43,6 @@ const TimelineWidth = {
   }
 };
 
-const CopyValue = {
-  mounted() {
-    this.copy = async () => {
-      const feedback = document.getElementById(this.el.dataset.copyFeedback);
-      if (feedback) feedback.textContent = "Copying…";
-      try {
-        if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
-        await navigator.clipboard.writeText(this.el.dataset.copyValue);
-        if (feedback) feedback.textContent = "Exact value copied.";
-      } catch (_error) {
-        if (feedback) feedback.textContent = "Copy unavailable. Select and copy the full value above.";
-      }
-    };
-    this.el.addEventListener("click", this.copy);
-  },
-  destroyed() { this.el.removeEventListener("click", this.copy); },
-};
-
-const DirtyDraft = {
-  mounted() {
-    this.dirty = this.el.dataset.dirty === "true";
-    this.editVersion = 0;
-    this.submittedVersion = 0;
-    this.markDirty = () => { this.dirty = true; this.editVersion += 1; };
-    this.beforeUnload = (event) => {
-      if (!this.dirty) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    this.guardLink = (event) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const link = event.target.closest?.("a[href]");
-      if (!this.dirty || !link || link.dataset.draftPreserving === "true" || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
-      const destination = new URL(link.href, location.href);
-      if (destination.origin === location.origin && destination.pathname === location.pathname && destination.search === location.search && destination.hash) return;
-      if (!window.confirm(draftMessage)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        link.focus();
-      } else {
-        // Avoid a second beforeunload prompt after this explicit confirmation.
-        this.dirty = false;
-      }
-    };
-    this.submitting = () => { this.submittedVersion = this.editVersion; };
-    this.discarding = (event) => {
-      if (event.target.closest?.('[phx-click="discard_confirmed"]')) this.submittedVersion = this.editVersion;
-    };
-    // The Navigation API can cancel same-document browser Back/Forward before
-    // LiveView changes route. No sentinel entries, history rewrites, or traps.
-    this.guardHistory = (event) => {
-      if (!this.dirty || event.navigationType !== "traverse" || !event.cancelable) return;
-      if (!window.confirm(draftMessage)) event.preventDefault();
-      else this.dirty = false;
-    };
-    this.el.addEventListener("input", this.markDirty);
-    this.el.addEventListener("change", this.markDirty);
-    this.el.addEventListener("submit", this.submitting, true);
-    window.addEventListener("beforeunload", this.beforeUnload);
-    document.addEventListener("click", this.guardLink, true);
-    document.addEventListener("click", this.discarding, true);
-    window.navigation?.addEventListener("navigate", this.guardHistory);
-    this.handleEvent("draft-saved", () => {
-      // A response to an older submission must not clear newer client edits.
-      if (this.editVersion === this.submittedVersion) this.dirty = false;
-    });
-  },
-  updated() {
-    // Only the explicit server success/discard event may clear a local draft;
-    // an unrelated patch with a stale data-dirty=false cannot clear it.
-    if (this.el.dataset.dirty === "true") this.dirty = true;
-  },
-  destroyed() {
-    this.el.removeEventListener("input", this.markDirty);
-    this.el.removeEventListener("change", this.markDirty);
-    this.el.removeEventListener("submit", this.submitting, true);
-    window.removeEventListener("beforeunload", this.beforeUnload);
-    document.removeEventListener("click", this.guardLink, true);
-    document.removeEventListener("click", this.discarding, true);
-    window.navigation?.removeEventListener("navigate", this.guardHistory);
-  },
-};
-
-// Optional nonmodal confirmation-region hook: focus the first action when the
-// region opens and restore its trigger on removal. No dialog/focus trap claim.
-const FocusReturn = {
-  mounted() {
-    this.trigger = document.activeElement;
-    this.el.querySelector('button:not([disabled]), a[href], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]')?.focus();
-  },
-  destroyed() {
-    const trigger = document.getElementById(this.el.dataset.returnFocus) || this.trigger;
-    if (trigger?.isConnected) trigger.focus();
-  },
-};
-
-const navigationMedia = window.matchMedia("(max-width: 760px)");
-const initializedMenus = new WeakSet();
-function syncNavigation(reset = false) {
-  const menu = document.getElementById("navigation-menu");
-  if (!menu) return;
-  if (reset || !initializedMenus.has(menu)) {
-    menu.open = !navigationMedia.matches;
-    initializedMenus.add(menu);
-  }
-}
-function closeNavigation(event) {
-  if (event.key !== "Escape" || !navigationMedia.matches) return;
-  const menu = document.getElementById("navigation-menu");
-  if (menu?.open && menu.contains(document.activeElement)) {
-    menu.open = false;
-    document.getElementById("navigation-toggle")?.focus();
-  }
-}
-navigationMedia.addEventListener("change", () => syncNavigation(true));
-window.addEventListener("phx:page-loading-stop", () => syncNavigation(true));
-document.addEventListener("triage:navigation-ready", () => syncNavigation(true));
-document.addEventListener("keydown", closeNavigation);
-syncNavigation();
-
 // Native modal owns focus trapping/inertness; LiveView still owns all child DOM.
 const WorkspaceDialog = {
   mounted() {
@@ -248,34 +76,23 @@ const WorkspaceDialog = {
   }
 };
 
-// Sensitive drafts never enter browser storage. Patches preserve server memory;
-// leaving/reloading warns rather than claiming durable draft persistence.
+// Drafts are stored on the server as they change. Leaving warns only while a
+// change is still on its way, was made while disconnected, or could not be
+// stored (data-dirty); a stored draft never triggers the prompt.
 const WorkspaceDraftGuard = {
   mounted() {
     this.wrapper = this.el.closest(".approved-workspace");
-    this.localDirty = false;
-    this.editVersion = 0;
-    this.submittedVersion = -1;
     this.leaving = false;
-    this.dirty = () => !this.leaving && (this.localDirty || this.el.dataset.dirty === "true");
-    // Protect keystrokes/checkbox changes before a slow or disconnected server
-    // can acknowledge them. Unrelated patches must never clear this state.
+    this.offlineEdit = false;
+    // LiveView marks an event it has sent but not yet had answered.
+    this.inFlight = () => !!this.wrapper.querySelector(
+      "#workspace-decision.phx-change-loading, #workspace-decision.phx-submit-loading, #workspace-decision .phx-change-loading, #workspace-decision .phx-click-loading"
+    );
+    this.dirty = () => !this.leaving && (this.el.dataset.dirty === "true" || this.offlineEdit || this.inFlight());
     this.edited = event => {
-      if (!event.target.closest?.("#workspace-decision")) return;
-      this.localDirty = true;
-      this.editVersion++;
+      if (event.target.closest?.("#workspace-decision") && !this.liveSocket.isConnected()) this.offlineEdit = true;
     };
-    this.submitting = event => {
-      if (event.target.id === "workspace-decision") this.submittedVersion = this.editVersion;
-    };
-    this.confirming = event => {
-      if (event.target.closest?.('[phx-click="confirm-risk"]')) {
-        this.submittedVersion = this.editVersion;
-      }
-    };
-    this.handleEvent("workspace-draft-cleared", () => {
-      if (this.editVersion === this.submittedVersion) this.localDirty = false;
-    });
+    this.handleEvent("workspace-draft-cleared", () => { this.offlineEdit = false; });
     this.unload = event => { if (this.dirty()) { event.preventDefault(); event.returnValue = ""; } };
     this.leave = event => {
       const link = event.target.closest?.("a[href]");
@@ -285,7 +102,7 @@ const WorkspaceDraftGuard = {
       const current = new URL(location.href);
       if (url.origin === current.origin && url.pathname === current.pathname && url.search === current.search && url.hash) return;
       if (url.origin === location.origin && ["/", "/workspace", "/timeline"].includes(url.pathname) && link.getAttribute("data-phx-link") === "patch") return;
-      if (!confirm("Leave this workspace? Drafts are held only in this live connection and may be lost.")) {
+      if (!confirm("Leave this page? Your latest change hasn't been saved yet.")) {
         event.preventDefault(); event.stopImmediatePropagation();
       } else {
         this.leaving = true; // No second beforeunload prompt after explicit consent.
@@ -294,18 +111,35 @@ const WorkspaceDraftGuard = {
     window.addEventListener("beforeunload", this.unload);
     this.wrapper.addEventListener("input", this.edited);
     this.wrapper.addEventListener("change", this.edited);
-    this.wrapper.addEventListener("submit", this.submitting, true);
-    this.wrapper.addEventListener("click", this.confirming, true);
     this.wrapper.addEventListener("click", this.leave, true);
   },
+  // On reconnect LiveView sends the form again; if storing it fails the
+  // server marks the draft unsaved through data-dirty.
+  reconnected() { this.offlineEdit = false; },
   destroyed() {
     window.removeEventListener("beforeunload", this.unload);
     this.wrapper.removeEventListener("input", this.edited);
     this.wrapper.removeEventListener("change", this.edited);
-    this.wrapper.removeEventListener("submit", this.submitting, true);
-    this.wrapper.removeEventListener("click", this.confirming, true);
     this.wrapper.removeEventListener("click", this.leave, true);
   }
+};
+
+// The CVE list is one Tab stop; the arrow keys, Home and End move between rows.
+const QueueKeys = {
+  mounted() {
+    this.onKey = event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const rows = [...this.el.querySelectorAll(".queue-item")];
+      const index = rows.indexOf(document.activeElement);
+      const next = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: rows.length - 1 }[event.key];
+      if (index < 0 || next === undefined || !rows[next]) return;
+      event.preventDefault();
+      rows.forEach(row => { row.tabIndex = row === rows[next] ? 0 : -1; });
+      rows[next].focus();
+    };
+    this.el.addEventListener("keydown", this.onKey);
+  },
+  destroyed() { this.el.removeEventListener("keydown", this.onKey); }
 };
 
 const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content");
@@ -314,7 +148,7 @@ if (typeof Phoenix === "undefined" || typeof LiveView === "undefined") {
 } else {
   const liveSocket = new LiveView.LiveSocket("/live", Phoenix.Socket, {
     params: { _csrf_token: csrfToken },
-    hooks: { CopyValue, DirtyDraft, FocusReturn, TimelineWidth, SavedQueueFilters, WorkspaceDialog, WorkspaceDraftGuard },
+    hooks: { QueueKeys, TimelineWidth, WorkspaceDialog, WorkspaceDraftGuard },
   });
   window.liveSocket = liveSocket;
   liveSocket.connect();

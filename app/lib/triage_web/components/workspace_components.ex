@@ -9,35 +9,62 @@ defmodule TriageWeb.WorkspaceComponents do
   defp draft_status(%{saved: true}), do: "Decision saved"
   defp draft_status(%{dirty: false}), do: "No unsaved changes"
   defp draft_status(%{persisted: true}), do: "Draft saved to your account"
-  defp draft_status(_draft), do: "Draft not saved. Keep this tab open."
+  defp draft_status(_draft), do: "Draft not saved yet. Keep this tab open."
 
-  defp decision_blocker(%{draft: nil}), do: nil
+  # Everything still missing before the decision can be saved, in form order.
+  # The action button stays disabled until the list is empty, so a click never
+  # ends in a validation error.
+  defp decision_blockers(%{draft: nil}), do: []
 
-  defp decision_blocker(assigns) do
+  defp decision_blockers(assigns) do
+    case state_blocker(assigns) do
+      nil -> missing_fields(assigns.draft)
+      message -> [{:other, message}]
+    end
+  end
+
+  # A state that rules out any decision until it is resolved.
+  defp state_blocker(assigns) do
     cond do
       not assigns.can_review ->
         "Reviewer access is required to make a decision."
 
       not is_nil(assigns.pending_operation) ->
-        "A ticket operation is already pending. Wait for its result."
+        "A ticket request for this CVE is still open. Check it before deciding again."
 
       assigns.draft_error ->
-        "The draft could not be saved. Keep this tab open and retry."
+        "Your draft could not be saved. Keep this tab open and try again."
 
       assigns.draft.stale ->
-        "Evidence changed. Reload current evidence before continuing."
+        "This CVE changed after you started. Reload it before continuing."
 
       assigns.hidden_targets != [] ->
-        "Selected deployments are hidden. Restore the original scope to continue."
+        "Some ticked deployments are hidden by the team or environment filter. Clear the filter to continue."
 
       assigns.draft.fields["action"] not in Commit.review_actions() ->
-        "Choose one of the three actions in the Decision panel."
-
-      assigns.draft.targets == [] ->
-        "Select at least one deployment to enable this action."
+        "Choose Create ticket, Mark as fixed or Whitelist."
 
       true ->
         nil
+    end
+  end
+
+  defp missing_fields(%{targets: targets, fields: fields}) do
+    whitelist? = fields["action"] == "accepted_risk"
+
+    [
+      targets == [] && {:targets, "Tick at least one deployment."},
+      (whitelist? and String.length(String.trim(fields["reason"] || "")) < 3) &&
+        {:reason, "Write why this is safe to accept."},
+      (whitelist? and past_date?(fields["due_on"])) && {:date, "Pick today or a later date."}
+    ]
+    |> Enum.filter(& &1)
+  end
+
+  defp past_date?(value) do
+    case Date.from_iso8601(value || "") do
+      {:ok, date} -> Date.compare(date, Date.utc_today()) == :lt
+      _ -> false
     end
   end
 
@@ -68,67 +95,53 @@ defmodule TriageWeb.WorkspaceComponents do
   def review(assigns) do
     assigns =
       assigns
-      |> assign(:decision_blocker, decision_blocker(assigns))
+      |> assign(:decision_blockers, decision_blockers(assigns))
       |> assign(
         :decision_error,
         assigns.error || (assigns.draft && assigns.draft[:persistence_error])
       )
+      |> assign(:searching, assigns.params["q"] not in [nil, ""])
 
     ~H"""
-    <div class="review-topbar">
-      <div class="review-tools">
-        <nav class="triage-counts" aria-label="CVE lists">
-          <.link
-            :for={
-              {mode, label} <- [
-                {"needs", "Need a decision"},
-                {"active", "Active CVEs"},
-                {"accepted", "Whitelisted"}
-              ]
-            }
-            id={"triage-count-#{mode}"}
-            patch={Routes.drill(@params, mode)}
-            class={["triage-count", @mode == mode && "active"]}
-            aria-current={if @mode == mode, do: "page"}
-          >
-            <span class="triage-count-value">{count(@metrics, mode)}</span>
-            <span class="triage-count-label">{label}</span>
-          </.link>
-        </nav>
-        <span class="spacer" />
-        <div class="classify-all">
-          <button
-            id="classify-all"
-            type="button"
-            phx-click="classify-all"
-            disabled={not @ai_configured or not @can_review}
-            title={
-              cond do
-                not @ai_configured ->
-                  "AI classification is off. Connect Kiro to enable it."
-
-                not @can_review ->
-                  "Reviewer access is required to classify."
-
-                true ->
-                  "Classifies every critical CVE that needs a decision in this team and environment. Nothing is decided automatically."
-              end
-            }
-          >
-            <.icon name="hero-sparkles" class="size-4" /> Classify all critical with AI
-          </button>
-          <p :if={@classify_all} id="classify-all-result" class="classify-all-result" role="status">
-            {classify_all_message(@classify_all)}
-          </p>
-        </div>
+    <div class="review-toolbar">
+      <nav class="list-tabs" aria-label="CVE lists">
+        <.link
+          :for={
+            {mode, label} <- [
+              {"needs", "Need a decision"},
+              {"accepted", "Whitelisted"},
+              {"active", "All active"}
+            ]
+          }
+          id={"triage-count-#{mode}"}
+          patch={Routes.drill(@params, mode)}
+          class={["list-tab", @mode == mode && "active"]}
+          aria-current={if @mode == mode, do: "page"}
+        >
+          {label}<span class="list-tab-count">{count(@metrics, mode)}</span>
+        </.link>
+      </nav>
+      <div :if={@ai_configured and @can_review} class="classify-all">
         <button
-          id="review-queue-toggle"
-          class="queue-toggle quiet"
-          phx-click="queue-toggle"
-          aria-expanded={to_string(@queue_shown)}
-          aria-controls="review-queue"
-        >{if @queue_shown, do: "Back to CVE", else: "Show list (#{@total})"}</button>
+          id="classify-all"
+          type="button"
+          phx-click="classify-all"
+          title="Classifies every critical CVE that needs a decision in this team and environment. Nothing is decided automatically."
+        >
+          <.icon name="hero-sparkles" class="size-4" /> Classify all critical with AI
+        </button>
+        <p :if={@classify_all} id="classify-all-result" class="classify-all-result" role="status">
+          {classify_all_message(@classify_all)}
+        </p>
       </div>
+      <button
+        id="review-queue-toggle"
+        type="button"
+        class="queue-toggle quiet"
+        phx-click="queue-toggle"
+        aria-expanded={to_string(@queue_shown)}
+        aria-controls="review-queue"
+      >{if @queue_shown, do: "Back to CVE", else: "Show list"}</button>
     </div>
     <div class="review-grid">
       <section id="review-queue" class="panel queue-panel" aria-label="CVE list">
@@ -147,19 +160,17 @@ defmodule TriageWeb.WorkspaceComponents do
             phx-debounce="250"
           />
         </.form>
-        <div class="queue-heading">
-          <strong>{@total} CVEs</strong><span>{list_label(@mode)}</span>
-        </div>
-        <div class="queue-list">
+        <p :if={@mode == "active"} class="queue-heading">
+          Includes whitelisted and in-progress CVEs.
+        </p>
+        <p class="sr-only">Use the up and down arrow keys to move between CVEs.</p>
+        <div id="queue-list" class="queue-list" phx-hook="QueueKeys">
           <.link
-            :for={row <- @rows}
+            :for={{row, index} <- Enum.with_index(@rows)}
             id={"queue-#{row.cve}"}
-            class={[
-              "queue-item",
-              "sev-#{severity_key(row.severity)}",
-              @row && @row.cve == row.cve && "active"
-            ]}
+            class={["queue-item", @row && @row.cve == row.cve && "active"]}
             aria-current={if @row && @row.cve == row.cve, do: "true"}
+            tabindex={queue_tabindex(row, index, @rows, @row)}
             patch={Routes.workspace_path(@params, %{"item" => row.cve})}
           ><div class="queue-line">
             <span class="queue-id cve-id">{row.cve}</span><.severity value={row.severity} />
@@ -170,13 +181,20 @@ defmodule TriageWeb.WorkspaceComponents do
               is_nil(whitelisted_until(row)) and age(row.first_seen)
             }>{age(row.first_seen)}</span><.ai_row_state state={@ai_rows[row.cve]} />
           </span></.link>
-          <p :if={@rows == []} class="empty">
-            {if @params["q"] not in [nil, ""],
-              do: "No CVEs match this search.",
-              else: "Nothing in this list for the current team and environment."}
-          </p>
+          <div :if={@rows == []} class="empty">
+            <p>
+              {if @searching,
+                do: "No CVEs match “#{@params["q"]}”.",
+                else: "Nothing in this list for the current team and environment."}
+            </p>
+            <.link
+              :if={@searching}
+              id="clear-search"
+              patch={Routes.workspace_path(@params, %{"q" => nil, "offset" => nil, "item" => nil})}
+            >Clear search</.link>
+          </div>
         </div>
-        <.pagination params={@params} offset={@offset} total={@total} />
+        <.pagination :if={@total > 0} params={@params} offset={@offset} total={@total} />
       </section>
       <section
         :if={@row}
@@ -184,7 +202,7 @@ defmodule TriageWeb.WorkspaceComponents do
         class="panel review-workspace"
         aria-label="Selected CVE"
       >
-        <header class={["review-heading", "sev-#{severity_key(@row.severity)}"]}>
+        <header class="review-heading">
           <div class="review-summary">
             <div class="review-title-row">
               <h2 class="cve-id">{@row.cve}</h2><.severity value={@row.severity} /><.saved_status scopes={
@@ -208,19 +226,76 @@ defmodule TriageWeb.WorkspaceComponents do
           phx-submit="save"
           class="review-content"
         >
+          <div class="evidence-column">
+            <section id="cve-description" class="triage-section" aria-labelledby="description-title">
+              <h3 id="description-title">Description</h3>
+              <p class="summary-copy long-value">{description(@row)}</p>
+              <dl class="reported-fix">
+                <div :if={installed_packages(@row.scopes)}>
+                  <dt>Installed</dt><dd>{installed_packages(@row.scopes)}</dd>
+                </div>
+                <div>
+                  <dt>Fixed in</dt><dd>{reported_fixes(@row)}</dd>
+                </div>
+              </dl>
+            </section>
+            <section
+              id="review-deployments"
+              class="triage-section"
+              tabindex="-1"
+              aria-labelledby="infrastructure-title"
+            >
+              <div class="block-title">
+                <h3 id="infrastructure-title">Your infrastructure</h3><span>{exposure_summary(
+                  @row.scopes
+                )}</span>
+              </div>
+              <p :if={@can_review} class="table-instruction">
+                Tick the deployments your decision applies to.
+              </p>
+              <p :if={@hidden_targets != []} class="form-error">
+                {length(@hidden_targets)} ticked deployments are hidden by the team or environment filter. Clear the filter to see them; they are still ticked.
+              </p>
+              <.scope_table
+                targets={@row.scopes}
+                selected={@draft.targets}
+                selectable={@can_review}
+                focus_target={@params["focus_target"]}
+                row_id_prefix="review-target"
+              />
+              <p class="coverage-note">
+                External deployments are reachable from the internet; internal ones are not.
+              </p>
+            </section>
+            <.ai_triage_panel
+              cve={@row.cve}
+              can_review={@can_review}
+              configured={@ai_configured}
+              assessing={@ai_assessing}
+              assessment={@ai_assessment}
+              error={@ai_assessment_error}
+            />
+            <details id="decision-history-section">
+              <summary>Decision history</summary>
+              <.history_entries history={@history} />
+            </details>
+          </div>
           <div class="decision-column">
             <p :if={not @can_review} id="viewer-read-only" class="inline-notice">
               Read-only viewer. A reviewer or administrator must make decisions.
             </p>
-            <h3 class="decision-title">Decision</h3>
+            <.current_decision scopes={@row.scopes} />
+            <h3 class="decision-title">
+              {if current_decisions(@row.scopes) == [], do: "Decision", else: "Change decision"}
+            </h3>
             <fieldset id="decision-action" class="action-choice" disabled={not @can_review}>
               <legend class="sr-only">Action</legend>
               <label
                 :for={
                   {value, label, hint} <- [
-                    {"accepted_risk", "Whitelist", "Accept the risk until a date"},
+                    {"create_ticket", "Create ticket", "Send to Azure DevOps"},
                     {"fixed", "Mark as fixed", "The fix is deployed"},
-                    {"create_ticket", "Create ticket", "Send to Azure DevOps"}
+                    {"accepted_risk", "Whitelist", "Accept the risk until a date"}
                   ]
                 }
                 id={"decision-action-#{value}"}
@@ -252,17 +327,11 @@ defmodule TriageWeb.WorkspaceComponents do
                 aria-describedby="whitelist-expiry-help"
               />
               <p id="whitelist-expiry-help" class="form-note">
-                Defaults to three months. Afterwards the CVE needs a decision again.
+                {expiry_note(@draft.fields["due_on"])}
               </p>
             </div>
             <p :if={@draft.fields["action"] == "create_ticket"} class="form-note">
-              Creates an Azure DevOps ticket with the CVE and the selected deployments.
-            </p>
-            <p class="decision-targets">
-              Applies to
-              <a href="#review-deployments">
-                {length(@draft.targets)} of {length(@row.scopes)} deployments
-              </a>
+              Creates an Azure DevOps ticket with the CVE and the ticked deployments.
             </p>
             <p :if={@decision_error} id="decision-error" role="alert" class="form-error">
               {@decision_error}
@@ -273,104 +342,104 @@ defmodule TriageWeb.WorkspaceComponents do
                 id="reload-evidence"
                 type="button"
                 phx-click="reconcile"
-              >Reload current evidence</button>
-              <div class="decision-buttons">
-                <button
-                  id="cancel-decision"
-                  disabled={not @can_review or not is_nil(@pending_operation) or not @draft.dirty}
-                  type="button"
-                  phx-click="cancel-decision"
-                >Discard</button>
-                <button
-                  id="save-decision"
-                  class="primary"
-                  type="submit"
-                  phx-disable-with="Working…"
-                  disabled={not is_nil(@decision_blocker)}
-                  aria-describedby={if @decision_blocker, do: "decision-action-help"}
-                  title={@decision_blocker}
-                >{case @draft.fields["action"] do
-                  "fixed" -> "Mark as fixed"
-                  "accepted_risk" -> "Whitelist"
-                  "create_ticket" -> "Create ticket"
-                  _ -> "Choose an action"
-                end}</button>
-              </div>
-              <p
-                :if={@decision_blocker}
+              >Reload this CVE</button>
+              <p class="decision-targets">
+                Applies to
+                <a href="#review-deployments">
+                  {length(@draft.targets)} of {deployment_count(@row.scopes)}
+                </a>
+              </p>
+              <button
+                id="save-decision"
+                class="primary"
+                type="submit"
+                phx-disable-with="Working…"
+                disabled={@decision_blockers != []}
+                aria-describedby={if @decision_blockers != [], do: "decision-action-help"}
+              >{case @draft.fields["action"] do
+                "fixed" -> "Mark as fixed"
+                "accepted_risk" -> "Whitelist"
+                "create_ticket" -> "Create ticket"
+                _ -> "Choose an action"
+              end}</button>
+              <div
+                :if={@decision_blockers != []}
                 id="decision-action-help"
                 class="decision-action-help"
                 role="status"
               >
-                {@decision_blocker}
-                <a
-                  :if={
-                    @can_review and @draft.targets == [] and
-                      @draft.fields["action"] in Commit.review_actions()
-                  }
-                  href="#review-deployments"
-                >Select deployments</a>
-              </p>
-              <span id="draft-state" class="save-state">{draft_status(@draft)}</span>
-            </div>
-          </div>
-          <div class="evidence-column">
-            <section id="cve-description" class="triage-section" aria-labelledby="description-title">
-              <h3 id="description-title">Description</h3>
-              <p class="summary-copy long-value">{description(@row)}</p>
-              <dl class="reported-fix">
-                <dt>Fixed in</dt><dd>{reported_fixes(@row)}</dd>
-              </dl>
-            </section>
-            <section
-              id="review-deployments"
-              class="triage-section"
-              tabindex="-1"
-              aria-labelledby="infrastructure-title"
-            >
-              <div class="block-title">
-                <h3 id="infrastructure-title">Your infrastructure</h3><span>{exposure_summary(
-                  @row.scopes
-                )}</span>
+                <p :for={{kind, text} <- @decision_blockers}>
+                  {text}
+                  <a :if={kind == :targets} href="#review-deployments">Show deployments</a>
+                </p>
               </div>
-              <p :if={@hidden_targets != []} class="form-error">
-                {length(@hidden_targets)} selected deployments are hidden by this team or environment. Restore the original scope; the selection has not changed.
-              </p>
-              <.scope_table
-                targets={@row.scopes}
-                selected={@draft.targets}
-                selectable={@can_review}
-                focus_target={@params["focus_target"]}
-                row_id_prefix="review-target"
-              />
-              <p class="coverage-note">
-                External deployments are reachable from the internet; internal ones are not. Tick the deployments your decision applies to.
-              </p>
-            </section>
-            <.ai_triage_panel
-              cve={@row.cve}
-              can_review={@can_review}
-              configured={@ai_configured}
-              assessing={@ai_assessing}
-              assessment={@ai_assessment}
-              error={@ai_assessment_error}
-            />
-            <details id="decision-history-section">
-              <summary>Decision history</summary>
-              <.history_entries history={@history} />
-            </details>
+              <div class="decision-foot">
+                <span id="draft-state" class="save-state">{draft_status(@draft)}</span>
+                <button
+                  id="cancel-decision"
+                  class="link"
+                  disabled={not @can_review or not is_nil(@pending_operation) or not @draft.dirty}
+                  type="button"
+                  phx-click="cancel-decision"
+                  data-confirm="Discard this draft? The action, reason and ticked deployments are cleared."
+                >Discard draft</button>
+              </div>
+            </div>
           </div>
         </.form>
       </section>
       <section :if={is_nil(@row)} class="panel review-workspace">
         <div class="empty">
-          <h2>No CVE selected</h2><p>
-            Pick a CVE from the list. Nothing here matches the current team, environment or search.
-          </p>
+          <%= cond do %>
+            <% @rows != [] -> %>
+              <h2>No CVE selected</h2>
+              <p>Pick a CVE from the list.</p>
+            <% @searching -> %>
+              <h2>No CVEs match “{@params["q"]}”</h2>
+              <p>
+                Search looks at CVE IDs and package names in the current team and environment.
+                <.link patch={
+                  Routes.workspace_path(@params, %{"q" => nil, "offset" => nil, "item" => nil})
+                }>
+                  Clear search
+                </.link>
+              </p>
+            <% true -> %>
+              <h2>Nothing to review here</h2>
+              <p>No CVEs in this list match the current team and environment.</p>
+          <% end %>
         </div>
       </section>
     </div>
     """
+  end
+
+  # The list is one Tab stop: the open CVE (or the first row) takes focus and
+  # the QueueKeys hook moves between rows with the arrow keys.
+  defp queue_tabindex(row, index, rows, selected) do
+    focus =
+      if selected && Enum.any?(rows, &(&1.cve == selected.cve)),
+        do: row.cve == selected.cve,
+        else: index == 0
+
+    if focus, do: "0", else: "-1"
+  end
+
+  defp expiry_note(due_on) do
+    case Date.from_iso8601(due_on || "") do
+      {:ok, date} -> "Needs a decision again after #{format_date(date)}."
+      _ -> "Defaults to three months, then it needs a decision again."
+    end
+  end
+
+  @doc "A calendar date as shown everywhere in the workspace: 30 Dec 2026."
+  def format_date(date), do: Calendar.strftime(date, "%d %b %Y")
+
+  defp due_date(value) do
+    case Date.from_iso8601(value || "") do
+      {:ok, date} -> format_date(date)
+      _ -> value
+    end
   end
 
   defp count(metrics, mode) do
@@ -379,10 +448,6 @@ defmodule TriageWeb.WorkspaceComponents do
       _ -> 0
     end
   end
-
-  defp list_label("active"), do: "all active"
-  defp list_label("accepted"), do: "whitelisted"
-  defp list_label(_mode), do: "need a decision"
 
   defp classify_all_message(%{error: message}), do: message
 
@@ -457,7 +522,8 @@ defmodule TriageWeb.WorkspaceComponents do
     |> Enum.join(" · ")
   end
 
-  # Earliest expiry among the active whitelisted deployments.
+  # Earliest expiry among the active whitelisted deployments, as the last day
+  # the whitelist still applies (the date picked in the form).
   defp whitelisted_until(row) do
     row.scopes
     |> Enum.filter(
@@ -466,14 +532,13 @@ defmodule TriageWeb.WorkspaceComponents do
     )
     |> Enum.map(& &1.decision.expires_at)
     |> Enum.min(DateTime, fn -> nil end)
-    |> case do
-      nil -> nil
-      expires_at -> Calendar.strftime(expires_at, "%d %b %Y")
-    end
+    |> last_valid_day()
   end
 
-  defp severity_key(severity) when is_binary(severity), do: String.downcase(severity)
-  defp severity_key(_severity), do: "unknown"
+  # A whitelist expires at the start of its `expires_at`, so the last day it
+  # applies is the day before a midnight expiry.
+  defp last_valid_day(nil), do: nil
+  defp last_valid_day(expires_at), do: expires_at |> DateTime.add(-1, :second) |> format_date()
 
   defp deployment_count([_one]), do: "1 deployment"
   defp deployment_count(scopes), do: "#{length(scopes)} deployments"
@@ -498,6 +563,35 @@ defmodule TriageWeb.WorkspaceComponents do
     if fixes == [], do: "Not reported", else: Enum.join(fixes, ", ")
   end
 
+  defp package_lines(scope),
+    do:
+      scope.findings
+      |> Enum.map(&{&1.package_name, &1.package_version})
+      |> Enum.uniq()
+      |> Enum.sort()
+
+  # The package versions every deployment shares, or nil when they differ. The
+  # deployments table shows a Package column only when they differ.
+  defp uniform_packages(scopes) do
+    case scopes |> Enum.map(&package_lines/1) |> Enum.uniq() do
+      [[_ | _] = lines] -> lines
+      _ -> nil
+    end
+  end
+
+  defp installed_packages(scopes) do
+    case uniform_packages(scopes) do
+      nil -> nil
+      lines -> Enum.map_join(lines, ", ", fn {name, version} -> "#{name} #{version}" end)
+    end
+  end
+
+  # Image paths may break after a slash, never inside a name.
+  defp path_parts(path) do
+    parts = String.split(path || "", "/")
+    Enum.map(Enum.drop(parts, -1), &(&1 <> "/")) ++ [List.last(parts)]
+  end
+
   attr :targets, :list, required: true
   attr :selected, :list, default: []
   attr :selectable, :boolean, default: false
@@ -505,6 +599,8 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :row_id_prefix, :string, default: nil
 
   def scope_table(assigns) do
+    assigns = assign(assigns, :show_packages, is_nil(uniform_packages(assigns.targets)))
+
     ~H"""
     <div class="table-wrap">
       <table class="scope-table">
@@ -512,7 +608,7 @@ defmodule TriageWeb.WorkspaceComponents do
           <tr>
             <th :if={@selectable}><span class="sr-only">Select</span></th><th>Exposure</th><th>
               Team / environment
-            </th><th>Service</th><th>Package</th><th>Status</th>
+            </th><th>Service</th><th :if={@show_packages}>Package</th><th>Status</th>
           </tr>
         </thead><tbody>
           <tr
@@ -527,7 +623,7 @@ defmodule TriageWeb.WorkspaceComponents do
               <label><input
                 type="checkbox"
                 id={"scope-target-#{scope.id}"}
-                aria-label={"Select #{scope.placement.owner} #{scope.placement.environment} placement #{scope.id}"}
+                aria-label={"Select #{team_name(scope.placement.owner)}, #{scope.placement.environment}, #{scope.placement.namespace} (#{scope.image.repository})"}
                 checked={scope.id in @selected}
                 disabled={not scope.active?}
                 phx-click="target"
@@ -538,15 +634,12 @@ defmodule TriageWeb.WorkspaceComponents do
             <td>
               <strong>{team_name(scope.placement.owner)}</strong><span class="subline">{scope.placement.environment}</span>
             </td><td>
-              {scope.image.repository}<span class="subline">{scope.placement.namespace} · deployment {scope.id}</span>
-            </td><td>
-              <span
-                :for={f <- Enum.uniq_by(scope.findings, &{&1.package_name, &1.package_version})}
-                class="package-line"
-              >
-                {f.package_name} {f.package_version}
+              <span :for={part <- path_parts(scope.image.repository)}>{part}<wbr /></span><span class="subline">{scope.placement.namespace}</span>
+            </td><td :if={@show_packages}>
+              <span :for={{name, version} <- package_lines(scope)} class="package-line">
+                {name} {version}
               </span>
-            </td><td>{work_status([scope])}</td>
+            </td><td class="status-cell">{work_status([scope])}</td>
           </tr>
         </tbody>
       </table>
@@ -568,15 +661,13 @@ defmodule TriageWeb.WorkspaceComponents do
     >
       <div class="confirmation-layout">
         <header class="modal-head">
-          <h2 id="risk-title">Whitelist temporarily?</h2>
+          <h2 id="risk-title">Whitelist {@row.cve}?</h2>
         </header><div class="modal-body">
-          <strong>{@row.cve}: {length(@draft.targets)} selected deployments</strong><.scope_table targets={
+          <strong>{deployment_count(Enum.filter(@row.scopes, &(&1.id in @draft.targets)))}</strong><.scope_table targets={
             Enum.filter(@row.scopes, &(&1.id in @draft.targets))
-          } /><p>{@draft.fields["reason"]}</p><p>
-            Valid through {@draft.fields["due_on"]}, UTC; expires at the following midnight.
-          </p><p>
-            Recorded locally with the current date.
-          </p><p>This does not mark the CVE fixed or create an external ticket.</p>
+          } /><p><strong>Reason:</strong> {@draft.fields["reason"]}</p><p>
+            Whitelisted through {due_date(@draft.fields["due_on"])} (UTC). After that the CVE needs a decision again.
+          </p><p>This doesn't mark the CVE as fixed or create a ticket.</p>
         </div><footer class="modal-foot">
           <button id="cancel-risk" phx-click="cancel-risk">Cancel</button><button
             id="confirm-risk"
@@ -620,8 +711,8 @@ defmodule TriageWeb.WorkspaceComponents do
         <div class="modal-body">
           <p>This will create a ticket in: <strong>{Triage.AzureDevOps.backlog()}</strong></p>
           <h3>{@row.cve} needs to be fixed</h3>
-          <p>Team: {Triage.AzureDevOps.team()} (routed through the team's area path)</p>
-          <div style="white-space: normal; overflow-wrap: anywhere; overflow: auto;">
+          <p>Team: {Triage.AzureDevOps.team()}</p>
+          <div class="ticket-preview">
             {Phoenix.HTML.raw(@ticket_description)}
           </div>
           <p :if={@error} role="alert">{@error}</p>
@@ -661,12 +752,12 @@ defmodule TriageWeb.WorkspaceComponents do
             </div>
             <div>
               <dt>Your work is saved to your account</dt><dd>
-                Drafts survive reloads and server restarts. A draft is not a decision: use the action button to commit it. Discard only clears the current draft.
+                Drafts are saved as you work and survive reloads and server restarts. A draft is not a decision: use the action button to save it. Discard draft only clears the draft.
               </dd>
             </div>
             <div>
               <dt>Changed evidence needs another look</dt><dd>
-                If another reviewer changes the same CVE, your draft is preserved. Reload the evidence before saving.
+                If another reviewer changes the same CVE, your draft is kept. Reload the CVE before saving.
               </dd>
             </div>
             <div>
@@ -714,31 +805,6 @@ defmodule TriageWeb.WorkspaceComponents do
     """
   end
 
-  attr :risk, :any, required: true
-  attr :severity, :any, default: nil
-
-  def priority(assigns) do
-    ~H"""
-    <span class={[
-      "badge",
-      String.downcase(displayed_priority(@risk, @severity))
-    ]}>{displayed_priority(@risk, @severity)}</span>
-    """
-  end
-
-  # The displayed review priority never contradicts the scanner severity: a
-  # "Critical" priority belongs to critical advisories only, and a critical
-  # advisory never shows a lesser label beside its severity. Without a
-  # recorded severity the computed review priority stands on its own.
-  defp displayed_priority(nil, _severity), do: "No active scope"
-
-  defp displayed_priority(risk, severity) do
-    case to_string(severity || "") |> String.downcase() do
-      known when known in ["critical", "high", "medium", "low"] -> String.capitalize(known)
-      _other -> String.capitalize(risk.priority)
-    end
-  end
-
   def team_name(name) when name in [nil, "", "(unknown)", "unassigned", "__unassigned__"],
     do: "Unassigned"
 
@@ -781,9 +847,9 @@ defmodule TriageWeb.WorkspaceComponents do
       case state do
         "fixed" -> "Reported fix (unverified)"
         "accepted_risk" -> "Whitelisted"
-        "create_ticket" -> "In progress — ticket created"
+        "create_ticket" -> "Ticket created"
         "needs" -> "Needs decision"
-        "mixed" -> "Mixed scope statuses"
+        "mixed" -> "Mixed statuses"
         _ -> "In progress"
       end
 
@@ -792,10 +858,6 @@ defmodule TriageWeb.WorkspaceComponents do
     ~H"""
     <span :if={@state != "accepted_risk"} class={"badge saved-status status-#{@state}"}>{@label}</span>
     """
-  end
-
-  def fixed_scopes?(scopes) do
-    scopes != [] and Enum.all?(scopes, &(&1.covered? and &1.decision.decision == "fixed"))
   end
 
   def work_status(scopes) do
@@ -832,16 +894,79 @@ defmodule TriageWeb.WorkspaceComponents do
   end
 
   def history_scope(%{placement_id: nil}),
-    do: "Legacy global advisory decision · scope not narrowed"
+    do: "All deployments (recorded before decisions were made per deployment)"
 
   def history_scope(d) do
     target = d.metadata["target"] || %{}
 
-    "Placement #{d.placement_id} · #{target["team"] || "historical team unknown"} · #{target["environment"] || "historical environment unknown"}"
+    [
+      if(target["team"], do: team_name(target["team"]), else: "Unknown team"),
+      target["environment"] || "unknown environment",
+      target["namespace"]
+    ]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(" · ")
   end
 
-  # T03: source-backed "Why now" from the deterministic risk policy. The
-  # strongest classified target's reason leads; no opaque score is invented.
+  defp history_state(:active), do: "in effect"
+  defp history_state(:expired), do: "expired"
+  defp history_state(:pending), do: "scheduled"
+  defp history_state(state), do: to_string(state)
+
+  # The recorded decisions that cover this CVE's active deployments now,
+  # grouped so one whitelist across several deployments reads as one line.
+  defp current_decisions(scopes) do
+    active = Enum.filter(scopes, & &1.active?)
+
+    active
+    |> Enum.filter(& &1.covered?)
+    |> Enum.group_by(&{&1.decision.decision, &1.decision.reason, &1.decision.actor})
+    |> Enum.map(fn {{decision, reason, actor}, covered} ->
+      %{
+        label: Decisions.label(decision),
+        reason: reason,
+        actor: actor,
+        decided_at: covered |> Enum.map(& &1.decision.decided_at) |> Enum.max(DateTime),
+        until:
+          if(decision == "accepted_risk",
+            do:
+              covered
+              |> Enum.map(& &1.decision.expires_at)
+              |> Enum.reject(&is_nil/1)
+              |> Enum.min(DateTime, fn -> nil end)
+              |> last_valid_day()
+          ),
+        count: length(covered),
+        total: length(active)
+      }
+    end)
+    |> Enum.sort_by(& &1.decided_at, {:desc, DateTime})
+  end
+
+  attr :scopes, :list, required: true
+
+  # What is already decided, so a reviewer sees an existing whitelist or ticket
+  # before choosing again.
+  defp current_decision(assigns) do
+    assigns = assign(assigns, :decisions, current_decisions(assigns.scopes))
+
+    ~H"""
+    <section :if={@decisions != []} id="current-decision" class="current-decision">
+      <h3 class="decision-title">Current decision</h3>
+      <div :for={d <- @decisions} class="current-decision-item">
+        <p>
+          <strong>{d.label}{if d.until, do: " until #{d.until}"}</strong>
+          · {d.count} of {d.total} {if d.total == 1, do: "deployment", else: "deployments"}
+        </p>
+        <p :if={d.reason not in [nil, ""]} class="current-decision-reason">{d.reason}</p>
+        <p class="current-decision-meta">
+          By {d.actor || "an unknown reviewer"} on {format_date(d.decided_at)}
+        </p>
+      </div>
+    </section>
+    """
+  end
+
   @doc "Inline Kiro classification. Scores are model assessments, not authorization."
   attr :cve, :string, required: true
   attr :can_review, :boolean, default: false
@@ -852,20 +977,17 @@ defmodule TriageWeb.WorkspaceComponents do
 
   def ai_triage_panel(%{configured: false} = assigns) do
     ~H"""
-    <section id="ai-triage" class="review-classification is-off" aria-label="Kiro classification">
+    <section id="ai-triage" class="review-classification is-off" aria-label="AI classification">
       <div class="classification-off">
-        <span class="classification-off-title">AI classification is off</span>
+        <span class="classification-off-title">AI classification is off.</span>
         <details id="classification-setup" class="classification-setup">
-          <summary>Connect Kiro to enable classification</summary>
+          <summary>How to turn it on</summary>
           <p>
             Set <code>TRIAGE_ANALYSIS_ENABLED=true</code>
             and <code>TRIAGE_KIRO_CLI</code>
             to your authenticated Kiro executable, then restart Phoenix. No model API key is required by this app.
           </p>
         </details>
-        <button id="classify-now" type="button" class="ai-analyze-btn" disabled>
-          Classify with AI
-        </button>
       </div>
     </section>
     """
@@ -994,14 +1116,16 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :history, :list, required: true
 
   @doc """
-  T03: the shared detail's append-only decision history, reused from the
-  retired inspector. Exact scope, reason and ticket links stay explicit.
+  The CVE's append-only decision history. Exact deployment, reviewer, reason
+  and ticket links stay explicit.
   """
   def history_entries(assigns) do
     ~H"""
     <article :for={d <- @history} id={"decision-history-#{d.id}"} class="history-entry">
       <time>{time(d.decided_at)}</time><div>
-        <strong>{d.label} · {d.state}</strong><p>{history_scope(d)}</p><p>
+        <strong>{d.label} · {history_state(d.state)}</strong><p>{history_scope(d)}</p><p :if={d.actor}>
+          By {d.actor}
+        </p><p>
           {d.reason}
           <a
             :if={d.metadata["ticket_url"]}
@@ -1014,7 +1138,7 @@ defmodule TriageWeb.WorkspaceComponents do
           {time(d.expires_at)}
         </p>
       </div>
-    </article><p :if={@history == []}>No recorded decisions for these scopes.</p>
+    </article><p :if={@history == []}>No decisions recorded for these deployments yet.</p>
     """
   end
 end
