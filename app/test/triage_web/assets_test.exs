@@ -173,7 +173,7 @@ defmodule TriageWeb.AssetsTest do
             "dialog.confirm { margin:auto; }",
             ".risk-metrics { display:grid;",
             ".risk-entry-main { display:grid;",
-            ".risk-register-panel { background:#fff;"
+            ".risk-register-panel { background:var(--paper);"
           ] do
         assert workspace_css =~ selector
       end
@@ -253,8 +253,8 @@ defmodule TriageWeb.AssetsTest do
       version = Application.fetch_env!(:tailwind, :version)
       assert String.starts_with?(tailwind, "/*! tailwindcss v#{version} |")
       # @theme bridges the two scale names the generated components carry
-      assert tailwind =~ "--color-error: #a02222"
-      assert tailwind =~ "--color-base-content: #182539"
+      assert tailwind =~ "--color-error: #ff6b78"
+      assert tailwind =~ "--color-base-content: #e4ebf4"
       # utilities a component actually passes are emitted, so the @source scan
       # really ran: size-5 on the validation icon, w-full on the controls
       assert tailwind =~ ".size-5 {"

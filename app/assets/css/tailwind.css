@@ -20,8 +20,8 @@
  * components onto this application's own tokens, so a utility can never
  * introduce a colour the rest of the stylesheet does not already define. */
 @theme {
-  --color-base-content: #182539;
-  --color-error: #a02222;
+  --color-base-content: #e4ebf4;
+  --color-error: #ff6b78;
 
   /* The application's own type scale. app.css used to normalise the generated
    * `text-xs` / `text-sm` utilities inside `.triage-content`; the scale lives
