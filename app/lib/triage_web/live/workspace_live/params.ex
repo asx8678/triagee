@@ -6,39 +6,38 @@ defmodule TriageWeb.WorkspaceLive.Params do
 
   | `page`       | Screen                                   |
   |--------------|------------------------------------------|
-  | `findings`   | Review (queue); `review` is its detail   |
-  | `exceptions` | Risk decisions                           |
+  | `findings`   | Triage (list); `review` is one CVE       |
   | `daily`      | Timeline (detections and actions)        |
   | `timeline`   | Observation chart (`/timeline`)          |
-  | `inventory`  | Vulnerabilities                          |
-  | `overview`   | Overview                                 |
-  | `news`       | News                                     |
+
+  The retired `overview`, `inventory`, `exceptions` and `news` pages open Triage.
   """
   alias TriageWeb.TimelineFilters
 
-  @pages ~w(findings exceptions daily overview inventory review timeline news)
-  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview risk_q risk_status risk_team risk_environment risk_page focus_target)
+  @pages ~w(findings daily review timeline)
+  @retired_pages ~w(overview inventory exceptions news)
+  # Lists Triage offers; older drilldown modes open the default list.
+  @triage_modes ~w(needs active accepted)
+  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview focus_target)
 
   def pages, do: @pages
-
-  def history_scope_label("exceptions", params) do
-    team = String.trim(params["risk_team"] || "")
-    environment = String.trim(params["risk_environment"] || "")
-
-    "#{if team == "", do: "all teams", else: team} in #{if environment == "", do: "all environments", else: environment}"
-  end
 
   def history_scope_label(_page, _params), do: "all teams in all environments"
 
   def page_title(page) do
     cond do
-      page in ~w(findings review) -> "Review"
-      page == "exceptions" -> "Risk decisions"
+      page in ~w(findings review) -> "Triage"
       page == "daily" -> "Timeline"
-      page == "inventory" -> "Vulnerabilities"
       true -> String.capitalize(page)
     end
   end
+
+  def normalize_retired_page(%{"page" => page} = params) when page in @retired_pages do
+    params = Map.put(params, "page", "findings")
+    if params["mode"] in @triage_modes, do: params, else: Map.delete(params, "mode")
+  end
+
+  def normalize_retired_page(params), do: params
 
   def normalize_valid_params(params) do
     if valid_params?(params),
@@ -76,7 +75,7 @@ defmodule TriageWeb.WorkspaceLive.Params do
   defp valid_views?(params) do
     Enum.all?(
       [
-        {"page", @pages},
+        {"page", @pages ++ @retired_pages},
         {"mode", ~w(active all history needs urgent unknown accepted progress fixed)},
         {"tab", ~w(summary assets history evidence)},
         {"sort", ~w(priority age)},
@@ -116,9 +115,6 @@ defmodule TriageWeb.WorkspaceLive.Params do
         environment: params["environment"]
       })
 
-  def nav_path(params, "exceptions"),
-    do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => "exceptions"})
-
   def nav_path(params, page),
     do: workspace_path(Map.take(params, ~w(team environment)), %{"page" => page})
 
@@ -129,11 +125,8 @@ defmodule TriageWeb.WorkspaceLive.Params do
   def drill(params, mode, extra \\ %{}),
     do:
       workspace_path(
-        Map.take(params, ~w(team environment)),
-        Map.merge(
-          %{"page" => if(mode == "needs", do: "review", else: "inventory"), "mode" => mode},
-          extra
-        )
+        Map.take(params, ~w(team environment q)),
+        Map.merge(%{"page" => "findings", "mode" => mode}, extra)
       )
 
   def review_path(params, cve),

@@ -44,13 +44,19 @@ mise x -- mix phx.server
 demo seed in development only, and builds assets. Test setup never seeds the demo
 implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener port.
 
-## Kiro classification in Review
+## Kiro classification in Triage
 
-Select a CVE in **Review** and click **Classify now**. Phoenix sends its complete
+Select a CVE in **Triage** and click **Classify with AI**. Phoenix sends its complete
 stored evidence for the current team/environment scope to **headless Kiro**, then
 shows a **risk score**, **whitelist-suitability score**, and reasoning directly in
-Review. Results are saved independently of the browser connection. Classification
+Triage. Results are saved independently of the browser connection. Classification
 never applies a whitelist, edits a repository or creates an Azure ticket.
+
+**Classify all critical with AI** queues the same guarded classification for every
+critical CVE that needs a decision in the current team and environment. Runs go
+through the single classifier slot one at a time; a CVE whose result is already
+current is not re-run. The list shows **AI classifying…** and then each CVE's AI
+risk score as results arrive. Nothing is decided automatically.
 
 Enable explicitly with `TRIAGE_ANALYSIS_ENABLED=true` and `TRIAGE_KIRO_CLI` pointing
 to your authenticated `kiro-cli`; optionally pin `TRIAGE_KIRO_MODEL`. No separate
@@ -60,8 +66,8 @@ flags are retired. See [setup, scoring and safety](docs/AI_CLASSIFIER.md).
 
 ## Presentation demo
 
-Development preselects **Whitelist temporarily** and the CVE's active deployments
-in the current scope, so **Whitelist now** starts enabled. A reason and confirmation
+Development preselects **Whitelist** and the CVE's active deployments in the
+current scope, so the **Whitelist** button starts enabled. A reason and confirmation
 are still required; existing drafts are preserved. Set `TRIAGE_DEMO_MODE=false`
 for neutral defaults (the default in test/production).
 
@@ -73,25 +79,22 @@ calls. Use **Demo mode · examples** in the scope bar or the
 
 ## Single workspace UI
 
-The homepage `/` is the new workspace; `/workspace` is an alias for the same UI.
-The primary navigation is **Review**, **Risk decisions**, and **Timeline**:
+The homepage `/` is the workspace; `/workspace` is an alias for the same UI.
+The navigation has two pages, **Triage** and **Timeline**:
 
-- **Review** (`/?page=findings`, with `/?page=review` for existing detail links):
-  review CVEs, select deployments, and choose **Mark as fixed**, **Whitelist
-  temporarily**, or **Create Azure DevOps ticket**. Disabled decision buttons
-  explain what is missing and link to deployment selection. AI classification is
-  optional and never blocks manual whitelisting; a reason and confirmation are
-  still required. Historical work requests remain visible in the timeline.
-- **Risk decisions** (`/?page=exceptions`): a searchable register of the last
-  365 days of whitelist and not-affected decisions, including older replacements.
-  Summary tiles filter by expiry; team/environment filters and search are saved
-  in the URL. Identical approvals from one operation are grouped across deployments,
-  with full reasons, exact UTC dates and individual record IDs in expandable details.
-  Pages show up to 12 grouped entries. Counts distinguish decisions from underlying
-  records. Expiry is not current coverage or proof of remediation: **Review** opens
-  the CVE with the explicitly selected scope, not an unrelated previous Review scope.
-  A whitelist applies through the selected date and expires at the following
-  midnight UTC. The deployments then need review unless a newer decision applies.
+- **Triage** (`/?page=findings`, with `/?page=review` for one CVE): three counts
+  at the top (**Need a decision**, **Active CVEs**, **Whitelisted**) also pick
+  the list shown beneath them. The list is searchable by CVE or package; each row
+  shows severity, whether the affected deployments are **External**
+  (internet-facing), **Internal** or of unknown exposure, and the latest AI state.
+  Whitelisted rows show their expiry. The selected CVE shows its description and
+  fixed version, **Your infrastructure** (each deployment's exposure, team,
+  environment, service, package version and status), AI classification and the
+  decision history. The decision offers **Whitelist**, **Mark as fixed** or
+  **Create ticket** for the ticked deployments. A whitelist needs a reason and an
+  end date (three months by default) and is confirmed in a dialog; it applies
+  through the selected date and expires at the following midnight UTC. AI
+  classification is optional and never blocks a manual decision.
 - **Timeline** (`/?page=daily`): one history per CVE, ordered from detection
   through whitelisting, work actions, marked fixes, and scanner observations.
   Each CVE shows its first detection, first recorded action on any deployment,
@@ -112,41 +115,26 @@ a fix marked by a reviewer, then a later scanner clearance. These records use
 `CVE-2099-9028` through `CVE-2099-9030`, have no public advisory URLs, and are
 added only if missing; repeated runs preserve existing history.
 
-Risk decisions and the detection timeline show history across all teams and
-environments; their scope bar states this explicitly. Team/environment filters
-remain available in Review. Existing URLs preserve bookmarks and unsaved drafts.
-Overview and Vulnerabilities remain at their existing `/?page=...` URLs. The full
-observation chart remains at `/timeline` and `/?page=timeline` in the same shell.
-Navigation keeps the LiveView connection and unsaved review drafts.
-Retired screen URLs redirect into the workspace and no longer mount their old
-LiveViews. The old stylesheet and links back to old screens are not loaded.
+The detection timeline shows history across all teams and environments; its
+scope bar states this explicitly. Team/environment filters remain available in
+Triage and the observation chart. Existing URLs preserve bookmarks and unsaved
+drafts. The full observation chart remains at `/timeline` and `/?page=timeline`
+in the same shell. Navigation keeps the LiveView connection and unsaved drafts.
 Stored inventory, decisions and case evidence are unchanged.
 
-The workspace currently supports inventory inspection and local scoped decisions.
-In Vulnerabilities, **Add CVE** opens an optional dialog with the research list,
-accepts a CVE number and explicitly fetches its
-English description from NVD. Review the preview, then save it to the persistent
-research list. Duplicate IDs are saved only once. Research entries do not create
-affected deployments or change operational counts. This manual lookup works
-without enabling background intelligence collection and sends only the CVE ID
-to NVD; failed or unpublished lookups do not create entries.
+The former **Overview**, **Vulnerabilities**, **Risk decisions** and **News**
+pages were removed to keep the workspace to one triage flow. Their bookmarks
+(`/?page=overview`, `inventory`, `exceptions`, `news`) open Triage. Whitelisted
+CVEs and their expiry are listed under **Whitelisted** in Triage; decision
+history stays on each CVE and in Timeline.
 
-The **News** tab fetches this month's published critical CVEs from NVD (CVSS
-v3/v4) and recent vulnerability headlines from BleepingComputer when opened.
-Refresh reloads both sources independently; errors retain the last successful
-results in the current connection. The table shows CVE IDs, publication dates,
-CVSS scores and descriptions. This public news does not create findings,
-change inventory counts, or claim local exposure. Fetch timestamps and source
-links are visible. Each NVD severity query is capped at 2,000 records and the UI
-reports incomplete results if that limit is reached.
 Timeline retains its connected observation chart (fit/daily scale), detection and
 response table, day bands, weekday heatmap, KEV context and paged CVE event/case
 history. Complete saved-case histories expand read-only in place. Team/environment
 scopes, 4/8/12-week windows and old timeline bookmarks are preserved. Imports, replay, intelligence
-refresh and AI are not yet available in this UI. Explicit Azure ticket creation
-uses the separate [review actions](docs/REVIEW_ACTIONS.md) workflow and `ADO_*`
-configuration. Decision history
-also remains in the CVE inspector.
+refresh are not available in this UI. Explicit Azure ticket creation uses the
+separate [review actions](docs/REVIEW_ACTIONS.md) workflow and `ADO_*`
+configuration.
 
 ## Retired screens
 
@@ -246,8 +234,8 @@ not a substitute for database-backed verification.
 - `lib/triage_web/live/`: UI state, navigation and explicit confirmations.
 - `lib/triage_web/live/workspace_live.ex`: the single workspace LiveView (routing,
   shared state, page shell). Page behaviour lives in plain modules under
-  `workspace_live/`: `params.ex` (URLs and page names), `review.ex` (drafts,
-  decisions, tickets, classification) and `news.ex` (news and research list).
+  `workspace_live/`: `params.ex` (URLs and page names) and `review.ex` (drafts,
+  decisions, tickets, classification).
 - `dev/`: demo seeds and `mix triage.demo`, compiled in dev/test but never shipped
   in production releases.
 

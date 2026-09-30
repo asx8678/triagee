@@ -12,7 +12,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
   alias Triage.Workspace.{Commit, Drafts}
   alias TriageWeb.WorkspaceLive
 
-  @events ~w(reconcile-ticket review-ticket-evidence reconcile-ticket-current draft target save confirm-ticket confirm-risk cancel-decision reconcile classify-now ai-analyze ai-dismiss)
+  @events ~w(reconcile-ticket review-ticket-evidence reconcile-ticket-current draft target save confirm-ticket confirm-risk cancel-decision reconcile classify-now classify-all ai-analyze ai-dismiss)
   def events, do: @events
 
   def handle_event(event, _, %{assigns: %{pending_operation: pending}} = socket)
@@ -268,25 +268,10 @@ defmodule TriageWeb.WorkspaceLive.Review do
            socket.assigns.current_principal
          ) do
       {:ok, _run} ->
-        {:noreply, load_classification(socket)}
+        {:noreply, socket |> load_classification() |> load_list_classifications()}
 
       {:error, reason} ->
-        message =
-          case reason do
-            :analysis_disabled ->
-              "Kiro classification is disabled. Configure TRIAGE_ANALYSIS_ENABLED and TRIAGE_KIRO_CLI, then restart."
-
-            :not_configured ->
-              "Kiro is not configured. Set TRIAGE_KIRO_CLI to your authenticated kiro-cli executable."
-
-            :prompt_too_large ->
-              "Full evidence exceeds the input limit. Narrow the team/environment scope; no evidence was dropped."
-
-            _ ->
-              "Classification could not start. Refresh the evidence and check your review permission."
-          end
-
-        {:noreply, assign(socket, ai_assessment_error: message)}
+        {:noreply, assign(socket, ai_assessment_error: classify_error(reason))}
     end
   end
 
@@ -295,6 +280,29 @@ defmodule TriageWeb.WorkspaceLive.Review do
       {:noreply,
        assign(socket, ai_assessment_error: "Reviewer permission is required to classify.")}
 
+  # Queues one guarded run per critical CVE in scope; suggestions only.
+  def handle_event("classify-all", _, %{assigns: %{can_review: true}} = socket) do
+    result =
+      case Triage.AiTriage.Runs.request_critical(
+             socket.assigns.params,
+             socket.assigns.current_principal
+           ) do
+        {:ok, counts} -> counts
+        {:error, reason} -> %{error: classify_error(reason)}
+      end
+
+    {:noreply,
+     socket
+     |> assign(classify_all: result)
+     |> load_classification()
+     |> load_list_classifications()}
+  end
+
+  def handle_event("classify-all", _, socket),
+    do:
+      {:noreply,
+       assign(socket, classify_all: %{error: "Reviewer permission is required to classify."})}
+
   # Existing clients use the same guarded, durable path after a code reload.
   def handle_event("ai-analyze", params, socket), do: handle_event("classify-now", params, socket)
 
@@ -302,6 +310,52 @@ defmodule TriageWeb.WorkspaceLive.Review do
     do: {:noreply, assign(socket, ai_assessment: nil, ai_assessment_error: nil)}
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
+
+  defp classify_error(:analysis_disabled),
+    do:
+      "Kiro classification is disabled. Configure TRIAGE_ANALYSIS_ENABLED and TRIAGE_KIRO_CLI, then restart."
+
+  defp classify_error(:not_configured),
+    do: "Kiro is not configured. Set TRIAGE_KIRO_CLI to your authenticated kiro-cli executable."
+
+  defp classify_error(:prompt_too_large),
+    do:
+      "Full evidence exceeds the input limit. Narrow the team/environment scope; no evidence was dropped."
+
+  defp classify_error(_reason),
+    do: "Classification could not start. Refresh the evidence and check your review permission."
+
+  @doc """
+  AI state of each listed CVE in the current scope: `:classifying` while a run
+  waits or runs, otherwise the latest completed result from the last 24 hours.
+  The open CVE's panel re-checks its result against current evidence.
+  """
+  def load_list_classifications(%{assigns: %{page: page, page_rows: rows}} = socket)
+      when page in ~w(findings review) do
+    cutoff = DateTime.add(DateTime.utc_now(), -86_400)
+
+    ai_rows =
+      rows
+      |> Enum.map(& &1.cve)
+      |> Triage.AiTriage.Runs.latest_by_cve(socket.assigns.params)
+      |> Enum.flat_map(fn {cve, run} ->
+        cond do
+          Triage.AiTriage.Runs.in_progress?(run) ->
+            [{cve, :classifying}]
+
+          run.state == "completed" and DateTime.compare(run.inserted_at, cutoff) == :gt ->
+            [{cve, run.result}]
+
+          true ->
+            []
+        end
+      end)
+      |> Map.new()
+
+    assign(socket, ai_rows: ai_rows)
+  end
+
+  def load_list_classifications(socket), do: assign(socket, ai_rows: %{})
 
   # Scores are loaded from durable jobs, never delivered as an unbound task result.
   # This only reads; opening a page never starts Kiro or modifies a reviewer draft.

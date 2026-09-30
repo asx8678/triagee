@@ -2,10 +2,12 @@
 
 ## What changed
 
-Classification is part of **Review**, not a separate screen or approval form.
-Select a CVE and click **Classify now**. A durable Oban job invokes Kiro in headless
-mode; Phoenix validates the response and displays its scores and reasoning in the
-CVE's Review panel. The job continues if you navigate away or disconnect. Reopening
+Classification is part of **Triage**, not a separate screen or approval form.
+Select a CVE and click **Classify with AI**, or use **Classify all critical with AI**
+to queue every critical CVE that needs a decision in the current team and
+environment. A durable Oban job invokes Kiro in headless mode, one run at a time;
+Phoenix validates the response and displays its scores and reasoning in the
+CVE's AI classification panel. The job continues if you navigate away or disconnect. Reopening
 the same scoped CVE restores its saved result.
 
 This implementation chooses **headless mode**, not a persistent ACP session. It

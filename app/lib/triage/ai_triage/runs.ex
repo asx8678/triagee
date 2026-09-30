@@ -46,6 +46,52 @@ defmodule Triage.AiTriage.Runs do
 
   def request(_, _, _), do: {:error, :invalid_request}
 
+  @doc """
+  Requests classification for every critical CVE that still needs a decision
+  in this team/environment scope. Each CVE is its own guarded run, exactly as
+  if requested one by one; nothing is decided. Returns counts by outcome:
+  `:queued` (new or already waiting), `:current` (a result for the current
+  evidence exists) and `:skipped` (the CVE could not be classified).
+  """
+  def request_critical(params, principal) do
+    with {:ok, _user} <- Accounts.authorize(principal, :review),
+         :ok <- AiTriage.ready() do
+      cves =
+        params
+        |> scope()
+        |> Workspace.targets()
+        |> Enum.filter(&(&1.needs_decision? and critical?(&1)))
+        |> Enum.map(& &1.cve)
+        |> Enum.uniq()
+
+      counts = Enum.frequencies_by(cves, &request_unless_current(&1, params, principal))
+      {:ok, Map.merge(%{queued: 0, current: 0, skipped: 0}, counts)}
+    end
+  end
+
+  defp request_unless_current(cve, params, principal) do
+    case latest(cve, params) do
+      %Run{} = run when run.state in ["queued", "running"] ->
+        if interrupted?(run), do: request_outcome(cve, params, principal), else: :queued
+
+      %Run{state: "completed"} = run ->
+        if current?(run), do: :current, else: request_outcome(cve, params, principal)
+
+      _ ->
+        request_outcome(cve, params, principal)
+    end
+  end
+
+  defp request_outcome(cve, params, principal) do
+    case request(cve, params, principal) do
+      {:ok, _run} -> :queued
+      _error -> :skipped
+    end
+  end
+
+  defp critical?(target),
+    do: Enum.any?(target.findings, &(is_nil(&1.resolved_at) and &1.severity == "CRITICAL"))
+
   def latest(cve, params) do
     key = Canonical.hash(scope(params))
 
@@ -56,6 +102,24 @@ defmodule Triage.AiTriage.Runs do
         limit: 1
     )
   end
+
+  @doc "Latest run per CVE in this scope, for list badges. Reads only; never starts Kiro."
+  def latest_by_cve([], _params), do: %{}
+
+  def latest_by_cve(cves, params) do
+    key = Canonical.hash(scope(params))
+
+    from(r in Run,
+      where: r.cve in ^cves and r.scope_key == ^key,
+      distinct: r.cve,
+      order_by: [desc: r.id]
+    )
+    |> Repo.all()
+    |> Map.new(&{&1.cve, &1})
+  end
+
+  @doc "True while a run is waiting for or holding the classifier."
+  def in_progress?(run), do: run.state in ["queued", "running"] and not interrupted?(run)
 
   def current?(run) do
     run.profile == AiTriage.profile() and
@@ -169,17 +233,38 @@ defmodule Triage.AiTriage.Runs do
     :ok
   end
 
-  defp interrupted?(run),
-    do: run.state in ["queued", "running"] and DateTime.diff(now(), run.updated_at) > 180
+  # A running job that stops reporting was interrupted. A queued run may wait
+  # behind others for the single classifier slot (Classify all), so it counts
+  # as interrupted only once its job is no longer waiting to run.
+  defp interrupted?(%{state: "running"} = run), do: DateTime.diff(now(), run.updated_at) > 180
+
+  defp interrupted?(%{state: "queued"} = run),
+    do: DateTime.diff(now(), run.updated_at) > 180 and not job_waiting?(run.id)
+
+  defp interrupted?(_run), do: false
+
+  defp job_waiting?(id) do
+    Repo.exists?(
+      from j in Oban.Job,
+        where:
+          j.worker == ^inspect(Worker) and fragment("?->>'run_id'", j.args) == ^to_string(id) and
+            j.state in ["available", "scheduled", "executing", "retryable"]
+    )
+  end
 
   defp expire_interrupted(identity) do
     cutoff = DateTime.add(now(), -180, :second)
 
-    Repo.update_all(
+    ids =
       from(r in Run,
         where:
           r.identity == ^identity and r.state in ["queued", "running"] and r.updated_at < ^cutoff
-      ),
+      )
+      |> Repo.all()
+      |> Enum.filter(&interrupted?/1)
+      |> Enum.map(& &1.id)
+
+    Repo.update_all(from(r in Run, where: r.id in ^ids),
       set: [state: "failed", error: "interrupted", finished_at: now()]
     )
   end

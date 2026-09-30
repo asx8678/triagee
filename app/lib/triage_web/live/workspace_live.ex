@@ -2,23 +2,22 @@ defmodule TriageWeb.WorkspaceLive do
   @moduledoc """
   Primary workspace over real inventory and advisory decisions.
 
-  This LiveView owns routing, shared state (drafts, selection, confirmations)
-  and the page shell. Page behaviour lives in plain modules it delegates to:
-  `Params` (URLs), `Review` (drafts, decisions, tickets, classification) and
-  `News` (public news and the research list). They are not LiveComponents, so
-  every event still passes `TriageWeb.Auth`'s per-event authorization hook.
+  Two pages: Triage (the CVE list and one CVE's decision) and Timeline. This
+  LiveView owns routing, shared state (drafts, confirmations) and the page
+  shell. Page behaviour lives in plain modules it delegates to: `Params` (URLs)
+  and `Review` (drafts, decisions, tickets, classification). They are not
+  LiveComponents, so every event still passes `TriageWeb.Auth`'s per-event
+  authorization hook.
   """
   use TriageWeb, :live_view
-  alias Triage.{Decisions, RiskDecisionHistory, Workspace}
+  alias Triage.Workspace
   alias TriageWeb.{TimelineFilters, TimelineLive}
-  alias TriageWeb.WorkspaceLive.{News, Params, Review}
+  alias TriageWeb.WorkspaceLive.{Params, Review}
   import TriageWeb.WorkspaceComponents
-  import TriageWeb.ExceptionsComponents
   import Params, only: [nav_active?: 2]
-  import News, only: [research_dialog: 1]
 
   # Pages that list no workspace CVEs: they need only the nav count and scope options.
-  @summary_pages ~w(daily exceptions news timeline)
+  @summary_pages ~w(daily timeline)
 
   @impl true
   def mount(_params, _session, socket) do
@@ -38,33 +37,19 @@ defmodule TriageWeb.WorkspaceLive do
        draft_error: false,
        pending_operation: nil,
        ticket_evidence: nil,
-       selected: [],
        confirmation: nil,
        error: nil,
        message: nil,
        action_toast: nil,
-       expanded: false,
        queue_shown: false,
        settings: false,
-       manual_open: false,
-       manual_loading: false,
-       manual_preview: nil,
-       manual_error: nil,
-       manual_form: to_form(%{"cve" => ""}, as: :manual),
-       manual_cves: [],
-       news_started: false,
-       news_cves: nil,
-       news_headlines: nil,
-       news_cves_loading: false,
-       news_headlines_loading: false,
-       news_cves_error: nil,
-       news_headlines_error: nil,
-       compact: false,
        daily_before: nil,
        daily_data: nil,
        ai_assessing: false,
        ai_assessment: nil,
        ai_assessment_error: nil,
+       ai_rows: %{},
+       classify_all: nil,
        classification_tick: false
      )}
   end
@@ -82,11 +67,11 @@ defmodule TriageWeb.WorkspaceLive do
       params
       |> Params.normalize_timeline_params(timeline?)
       |> Params.normalize_valid_params()
+      |> Params.normalize_retired_page()
       |> Params.normalize_timeline_params(timeline?)
       |> Params.normalize_inspect_deep_link()
       |> Params.preserve_invalid_focus(raw_params, invalid_params)
 
-    socket = clear_changed_selection(socket, params)
     page = if params["page"] in Params.pages(), do: params["page"], else: "findings"
     params = Map.put(params, "page", page) |> pin_review_item(socket)
 
@@ -103,8 +88,7 @@ defmodule TriageWeb.WorkspaceLive do
        invalid_params: invalid_params,
        confirmation: nil
      )
-     |> load()
-     |> News.maybe_load_news()}
+     |> load()}
   end
 
   defp pin_review_item(%{"page" => "review"} = params, %{assigns: %{page: "review", item: item}})
@@ -163,37 +147,21 @@ defmodule TriageWeb.WorkspaceLive do
         nil
       end
 
-    # Built once per load, not on every render: filtering, grouping and the
-    # status tiles need the whole year's register, so paging stays in memory.
-    risk_history =
-      if socket.assigns.page == "exceptions" do
-        now = DateTime.utc_now()
-        RiskDecisionHistory.build(Decisions.risk_register(now), params, now)
-      end
-
     socket
     |> assign(Map.drop(page, [:matching]))
     |> assign(
       row_history: history,
-      risk_history: risk_history,
       daily_data: daily_data,
       scope_form: scope_form(params),
       search_form: search_form(params)
     )
     |> Review.prepare_draft(page.row, page.matching)
     |> Review.load_classification()
+    |> Review.load_list_classifications()
     |> load_timeline()
   end
 
-  # Overview: priority preview must not miss urgent CVEs beyond the first page.
-  defp page_params(%{"page" => "overview"} = params) do
-    params
-    |> Map.take(~w(page team environment item inspect))
-    |> Map.merge(%{"mode" => "urgent", "offset" => "0"})
-  end
-
-  # T04: Findings is the primary workspace; it uses the same review projection
-  # with the attention default ("Needs attention" = the existing needs mode).
+  # Triage lists CVEs that need a decision unless another list is chosen.
   defp page_params(%{"page" => "findings"} = params) do
     params
     |> Map.take(~w(page team environment q severity sort offset item batch))
@@ -247,23 +215,11 @@ defmodule TriageWeb.WorkspaceLive do
         as: :scope
       )
 
-  defp search_form(params),
-    do:
-      to_form(
-        %{
-          "q" => params["q"] || "",
-          "severity" => params["severity"] || "",
-          "sort" => params["sort"] || "priority"
-        },
-        as: :search
-      )
+  defp search_form(params), do: to_form(%{"q" => params["q"] || ""}, as: :search)
 
   @impl true
   def handle_event(event, params, socket) when event in unquote(Review.events()),
     do: Review.handle_event(event, params, socket)
-
-  def handle_event(event, params, socket) when event in unquote(News.events()),
-    do: News.handle_event(event, params, socket)
 
   def handle_event("filter", params, %{assigns: %{page: "timeline"}} = socket),
     do: TimelineLive.handle_event("filter", params, socket)
@@ -297,81 +253,21 @@ defmodule TriageWeb.WorkspaceLive do
      )}
   end
 
-  def handle_event(
-        "risk-filter",
-        %{"risk_filters" => params},
-        %{assigns: %{page: "exceptions"}} = socket
-      )
-      when is_map(params) do
-    filters = Map.take(params, ~w(risk_q risk_team risk_environment))
-
-    if Enum.all?(filters, fn {_key, value} -> is_binary(value) and byte_size(value) <= 2000 end) do
-      {:noreply,
-       push_patch(socket,
-         to: workspace_path(socket.assigns.params, Map.put(filters, "risk_page", nil))
-       )}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  def handle_event("risk-filter", _params, socket), do: {:noreply, socket}
-
   def handle_event("search", %{"search" => params}, socket) do
     {:noreply,
      push_patch(socket,
        to:
          workspace_path(
            socket.assigns.params,
-           Map.merge(Map.take(params, ~w(q severity sort)), %{"offset" => nil})
+           Map.merge(Map.take(params, ~w(q)), %{"offset" => nil, "item" => nil})
          )
      )}
-  end
-
-  def handle_event("select", %{"cve" => cve}, socket) do
-    selected = socket.assigns.selected
-
-    selected =
-      cond do
-        cve in selected ->
-          List.delete(selected, cve)
-
-        length(selected) < 25 and Enum.any?(socket.assigns.page_rows, &(&1.cve == cve)) ->
-          selected ++ [cve]
-
-        true ->
-          selected
-      end
-
-    {:noreply, assign(socket, selected: selected)}
-  end
-
-  def handle_event("clear-selection", _, socket), do: {:noreply, assign(socket, selected: [])}
-
-  def handle_event("review-selected", _, socket) do
-    if socket.assigns.selected == [] do
-      {:noreply, socket}
-    else
-      {:noreply,
-       push_patch(socket,
-         to:
-           workspace_path(socket.assigns.params, %{
-             "page" => "review",
-             "batch" => Enum.join(socket.assigns.selected, ","),
-             "item" => hd(socket.assigns.selected),
-             "offset" => nil
-           })
-       )}
-    end
   end
 
   def handle_event("cancel-risk", _, socket), do: {:noreply, assign(socket, confirmation: nil)}
 
   def handle_event("queue-toggle", _, socket),
     do: {:noreply, assign(socket, queue_shown: not socket.assigns.queue_shown)}
-
-  def handle_event("density", _, socket),
-    do: {:noreply, assign(socket, compact: not socket.assigns.compact)}
 
   def handle_event("settings", _, socket), do: {:noreply, assign(socket, settings: true)}
 
@@ -399,26 +295,17 @@ defmodule TriageWeb.WorkspaceLive do
 
   defp exact_target_page(page, _params), do: page
 
-  defp clear_changed_selection(socket, params) do
-    previous = Map.get(socket.assigns, :params, %{}) |> Map.take(~w(team environment))
-
-    if previous != Map.take(params, ~w(team environment)) and socket.assigns.selected != [] do
-      assign(socket,
-        selected: [],
-        message:
-          "Scope changed. Inventory selection cleared; decision draft targets are unchanged."
-      )
-    else
-      socket
-    end
-  end
-
   # Ignore legacy/unbound result messages. Current notifications only trigger
   # a fresh read of the durable, evidence-bound classification.
   @impl true
   def handle_info({:ai_assessment, _cve, _result}, socket), do: {:noreply, socket}
 
   def handle_info({:classification_changed, cve}, socket) do
+    socket =
+      if Enum.any?(Map.get(socket.assigns, :page_rows, []), &(&1.cve == cve)),
+        do: Review.load_list_classifications(socket),
+        else: socket
+
     if socket.assigns.row && socket.assigns.row.cve == cve,
       do: {:noreply, Review.load_classification(socket)},
       else: {:noreply, socket}
@@ -464,24 +351,12 @@ defmodule TriageWeb.WorkspaceLive do
       else: {:noreply, socket}
   end
 
-  # News fetches public sources and only reviewers may refresh it.
-  defp nav_items(can_review?) do
-    [
-      {"overview", "Overview"},
-      {"findings", "Review"},
-      {"inventory", "Vulnerabilities"},
-      {"exceptions", "Risk decisions"},
-      {"daily", "Timeline"}
-    ] ++ if(can_review?, do: [{"news", "News"}], else: [])
-  end
+  defp nav_items, do: [{"findings", "Triage"}, {"daily", "Timeline"}]
 
   defp initials(%{user: %{email: email}}) when is_binary(email),
     do: email |> String.first() |> String.upcase()
 
   defp initials(_scope), do: "?"
-
-  @impl true
-  def handle_async(name, result, socket), do: News.handle_async(name, result, socket)
 
   # Kept for existing callers (redirects, components); see `Params`.
   defdelegate workspace_path(params, changes \\ %{}), to: Params
@@ -496,12 +371,11 @@ defmodule TriageWeb.WorkspaceLive do
       <a href="#main-content" class="skip-link">Skip to content</a>
       <div
         id="shell"
-        class={[@compact && "compact"]}
         phx-hook="WorkspaceDraftGuard"
         data-dirty={Enum.any?(@drafts, fn {_id, d} -> not d.saved and d.dirty end) |> to_string()}
       >
         <header class="topbar">
-          <.link patch={nav_path(@params, "overview")} class="brand" aria-label="PTV Triage overview">
+          <.link patch={nav_path(@params, "findings")} class="brand" aria-label="PTV Triage">
             <svg aria-hidden="true" viewBox="0 0 32 32">
               <path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3" />
               <path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3" />
@@ -510,7 +384,7 @@ defmodule TriageWeb.WorkspaceLive do
           </.link>
           <nav class="topnav" aria-label="Primary">
             <.link
-              :for={{page, label} <- nav_items(@can_review)}
+              :for={{page, label} <- nav_items()}
               id={"workspace-nav-#{page}"}
               patch={nav_path(@params, page)}
               class={[nav_active?(page, @page) && "active"]}
@@ -568,13 +442,8 @@ defmodule TriageWeb.WorkspaceLive do
             History for <strong>{Params.history_scope_label(@page, @params)}</strong>
           </span>
         </nav>
-        <div :if={@page == "exceptions"} id="workspace-history-scope" class="scopebar">
-          <span class="scope-note">
-            History for <strong>{Params.history_scope_label(@page, @params)}</strong>
-          </span>
-        </div>
         <.form
-          :if={@page not in ~w(news exceptions daily)}
+          :if={@page != "daily"}
           for={@scope_form}
           id="workspace-scope"
           class="scopebar"
@@ -618,27 +487,18 @@ defmodule TriageWeb.WorkspaceLive do
               })
             }
           >Demo examples</.link>
-          <button
-            type="button"
-            class="coverage-status"
-            phx-click="settings"
-            title="Counts come from recorded scans. Whether every production deployment is scanned is not verified."
-          >
-            <span class="status-dot" aria-hidden="true"></span>Coverage unverified
-          </button>
         </.form>
         <main
           id="main-content"
           tabindex="-1"
           class={[
             "page",
-            @page == "inventory" && "inventory-page",
             @page in ~w(findings review) && "review-page",
             @queue_shown && "show-queue"
           ]}
         >
           <h1
-            :if={@page in ~w(findings inventory review timeline)}
+            :if={@page in ~w(findings review timeline)}
             id="workspace-page-title"
             class="sr-only"
           >
@@ -709,24 +569,6 @@ defmodule TriageWeb.WorkspaceLive do
               <button id="reconcile-ticket-current" phx-click="reconcile-ticket-current">Accept reviewed evidence and finalize existing ticket</button>
             </div>
           </section>
-          <.overview
-            :if={@page == "overview"}
-            metrics={@metrics}
-            teams={@teams}
-            targets={@targets}
-            params={@params}
-          />
-          <.inventory
-            :if={@page == "inventory"}
-            rows={@page_rows}
-            total={@total}
-            offset={@offset}
-            params={@params}
-            selected={@selected}
-            mode={@mode}
-            search_form={@search_form}
-            compact={@compact}
-          />
           <.review
             :if={@page in ~w(review findings)}
             rows={@page_rows}
@@ -748,7 +590,10 @@ defmodule TriageWeb.WorkspaceLive do
             ai_assessing={@ai_assessing}
             ai_assessment={@ai_assessment}
             ai_assessment_error={@ai_assessment_error}
+            ai_rows={@ai_rows}
+            classify_all={@classify_all}
             metrics={@metrics}
+            search_form={@search_form}
           />
           <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
           <TriageWeb.DailyComponents.panel
@@ -759,12 +604,6 @@ defmodule TriageWeb.WorkspaceLive do
             total_cves={@daily_data.total_cves}
             event_count={@daily_data.event_count}
             earlier?={@daily_data.earlier?}
-            params={@params}
-          />
-          <TriageWeb.SecurityNewsComponents.panel :if={@page == "news"} {assigns} />
-          <.exceptions_register
-            :if={@page == "exceptions" and @risk_history}
-            history={@risk_history}
             params={@params}
           />
         </main>
@@ -779,15 +618,6 @@ defmodule TriageWeb.WorkspaceLive do
         row={@row}
         draft={@draft}
         error={@error}
-      />
-      <.research_dialog
-        :if={@manual_open}
-        form={@manual_form}
-        loading={@manual_loading}
-        error={@manual_error}
-        preview={@manual_preview}
-        cves={@manual_cves}
-        can_review={@can_review}
       />
       <.settings_dialog :if={@settings} />
     </Layouts.app>

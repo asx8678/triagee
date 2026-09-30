@@ -61,14 +61,14 @@ are started. Existing sample and user data are retained.
 1. **Start here:** `/?page=review&team=demo-payments&item=CVE-2099-9101`.
    Show the public checkout API and three preselected environments. Narrow to
    `environment=prod` before typing a reason to demonstrate precise scope.
-2. **Classify now:** run real Kiro on this explicitly fictional case. Scores and
+2. **Classify with AI:** run real Kiro on this explicitly fictional case. Scores and
    reasoning come from Kiro, not canned seed output. The normal analysis setup
    still applies; demo mode does not enable external providers.
-3. **Whitelist:** enter a presentation reason and use **Whitelist now**. Review
+3. **Whitelist:** enter a presentation reason and use **Whitelist**. Review
    the affected deployments in the confirmation dialog before applying it.
-4. **Compare all four queues:** Needs decision, In progress, Whitelisted and
-   Reported fixed all contain examples. `CVE-2099-9108` has an open production
-   deployment, a staging work item and a whitelisted development deployment.
+4. **Compare the lists:** Need a decision, Active CVEs and Whitelisted all
+   contain examples. `CVE-2099-9108` has an open production deployment, a
+   staging work item and a whitelisted development deployment.
 5. **Tell a lifecycle story:** `CVE-2099-9113` has an expired exception;
    `CVE-2099-9106` has an exception expiring in two days;
    `CVE-2099-9124` reappeared after an older image was redeployed.
