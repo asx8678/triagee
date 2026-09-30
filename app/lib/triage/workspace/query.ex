@@ -112,7 +112,14 @@ defmodule Triage.Workspace.Query do
     result
   end
 
-  defp metrics(values), do: Map.new(~w(active needs urgent unknown), &{&1, %{value: values[&1]}})
+  # `progress`, `accepted` and `fixed` count the Review tabs with exactly the
+  # predicates `sql/1` uses for those modes.
+  defp metrics(values),
+    do:
+      Map.new(
+        ~w(active needs urgent unknown progress accepted fixed),
+        &{&1, %{value: values[&1] || 0}}
+      )
 
   defp offset(value) when is_binary(value) do
     case Integer.parse(value) do
@@ -187,7 +194,12 @@ defmodule Triage.Workspace.Query do
     count(DISTINCT cve) FILTER (WHERE active) AS active,
     count(DISTINCT cve) FILTER (WHERE active AND NOT covered) AS needs,
     count(DISTINCT cve) FILTER (WHERE active AND priority = 4) AS urgent,
-    count(*) FILTER (WHERE active AND exposure = 'unknown') AS unknown
+    count(*) FILTER (WHERE active AND exposure = 'unknown') AS unknown,
+    count(DISTINCT cve) FILTER (WHERE active AND covered
+      AND decision IN ('request_remediation', 'investigate', 'request_verification', 'create_ticket')
+      AND NOT (decision_expires_at IS NOT NULL AND decision_expires_at <= ($3::timestamp + interval '7 days'))) AS progress,
+    count(DISTINCT cve) FILTER (WHERE active AND covered AND decision = 'accepted_risk') AS accepted,
+    count(DISTINCT cve) FILTER (WHERE covered AND decision = 'fixed') AS fixed
     """
   end
 end

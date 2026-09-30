@@ -748,6 +748,7 @@ defmodule TriageWeb.WorkspaceLive do
             ai_assessing={@ai_assessing}
             ai_assessment={@ai_assessment}
             ai_assessment_error={@ai_assessment_error}
+            metrics={@metrics}
           />
           <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
           <TriageWeb.DailyComponents.panel

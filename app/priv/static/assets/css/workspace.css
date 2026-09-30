@@ -771,7 +771,7 @@ body:has(.approved-workspace) { margin:0; background:#0c1420; color-scheme:dark;
   .tl-c-today { stroke: var(--triage-focus); stroke-width: 1.5; stroke-dasharray: 3 3; }
   .tl-c-today-label { font-size: 10px; font-weight: 700; fill: var(--triage-focus); }
   .tl-c-band { fill: var(--ink); }
-  .tl-chart-cve { font-family: var(--font-mono); font-size: 10.5px; fill: var(--triage-text); }
+  .tl-chart-cve { font-family: var(--font-sans); font-variant-numeric: tabular-nums; font-size: 11.5px; fill: var(--triage-text); }
   .tl-c-sev { stroke-width: 1; stroke: none; }
   .tl-c-sev-critical { fill: var(--red); }
   .tl-c-sev-high { fill: var(--orange); }
@@ -1037,14 +1037,14 @@ body:has(.approved-workspace) { margin:0; background:#0c1420; color-scheme:dark;
 .day-cve { padding:8px 0; border-bottom:1px solid var(--line); }
 .day-cve:last-child { border-bottom:0; }
 .cve-line { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-.cve-id { font-family:monospace; font-weight:600; color:var(--ink); }
+.cve-id { font-family:var(--font-sans); font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink); }
 .cve-sev { font-size:.7rem; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase; }
 .cve-sev.severity-critical { background:var(--red-soft); color:var(--red); }
 .cve-sev.severity-high { background:var(--amber-soft); color:var(--orange); }
 .cve-sev.severity-medium { background:var(--amber-soft); color:var(--amber); }
 .cve-sev.severity-low, .cve-sev.severity-unknown { background:var(--raised); color:var(--ink-2); }
 .cve-desc { margin:0 0 2px; font-size:.85rem; color:var(--ink); line-height:1.4; }
-.cve-pkg { margin:0; font-size:.75rem; color:var(--muted); font-family:monospace; }
+.cve-pkg { margin:0; font-size:.8rem; color:var(--muted); }
 .daily-more { text-align:center; padding:12px; }
 .daily-more button { background:var(--orange); color:var(--ink); border:0; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:.9rem; }
 .daily-more button:hover { background:var(--orange); }
@@ -1233,4 +1233,93 @@ body:has(.approved-workspace) { margin:0; background:#0c1420; color-scheme:dark;
   :scope .account-dropdown > summary { border:0; padding:0; min-height:0; background:transparent; border-radius:50%; }
   :scope .subnav { align-items:center; padding:10px 24px; border-bottom:1px solid var(--line); }
   :scope .subnav .scope-note { margin-left:auto; font-size:13px; }
+}
+
+/* ===== Review ===== */
+@scope (.approved-workspace) {
+  /* Queue tabs with counts. */
+  :scope .review-tools { margin-bottom:14px; }
+  :scope .review-tools .tabs { border:0; border-bottom:1px solid var(--line); padding:0; gap:4px; display:flex; }
+  :scope .review-tools .tabs :is(button,a) { min-height:40px; padding:6px 12px; gap:8px; display:inline-flex; align-items:center; }
+  :scope .tab-count { min-width:20px; padding:0 6px; border-radius:999px; background:var(--raised); color:var(--ink-2); font-size:11.5px; line-height:18px; text-align:center; font-variant-numeric:tabular-nums; }
+  :scope .tabs .active .tab-count { background:var(--orange-soft); color:var(--orange); }
+
+  :scope .review-grid { grid-template-columns:300px minmax(0,1fr); gap:16px; }
+  :scope .panel { background:var(--paper); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+
+  /* Queue: the severity rail is the page's one bold element. */
+  :scope .queue-heading { padding:12px 16px; background:var(--paper); color:var(--muted); font-size:12.5px; }
+  :scope .queue-heading strong { color:var(--ink); font-weight:600; }
+  :scope .queue-item { padding:12px 16px 12px 18px; border-bottom:1px solid var(--line); background:transparent; text-decoration:none; color:var(--ink); border-left:0; }
+  :scope .queue-item::before { content:""; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:0 3px 3px 0; background:var(--rail, var(--line-strong)); }
+  :scope .queue-item.sev-critical { --rail:var(--sev-critical); }
+  :scope .queue-item.sev-high { --rail:var(--sev-high); }
+  :scope .queue-item.sev-medium { --rail:var(--sev-medium); }
+  :scope .queue-item.sev-low { --rail:var(--sev-low); }
+  :scope .queue-item:hover:not(:disabled) { background:var(--raised); }
+  :scope .queue-item.active { background:var(--raised); border-left:0; padding-left:18px; box-shadow:inset 0 0 0 1px var(--line-strong); }
+  :scope .queue-line { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  :scope .queue-item .queue-id { font-size:13.5px; font-weight:600; color:var(--ink); }
+  :scope .queue-item.active .queue-id { font-weight:650; }
+  :scope .queue-item .queue-package { font-size:12.5px; margin-top:4px; color:var(--ink-2); }
+  :scope .queue-item .queue-meta { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:6px; font-size:12px; color:var(--muted); }
+  :scope .queue-flag { color:var(--amber); }
+
+  /* Heading. */
+  :scope .review-heading { padding:16px 20px; background:var(--paper); border-bottom:1px solid var(--line); }
+  :scope .review-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; }
+  :scope .review-heading h2 { font-size:22px; font-weight:650; letter-spacing:-.3px; }
+  :scope .review-heading .subtitle { display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:6px; font-size:13px; color:var(--muted); }
+  :scope .review-heading .package-name { color:var(--ink-2); }
+  :scope .status-pill { padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; letter-spacing:0; }
+  :scope .whitelisted-banner.status-pill { background:var(--blue-soft); color:var(--blue); border:1px solid var(--blue-line); }
+  :scope .fixed-banner.status-pill { background:var(--green-soft); color:var(--green); border:1px solid var(--green-line); }
+  :scope :is(.fixed-heading,.whitelisted-heading) { background:var(--paper); }
+
+  /* Decision panel: steps, then one action bar that stays in view. */
+  :scope .review-content { grid-template-columns:minmax(0,1fr) 340px; }
+  :scope .decision-column { display:flex; flex-direction:column; gap:12px; padding:18px 20px 0; background:var(--raised); border-left:1px solid var(--line); }
+  :scope .decision-title { font-size:15px; font-weight:650; }
+  :scope #why-now { margin:0; font-size:12.5px; color:var(--muted); }
+  :scope .decision-steps { list-style:none; margin:0; padding:0; display:grid; gap:0; counter-reset:step; }
+  :scope .decision-step { position:relative; padding:0 0 18px 34px; counter-increment:step; display:grid; gap:8px; }
+  :scope .decision-step::before { content:counter(step); position:absolute; left:0; top:0; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:650; color:var(--muted); border:1px solid var(--line-strong); background:var(--paper); }
+  :scope .decision-step::after { content:""; position:absolute; left:11px; top:26px; bottom:4px; width:1px; background:var(--line); }
+  :scope .decision-step:last-child::after { display:none; }
+  :scope .decision-step.done::before { content:"✓"; color:var(--on-accent); background:var(--green); border-color:var(--green); }
+  :scope .step-title { font-size:13px; font-weight:600; color:var(--ink); line-height:22px; }
+  :scope .step-value { font-size:13px; }
+  :scope .step-hint { margin:0; font-size:12.5px; color:var(--amber); }
+  :scope .decision-column label { font-size:13px; font-weight:600; color:var(--ink); }
+  :scope .decision-column :is(select,input,textarea) { font-size:13.5px; min-height:38px; }
+  :scope .decision-column textarea { min-height:88px; }
+  :scope .decision-column .form-note { font-size:12.5px; color:var(--muted); margin:0; }
+  :scope .decision-bar { position:sticky; bottom:0; margin:auto -20px 0; padding:14px 20px 16px; display:grid; gap:8px; background:var(--raised); border-top:1px solid var(--line); }
+  :scope .decision-buttons { display:flex; gap:8px; }
+  :scope .decision-buttons #save-decision { flex:1; }
+  :scope .decision-action-help { margin:0; font-size:12.5px; color:var(--muted); }
+  :scope .save-state { font-size:12px; color:var(--muted); }
+  :scope .form-error { color:var(--red); background:var(--red-soft); border:1px solid var(--red-line); border-radius:var(--radius); padding:8px 10px; font-size:12.5px; }
+  :scope .inline-notice { color:var(--ink-2); background:var(--blue-soft); border:1px solid var(--blue-line); border-radius:var(--radius); padding:8px 10px; font-size:12.5px; }
+
+  /* Evidence column. */
+  :scope .evidence-column { padding:18px 20px 24px; }
+  :scope .block-title h3 { font-size:14px; font-weight:650; }
+  :scope .summary-copy { font-size:14px; line-height:1.6; color:var(--ink-2); max-width:75ch; }
+
+  /* AI classification: one quiet row when it is off. */
+  :scope .review-classification { background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:18px; background-image:none; }
+  :scope .review-classification.is-off { padding:10px 14px; }
+  :scope .classification-off { display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:13px; }
+  :scope .classification-off-title { color:var(--muted); font-weight:550; }
+  :scope .classification-off .classification-setup { margin:0; border:0; padding:0; }
+  :scope .classification-off .classification-setup summary { font-size:13px; font-weight:500; color:var(--blue); min-height:0; }
+  :scope .classification-off .classification-setup p { font-size:12.5px; }
+  :scope .classification-off #classify-now { margin-left:auto; min-height:30px; padding:4px 12px; font-size:12.5px; }
+  :scope #ai-triage .ai-error { color:var(--amber); background:var(--amber-soft); border:1px solid var(--amber-line); }
+}
+
+@scope (.approved-workspace) {
+  :scope .classification-off #classify-now:disabled { background:transparent; color:var(--muted); border:1px solid var(--line); opacity:1; }
+  :scope .ai-analyze-btn { color:var(--on-accent); font-weight:650; }
 }

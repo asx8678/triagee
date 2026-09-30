@@ -264,7 +264,7 @@ defmodule Triage.Workspace do
   defp priority_rank(risk), do: Enum.find_index(Risk.priorities(), &(&1 == risk.priority))
 
   def metrics(targets) do
-    for view <- ~w(active needs urgent unknown), into: %{} do
+    for view <- ~w(active needs urgent unknown progress accepted fixed), into: %{} do
       contributing = select(targets, view)
       ids = contributing |> Enum.map(& &1.cve) |> Enum.uniq() |> Enum.sort()
 

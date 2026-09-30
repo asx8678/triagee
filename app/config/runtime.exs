@@ -81,15 +81,17 @@ end
 
 config :triage, TriageWeb.Endpoint, http: [ip: bind_ip, port: port]
 
+# Development never reloads an open page: a full reload loses LiveView state
+# and trips the unsaved-draft guard. Stylesheets are swapped in place, and code
+# changes under lib/triage_web recompile and re-render open LiveViews in place,
+# keeping their assigns (drafts included). JavaScript and router changes still
+# need a manual browser reload.
 if config_env() == :dev do
   config :triage, TriageWeb.Endpoint,
     live_reload: [
       web_console_logger: true,
-      patterns: [
-        ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$"E,
-        ~r"lib/triage_web/router\.ex$"E,
-        ~r"lib/triage_web/(controllers|live|components)/.*\.(ex|heex)$"E
-      ]
+      patterns: [~r"priv/static/assets/css/.*\.css$"E],
+      notify: [live_view: [~r"lib/triage_web/.*\.(ex|heex)$"E]]
     ]
 end
 
