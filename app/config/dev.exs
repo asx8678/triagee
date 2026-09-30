@@ -23,7 +23,7 @@ config :triage, Triage.Repo,
 # on source changes; it installs the CLI only if _build does not have it.
 config :triage, TriageWeb.Endpoint,
   # runtime.exs enforces the TRIAGE_BIND loopback-only policy.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {127, 0, 0, 1}, port: 4005],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,

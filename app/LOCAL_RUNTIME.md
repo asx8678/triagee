@@ -11,7 +11,7 @@ configuration is loaded.
   literals `127.0.0.1` and `::1`. Hostnames, wildcard/public addresses, and every
   other IP are rejected during configuration loading.
 - `PORT` must be an unsigned decimal integer from `0` through `65535`. It defaults
-  to `4002` in test and `4000` in development and production. Port `0` is intended
+  to `4002` in test, `4005` in development and `4000` in production. Port `0` is intended
   for owned ephemeral verification probes; ordinary startup should use a stable
   nonzero port.
 - `PHX_HOST` controls production URL generation only. It does not select or weaken
@@ -35,11 +35,11 @@ access.
 Examples:
 
 ```sh
-# Development default: http://127.0.0.1:4000
+# Development default: http://127.0.0.1:4005
 mix phx.server
 
 # Explicit IPv6 loopback
-TRIAGE_BIND=::1 PORT=4000 mix phx.server
+TRIAGE_BIND=::1 PORT=4005 mix phx.server
 ```
 
 A value such as `TRIAGE_BIND=0.0.0.0`, `TRIAGE_BIND=localhost`, or an invalid

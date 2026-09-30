@@ -177,8 +177,8 @@ defmodule Triage.RuntimeConfigTest do
     end
   end
 
-  test "development and production default to IPv4 loopback port 4000" do
-    assert {:ok, {{127, 0, 0, 1}, 4000, nil}} = read_runtime(:dev)
+  test "development defaults to IPv4 loopback port 4005 and production to 4000" do
+    assert {:ok, {{127, 0, 0, 1}, 4005, nil}} = read_runtime(:dev)
     assert {:ok, {{127, 0, 0, 1}, 4000, "example.com"}} = read_runtime(:prod, @prod_env)
   end
 

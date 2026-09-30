@@ -49,7 +49,13 @@ bind_ip =
       raise "TRIAGE_BIND must be exactly 127.0.0.1 or ::1; public, hostname, and other IP binds are disabled"
   end
 
-default_port = if config_env() == :test, do: "4002", else: "4000"
+default_port =
+  case config_env() do
+    :test -> "4002"
+    :dev -> "4005"
+    _ -> "4000"
+  end
+
 port_text = System.get_env("PORT", default_port)
 
 port =
