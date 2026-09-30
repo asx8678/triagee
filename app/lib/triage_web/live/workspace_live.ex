@@ -17,7 +17,7 @@ defmodule TriageWeb.WorkspaceLive do
   import Params, only: [nav_active?: 2]
 
   # Pages that list no workspace CVEs: they need only the nav count and scope options.
-  @summary_pages ~w(daily timeline)
+  @summary_pages ~w(daily timeline statistics)
 
   @impl true
   def mount(_params, _session, socket) do
@@ -50,7 +50,8 @@ defmodule TriageWeb.WorkspaceLive do
        ai_assessment_error: nil,
        ai_rows: %{},
        classify_all: nil,
-       classification_tick: false
+       classification_tick: false,
+       statistics: nil
      )}
   end
 
@@ -156,6 +157,7 @@ defmodule TriageWeb.WorkspaceLive do
       page_title: browser_title(socket.assigns.page, page.row),
       row_history: history,
       daily_data: daily_data,
+      statistics: statistics(socket.assigns, params),
       scope_form: scope_form(params),
       search_form: search_form(params)
     )
@@ -212,6 +214,15 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   defp load_timeline(socket), do: socket
+
+  defp statistics(%{page: "statistics", invalid_params: false}, params),
+    do:
+      Triage.Statistics.report(
+        Map.take(params, ~w(team environment)),
+        TriageWeb.StatisticsComponents.period(params)
+      )
+
+  defp statistics(_assigns, _params), do: nil
 
   # The browser tab names the open CVE so several tabs stay distinguishable.
   defp browser_title(page, %{cve: cve}) when page in ~w(findings review), do: cve
@@ -359,7 +370,8 @@ defmodule TriageWeb.WorkspaceLive do
       else: {:noreply, socket}
   end
 
-  defp nav_items, do: [{"findings", "Triage"}, {"daily", "Timeline"}]
+  defp nav_items,
+    do: [{"findings", "Triage"}, {"daily", "Timeline"}, {"statistics", "Statistics"}]
 
   # Drafts are stored as they change; only one the server could not store
   # would be lost by leaving, so only that one asks before the page unloads.
@@ -618,6 +630,11 @@ defmodule TriageWeb.WorkspaceLive do
             search_form={@search_form}
           />
           <TimelineLive.panel :if={@page == "timeline"} workspace_scope={@params} {assigns} />
+          <TriageWeb.StatisticsComponents.panel
+            :if={@page == "statistics" and @statistics}
+            report={@statistics}
+            params={@params}
+          />
           <TriageWeb.DailyComponents.panel
             :if={@page == "daily" and @daily_data}
             days={@daily_data.days}

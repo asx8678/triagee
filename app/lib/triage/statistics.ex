@@ -21,8 +21,9 @@ defmodule Triage.Statistics do
 
   alias Triage.Decisions
   alias Triage.Decisions.Decision
-  alias Triage.Inventory.{Finding, ImagePlacement}
+  alias Triage.Inventory.{Finding, FindingEvent, ImagePlacement}
   alias Triage.Repo
+  alias Triage.Workspace
 
   # Local review targets in days from first local observation, by the highest
   # scanner severity recorded for the advisory.
@@ -274,4 +275,318 @@ defmodule Triage.Statistics do
       (Enum.at(sorted, mid - 1) + Enum.at(sorted, mid)) / 2
     end
   end
+
+  ## Handling statistics: the Statistics page and its CSV export
+
+  @periods %{"30d" => 30, "90d" => 90, "12m" => 365, "all" => nil}
+  @severity_rank %{"CRITICAL" => 4, "HIGH" => 3, "MEDIUM" => 2, "LOW" => 1}
+
+  @doc "Statistics periods by URL value, with their length in days (`nil` is all time)."
+  def periods, do: @periods
+
+  @doc """
+  One row per CVE and deployment, for the Statistics page and its CSV export.
+
+    * `observed_at` - when the scanner first recorded the CVE on the
+      deployment's image: the earlier of the finding's `first_seen` and its
+      first `appeared` event, as the Timeline counts detections.
+    * `first_action` - the first decision for this deployment, or for every
+      deployment of the CVE, made at or after `observed_at`: whitelist, marked
+      fixed or ticket, with who made it.
+    * `gone_at` - when the scanner stopped reporting it: the latest
+      `resolved_at` once every occurrence is resolved, or the deployment's
+      `last_seen` once it is retired. `nil` while it is still observed.
+    * `outcome` - how it was handled: the first action, or "Disappeared on its
+      own" when it stopped being observed before any action. A fix the scanner
+      then stopped reporting is "Fixed, confirmed by scan".
+
+  Filters are the Triage team/environment filters; reference data is excluded
+  exactly as in Triage.
+  """
+  def deployment_rows(filters \\ %{}, now \\ DateTime.utc_now()) do
+    targets = Workspace.targets(Map.take(filters, ["team", "environment"]), now)
+    decisions = targets |> Enum.map(& &1.cve) |> Enum.uniq() |> decisions_for(now)
+    appeared = first_appearances(targets)
+
+    targets
+    |> Enum.map(&deployment_row(&1, Map.get(decisions, &1.cve, []), appeared, now))
+    |> Enum.sort_by(&{&1.cve, &1.team || "", &1.environment || "", &1.namespace || ""})
+  end
+
+  @doc """
+  Groups `deployment_rows/2` into one row per CVE. A CVE counts as handled only
+  once every deployment is (`handled_at` is the last of them), and it is open
+  while any deployment still needs a decision.
+  """
+  def cve_rows(rows, now \\ DateTime.utc_now()) do
+    rows
+    |> Enum.group_by(& &1.cve)
+    |> Enum.map(fn {cve, deployments} -> cve_row(cve, deployments, now) end)
+  end
+
+  @doc """
+  The Statistics page: CVEs open now, CVEs handled since the period start, and
+  headline numbers for the period. Open CVEs are never filtered by period.
+  """
+  def report(filters, period, now \\ DateTime.utc_now()) do
+    since = period_start(period, now)
+    rows = deployment_rows(filters, now)
+    cves = cve_rows(rows, now)
+
+    open =
+      cves
+      |> Enum.filter(&(&1.status == :open))
+      |> Enum.sort_by(&{-(&1.days_open || 0), &1.cve})
+
+    handled =
+      cves
+      |> Enum.filter(&in_period?(&1.handled_at, since))
+      |> Enum.sort_by(& &1.handled_at, {:desc, DateTime})
+
+    %{
+      since: since,
+      open: open,
+      handled: handled,
+      summary: %{
+        open: length(open),
+        oldest_open_days: open |> Enum.map(& &1.days_open) |> Enum.max(fn -> nil end),
+        handled: length(handled),
+        median_days_to_first_action:
+          cves
+          |> Enum.filter(&(&1.first_action && in_period?(&1.first_action.at, since)))
+          |> Enum.map(& &1.days_to_first_action)
+          |> median(),
+        median_days_to_handle: handled |> Enum.map(& &1.days_to_handle) |> median(),
+        outcomes:
+          rows
+          |> Enum.filter(&in_period?(&1.handled_at, since))
+          |> Enum.frequencies_by(& &1.outcome)
+      }
+    }
+  end
+
+  @doc "Deployment rows of the CVEs the Statistics page lists: open now or handled in the period."
+  def export_rows(filters, period, now \\ DateTime.utc_now()) do
+    since = period_start(period, now)
+    rows = deployment_rows(filters, now)
+
+    listed =
+      rows
+      |> cve_rows(now)
+      |> Enum.filter(&(&1.status == :open or in_period?(&1.handled_at, since)))
+      |> MapSet.new(& &1.cve)
+
+    Enum.filter(rows, &MapSet.member?(listed, &1.cve))
+  end
+
+  defp deployment_row(target, decisions, appeared, now) do
+    observed_at =
+      target.findings
+      |> Enum.map(&earliest([&1.first_seen, Map.get(appeared, &1.id)]))
+      |> earliest()
+
+    gone? = not target.active?
+    gone_at = gone_at(target)
+    action = first_action(decisions, target.id, observed_at)
+
+    %{
+      cve: target.cve,
+      severity: target.findings |> Enum.map(& &1.severity) |> highest(),
+      packages:
+        target.findings
+        |> Enum.map(&"#{&1.package_name} #{&1.package_version}")
+        |> Enum.uniq()
+        |> Enum.sort(),
+      team: target.placement.owner,
+      environment: target.placement.environment,
+      namespace: target.placement.namespace,
+      image: image_label(target.image),
+      observed_at: observed_at,
+      first_action: action,
+      days_to_first_action: action && whole_days(observed_at, action.at),
+      gone?: gone?,
+      gone_at: gone_at,
+      days_until_gone: if(gone?, do: whole_days(observed_at, gone_at)),
+      days_open: if(not gone?, do: whole_days(observed_at, now)),
+      handled_at: earliest([action && action.at, gone_at]),
+      outcome: outcome(action, gone?, gone_at),
+      current_state: current_state(target),
+      whitelisted_until: whitelisted_until(target)
+    }
+  end
+
+  defp cve_row(cve, deployments, now) do
+    observed_at = deployments |> Enum.map(& &1.observed_at) |> earliest()
+
+    first_action =
+      deployments
+      |> Enum.map(& &1.first_action)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.min_by(& &1.at, DateTime, fn -> nil end)
+
+    handled = Enum.map(deployments, & &1.handled_at)
+    handled_at = if Enum.all?(handled), do: latest(handled)
+    gone? = Enum.all?(deployments, & &1.gone?)
+    open = Enum.count(deployments, &(&1.current_state == "Needs decision"))
+
+    %{
+      cve: cve,
+      severity: deployments |> Enum.map(& &1.severity) |> highest(),
+      packages: deployments |> Enum.flat_map(& &1.packages) |> Enum.uniq() |> Enum.sort(),
+      deployments: length(deployments),
+      open_deployments: open,
+      observed_at: observed_at,
+      first_action: first_action,
+      days_to_first_action: first_action && whole_days(observed_at, first_action.at),
+      handled_at: handled_at,
+      days_to_handle: handled_at && whole_days(observed_at, handled_at),
+      gone_at: if(gone?, do: deployments |> Enum.map(& &1.gone_at) |> latest()),
+      outcome: combined(deployments, & &1.outcome),
+      current_state: combined(deployments, & &1.current_state),
+      status: cve_status(open, gone?),
+      days_open: if(open > 0, do: whole_days(observed_at, now))
+    }
+  end
+
+  defp cve_status(open, _gone?) when open > 0, do: :open
+  defp cve_status(_open, true), do: :gone
+  defp cve_status(_open, false), do: :handled
+
+  # One label when every deployment agrees, otherwise each label with its count.
+  defp combined(deployments, label) do
+    case deployments |> Enum.frequencies_by(label) |> Enum.sort_by(fn {l, n} -> {-n, l} end) do
+      [{only, _count}] -> only
+      counts -> Enum.map_join(counts, ", ", fn {l, n} -> "#{l} (#{n})" end)
+    end
+  end
+
+  defp gone_at(%{active?: true}), do: nil
+
+  defp gone_at(%{findings: findings, placement: placement}) do
+    resolved = Enum.map(findings, & &1.resolved_at)
+
+    earliest([
+      if(findings != [] and Enum.all?(resolved), do: latest(resolved)),
+      if(not placement.active, do: placement.last_seen)
+    ])
+  end
+
+  # Decisions arrive oldest first; a decision without a placement covers every
+  # deployment of its CVE. Only decisions at or after observation count, as in
+  # the Timeline's response timing.
+  defp first_action(decisions, placement_id, observed_at) do
+    Enum.find_value(decisions, fn d ->
+      if (is_nil(d.placement_id) or d.placement_id == placement_id) and
+           (is_nil(observed_at) or DateTime.compare(d.decided_at, observed_at) != :lt) do
+        %{
+          kind: d.decision,
+          label: action_label(d.decision),
+          at: d.decided_at,
+          by: d.actor,
+          reason: d.reason,
+          ticket_url: (d.metadata || %{})["ticket_url"]
+        }
+      end
+    end)
+  end
+
+  defp action_label("accepted_risk"), do: "Whitelisted"
+  defp action_label("fixed"), do: "Marked fixed"
+  defp action_label("create_ticket"), do: "Ticket created"
+  defp action_label(other), do: Decisions.label(other)
+
+  defp outcome(nil, true, _gone_at), do: "Disappeared on its own"
+  defp outcome(nil, false, _gone_at), do: "Open"
+
+  defp outcome(action, gone?, gone_at) do
+    if gone? and gone_before?(gone_at, action.at),
+      do: "Disappeared on its own",
+      else: action_outcome(action.kind, gone?, action.label)
+  end
+
+  defp gone_before?(nil, _at), do: false
+  defp gone_before?(gone_at, at), do: DateTime.compare(gone_at, at) == :lt
+
+  defp action_outcome("fixed", true, _label), do: "Fixed, confirmed by scan"
+  defp action_outcome("fixed", false, _label), do: "Fixed, not yet confirmed"
+  defp action_outcome("accepted_risk", _gone?, _label), do: "Whitelisted"
+  defp action_outcome("create_ticket", _gone?, _label), do: "Ticket created"
+  defp action_outcome(_kind, _gone?, label), do: label
+
+  defp current_state(%{active?: false}), do: "No longer observed"
+  defp current_state(%{covered?: true, decision: %{decision: "accepted_risk"}}), do: "Whitelisted"
+  defp current_state(%{covered?: true, decision: %{decision: "fixed"}}), do: "Fix reported"
+  defp current_state(%{covered?: true, decision: %{decision: "create_ticket"}}), do: "Ticket open"
+  defp current_state(%{covered?: true, decision: %{decision: other}}), do: Decisions.label(other)
+  defp current_state(_target), do: "Needs decision"
+
+  # The last day an active whitelist still applies (it expires at the start of `expires_at`).
+  defp whitelisted_until(%{
+         active?: true,
+         covered?: true,
+         decision: %{decision: "accepted_risk", expires_at: %DateTime{} = expires_at}
+       }),
+       do: expires_at |> DateTime.add(-1, :second) |> DateTime.to_date()
+
+  defp whitelisted_until(_target), do: nil
+
+  defp decisions_for([], _now), do: %{}
+
+  defp decisions_for(cves, now) do
+    from(d in Decision,
+      where: d.cve in ^cves and d.decided_at <= ^now,
+      order_by: [asc: d.decided_at, asc: d.id]
+    )
+    |> Repo.all()
+    |> Enum.group_by(& &1.cve)
+  end
+
+  defp first_appearances(targets) do
+    case targets |> Enum.flat_map(& &1.findings) |> Enum.map(& &1.id) |> Enum.uniq() do
+      [] ->
+        %{}
+
+      ids ->
+        from(e in FindingEvent,
+          where: e.finding_id in ^ids and e.event == "appeared",
+          group_by: e.finding_id,
+          select: {e.finding_id, min(e.occurred_at)}
+        )
+        |> Repo.all()
+        |> Map.new()
+    end
+  end
+
+  defp image_label(%{repository: repository, tag: tag})
+       when is_binary(repository) and is_binary(tag) and tag != "",
+       do: "#{repository}:#{tag}"
+
+  defp image_label(%{repository: repository}) when is_binary(repository), do: repository
+  defp image_label(%{digest: digest}), do: digest
+
+  defp highest(severities) do
+    severities
+    |> Enum.map(&(&1 && String.upcase(&1)))
+    |> Enum.filter(&Map.has_key?(@severity_rank, &1))
+    |> Enum.max_by(&Map.fetch!(@severity_rank, &1), fn -> nil end)
+  end
+
+  defp period_start(period, now) do
+    case Map.fetch(@periods, period) do
+      {:ok, nil} -> nil
+      {:ok, days} -> DateTime.add(now, -days, :day)
+      :error -> DateTime.add(now, -90, :day)
+    end
+  end
+
+  defp in_period?(nil, _since), do: false
+  defp in_period?(_at, nil), do: true
+  defp in_period?(at, since), do: DateTime.compare(at, since) != :lt
+
+  defp whole_days(nil, _to), do: nil
+  defp whole_days(_from, nil), do: nil
+  defp whole_days(from, to), do: max(div(DateTime.diff(to, from, :second), 86_400), 0)
+
+  defp earliest(dates), do: dates |> Enum.reject(&is_nil/1) |> Enum.min(DateTime, fn -> nil end)
+  defp latest(dates), do: dates |> Enum.reject(&is_nil/1) |> Enum.max(DateTime, fn -> nil end)
 end

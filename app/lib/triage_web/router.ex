@@ -72,6 +72,7 @@ defmodule TriageWeb.Router do
     get "/cases/:id/exception", WorkspaceRedirectController, :show
 
     get "/whats-new", WorkspaceRedirectController, :show
+    get "/statistics/export.csv", StatisticsExportController, :csv
     get "/statistics", WorkspaceRedirectController, :show
     get "/replay", WorkspaceRedirectController, :show
     get "/replay/history", WorkspaceRedirectController, :show

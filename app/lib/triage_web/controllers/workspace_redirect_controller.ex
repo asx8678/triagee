@@ -37,6 +37,7 @@ defmodule TriageWeb.WorkspaceRedirectController do
       ["cves", cve] -> %{"page" => "review", "item" => cve}
       ["cases" | _] -> %{"page" => "review"}
       [page] when page in ["timeline", "whats-new"] -> %{"page" => "timeline"}
+      ["statistics"] -> %{"page" => "statistics"}
       _ -> %{"page" => "findings"}
     end
   end

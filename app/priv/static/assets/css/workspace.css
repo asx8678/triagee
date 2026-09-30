@@ -1006,3 +1006,59 @@ body:has(.approved-workspace) { margin:0; background:#16191e; color-scheme:dark;
     :scope .list-tab { gap:5px; padding:4px 6px; font-size:12.5px; }
   }
 }
+
+/* ===== Statistics =====
+   Headline numbers, how deployments were handled, then the open and handled
+   CVEs. One chart colour, validated on the panel surface; labels and values
+   stay in the text colours. */
+@scope (.approved-workspace) {
+  :scope { --viz-1:#3987e5; }
+  :scope .statistics { display:grid; gap:16px; }
+  :scope .statistics-head { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px 24px; }
+  :scope .statistics-head h1 { font-size:22px; font-weight:650; }
+  :scope .statistics-lede { margin-top:4px; font-size:13px; color:var(--muted); }
+  :scope .statistics-export { display:inline-flex; align-items:center; min-height:36px; padding:7px 14px; border-radius:var(--radius); background:var(--accent); color:var(--on-accent); font-size:13.5px; font-weight:650; text-decoration:none; }
+  :scope .statistics-export:hover { background:#d8e0e8; }
+  :scope .statistics-export:focus-visible { outline-offset:2px; }
+  :scope .statistics-periods { justify-self:start; }
+
+  /* Stat tiles: label, value, one line of context. */
+  :scope .stat-tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin:0; }
+  :scope .stat-tile { display:grid; align-content:start; gap:4px; padding:14px 16px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+  :scope .stat-tile dt { font-size:12.5px; font-weight:550; color:var(--muted); }
+  :scope .stat-tile dd { margin:0; }
+  :scope .stat-value { font-size:26px; font-weight:650; letter-spacing:-.4px; line-height:1.15; color:var(--ink); }
+  :scope .stat-note { font-size:12px; color:var(--muted); }
+
+  /* Cards, the one-colour bar list and the tables. */
+  :scope .statistics-card { padding:16px 18px; }
+  :scope .statistics-card h2 { display:flex; align-items:baseline; gap:8px; margin-bottom:12px; font-size:15px; font-weight:650; }
+  :scope .statistics-count { font-size:13px; font-weight:550; color:var(--muted); }
+  :scope .outcome-bars { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+  :scope .outcome-bars li { display:grid; grid-template-columns:minmax(150px, 220px) minmax(0,1fr) 96px; align-items:center; gap:12px; font-size:13px; }
+  :scope .outcome-label { color:var(--ink-2); }
+  :scope .outcome-track { height:12px; }
+  :scope .outcome-bar { display:block; height:12px; min-width:2px; border-radius:0 4px 4px 0; background:var(--viz-1); }
+  :scope .outcome-value { font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums; }
+  :scope .outcome-share { margin-left:6px; font-weight:450; color:var(--muted); }
+  :scope .statistics-help { font-size:13px; color:var(--muted); }
+  :scope .statistics-help summary { font-weight:600; color:var(--ink-2); }
+  :scope .statistics-help dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:6px 16px; max-width:90ch; margin:10px 0 0; }
+  :scope .statistics-help dt { font-weight:600; color:var(--ink-2); }
+  :scope .statistics-help dd { margin:0; line-height:1.55; }
+  :scope .statistics-table { font-size:13px; white-space:normal; }
+  :scope .statistics-table :is(td.num, td.date) { white-space:nowrap; }
+  :scope .statistics-cve { font-weight:600; color:var(--ink); white-space:nowrap; }
+  :scope .statistics-more-packages { color:var(--muted); }
+  :scope .statistics-empty, :scope .statistics-more { margin:0; font-size:13px; color:var(--muted); }
+  :scope .statistics-more { margin-top:10px; }
+
+  @media (max-width: 1000px) {
+    :scope .stat-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width: 640px) {
+    :scope .outcome-bars li { grid-template-columns:minmax(0,1fr) 96px; }
+    :scope .outcome-track { grid-column:1 / -1; grid-row:2; }
+    :scope .statistics-help dl { grid-template-columns:minmax(0,1fr); }
+  }
+}

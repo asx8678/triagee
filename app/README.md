@@ -81,7 +81,7 @@ calls. Use **Demo examples** in the scope bar or the
 ## Single workspace UI
 
 The homepage `/` is the workspace; `/workspace` is an alias for the same UI.
-The navigation has two pages, **Triage** and **Timeline**:
+The navigation has three pages, **Triage**, **Timeline** and **Statistics**:
 
 - **Triage** (`/?page=findings`, with `/?page=review` for one CVE): a tab row
   (**Need a decision**, **Whitelisted**, **All active**, each with its count)
@@ -112,6 +112,14 @@ The navigation has two pages, **Triage** and **Timeline**:
   whitelist decisions are labelled **Whitelist updated**. CVEs are sorted by
   latest activity and paged as complete histories, so detection and action
   cannot end up on separate pages.
+- **Statistics** (`/?page=statistics`): for the chosen team, environment and
+  period, the CVEs open now and those handled in the period, with when each was
+  first observed, the first action (Whitelisted, Marked fixed or Ticket created)
+  and who took it, days to first action, when it was no longer observed, and how
+  it was handled, including **Disappeared on its own** when the scanner stopped
+  reporting it before any decision. **Download CSV** exports one row per CVE and
+  deployment for Excel. Definitions and limits:
+  [Statistics](docs/STATISTICS.md).
 
 To add three fictional local Timeline examples, run
 `mise x -- mix run priv/repo/timeline_samples.exs` in development. The two

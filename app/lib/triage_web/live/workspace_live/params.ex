@@ -9,16 +9,17 @@ defmodule TriageWeb.WorkspaceLive.Params do
   | `findings`   | Triage (list); `review` is one CVE       |
   | `daily`      | Timeline (detections and actions)        |
   | `timeline`   | Observation chart (`/timeline`)          |
+  | `statistics` | Statistics and its CSV export            |
 
   The retired `overview`, `inventory`, `exceptions` and `news` pages open Triage.
   """
   alias TriageWeb.TimelineFilters
 
-  @pages ~w(findings daily review timeline)
+  @pages ~w(findings daily review timeline statistics)
   @retired_pages ~w(overview inventory exceptions news)
   # Lists Triage offers; older drilldown modes open the default list.
   @triage_modes ~w(needs active accepted)
-  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview focus_target)
+  @keys ~w(page team environment mode q severity sort offset item inspect tab batch weeks tview focus_target period)
 
   def pages, do: @pages
 
@@ -79,7 +80,8 @@ defmodule TriageWeb.WorkspaceLive.Params do
         {"mode", ~w(active all history needs urgent unknown accepted progress fixed)},
         {"tab", ~w(summary assets history evidence)},
         {"sort", ~w(priority age)},
-        {"severity", ~w(CRITICAL HIGH MEDIUM LOW)}
+        {"severity", ~w(CRITICAL HIGH MEDIUM LOW)},
+        {"period", Map.keys(Triage.Statistics.periods())}
       ],
       fn {key, allowed} -> params[key] in [nil, ""] or params[key] in allowed end
     ) and valid_focus_target?(params["focus_target"])
