@@ -1,9 +1,32 @@
 defmodule Triage.AzureDevOps do
-  @moduledoc "Explicit, server-side Azure DevOps work item creation. No automatic POST retries."
+  @moduledoc """
+  Explicit, server-side Azure DevOps access: work item creation with no
+  automatic POST retries, and a read-only fetch of one repository file.
+  """
   @doc "Low-level transport; callers must durably claim an operation before calling."
   def create(cve, targets, operation) do
     with {:ok, destination} <- destination() do
       create_payload(destination, payload(cve, targets, operation))
+    end
+  end
+
+  @org_url_error "ADO_ORG_URL must be an HTTPS URL without credentials, query or fragment."
+
+  defp valid_org?(org) do
+    uri = URI.parse(org)
+
+    uri.scheme == "https" and not is_nil(uri.host) and is_nil(uri.userinfo) and
+      is_nil(uri.query) and is_nil(uri.fragment)
+  end
+
+  @doc "The organization URL from `ADO_ORG_URL`, or why it cannot be used."
+  def organization do
+    org = String.trim_trailing(System.get_env("ADO_ORG_URL") || "", "/")
+
+    cond do
+      org == "" -> {:error, "ADO_ORG_URL is not set."}
+      not valid_org?(org) -> {:error, @org_url_error}
+      true -> {:ok, org}
     end
   end
 
@@ -13,16 +36,14 @@ defmodule Triage.AzureDevOps do
       Map.new(~w(ADO_ORG_URL ADO_PROJECT ADO_PAT ADO_WORK_ITEM_TYPE), &{&1, System.get_env(&1)})
 
     org = String.trim_trailing(config["ADO_ORG_URL"] || "", "/")
-    uri = URI.parse(org)
 
     cond do
       Enum.any?(config, fn {_, value} -> value in [nil, ""] end) ->
         {:error,
          "Azure DevOps is not configured. Set ADO_ORG_URL, ADO_PROJECT, ADO_PAT and ADO_WORK_ITEM_TYPE on the server."}
 
-      uri.scheme != "https" or is_nil(uri.host) or not is_nil(uri.userinfo) or
-        not is_nil(uri.query) or not is_nil(uri.fragment) ->
-        {:error, "ADO_ORG_URL must be an HTTPS URL without credentials, query or fragment."}
+      not valid_org?(org) ->
+        {:error, @org_url_error}
 
       true ->
         {:ok,
@@ -38,6 +59,18 @@ defmodule Triage.AzureDevOps do
 
   def backlog, do: System.get_env("ADO_BACKLOG") || "1 backlog"
   def team, do: System.get_env("ADO_TEAM") || "Configured backlog team"
+
+  @doc "The optional backlog and team display labels; `nil` when not set."
+  def display_labels do
+    %{backlog: label("ADO_BACKLOG"), team: label("ADO_TEAM")}
+  end
+
+  defp label(variable) do
+    case System.get_env(variable) do
+      value when value in [nil, ""] -> nil
+      value -> value
+    end
+  end
 
   def rationale,
     do:
@@ -79,13 +112,12 @@ defmodule Triage.AzureDevOps do
   defp deployment_description(target) do
     deployment =
       fields([
-        {"Deployment", target.placement.id},
         {"Team", target.placement.owner},
         {"Environment", target.placement.environment},
         {"Namespace", target.placement.namespace},
-        {"Image", target.image.id},
+        {"Image", image_name(target.image)},
         {"Image digest", target.image.digest},
-        {"Exposure", target.exposure}
+        {"Exposure", exposure_label(target.exposure)}
       ])
 
     findings =
@@ -109,6 +141,17 @@ defmodule Triage.AzureDevOps do
 
     "<h3>Affected deployment</h3><ul>" <> deployment <> "</ul>" <> findings
   end
+
+  defp image_name(%{repository: repository, tag: tag})
+       when is_binary(repository) and repository != "" and is_binary(tag) and tag != "",
+       do: repository <> ":" <> tag
+
+  defp image_name(%{repository: repository}) when is_binary(repository), do: repository
+  defp image_name(_image), do: nil
+
+  defp exposure_label("internet_exposed"), do: "External (reachable from the internet)"
+  defp exposure_label("internal"), do: "Internal"
+  defp exposure_label(_unknown), do: "Unknown"
 
   defp fields(values) do
     Enum.map_join(values, "", fn {label, value} ->
@@ -187,6 +230,106 @@ defmodule Triage.AzureDevOps do
     case destination() do
       {:ok, ^expected} -> :ok
       _ -> {:error, :configuration_changed}
+    end
+  end
+
+  @max_file_bytes 1_000_000
+
+  @doc """
+  Reads one text file from an Azure Repos Git repository. Nothing is ever
+  written to the repository, and the token needs only the Code (Read) scope:
+  `ADO_WHITELIST_PAT` when set, otherwise `ADO_PAT`.
+
+  `source` is the non-secret location: `"org"`, `"project"`, `"repository"`,
+  `"path"` and an optional `"branch"` (the default branch when absent).
+  Returns `{:ok, %{content: text, commit: id}}`, or `{:error, reason}` with
+  `:unauthorized`, `:not_found`, `:not_a_file`, `:too_large` or `:unavailable`.
+  """
+  def repository_file(source) do
+    url =
+      source["org"] <>
+        "/" <>
+        path_segment(source["project"]) <>
+        "/_apis/git/repositories/" <> path_segment(source["repository"]) <> "/items"
+
+    Req.new(Application.get_env(:triage, :ado_req_options, []))
+    |> Req.request(
+      method: :get,
+      url: url,
+      params: file_params(source),
+      auth: {:basic, ":" <> repository_token()},
+      retry: false,
+      redirect: false,
+      receive_timeout: 15_000
+    )
+    |> file_response()
+  rescue
+    # Never expose adapter exceptions: they can contain the token or request headers.
+    _ -> {:error, :unavailable}
+  end
+
+  @doc "The browser address of the same file, for a link. Holds no secret."
+  def repository_file_url(source) do
+    version = if source["branch"], do: [{"version", "GB" <> source["branch"]}], else: []
+
+    source["org"] <>
+      "/" <>
+      path_segment(source["project"]) <>
+      "/_git/" <>
+      path_segment(source["repository"]) <>
+      "?" <> URI.encode_query([{"path", source["path"]}] ++ version)
+  end
+
+  @doc "Whether a token for reading the repository is present."
+  def repository_token?, do: repository_token() != ""
+
+  defp repository_token do
+    case System.get_env("ADO_WHITELIST_PAT") do
+      value when value in [nil, ""] -> System.get_env("ADO_PAT", "")
+      value -> value
+    end
+  end
+
+  defp file_params(source) do
+    base = [
+      {"path", source["path"]},
+      {"includeContent", "true"},
+      {"$format", "json"},
+      {"api-version", "7.1"}
+    ]
+
+    case source["branch"] do
+      branch when branch in [nil, ""] ->
+        base
+
+      branch ->
+        base ++
+          [{"versionDescriptor.version", branch}, {"versionDescriptor.versionType", "branch"}]
+    end
+  end
+
+  # A rejected token is answered with 401/403, or with a sign-in page as 203 or
+  # a redirect. A folder has no content.
+  defp file_response({:ok, %{status: 200, body: %{"content" => content} = item}})
+       when is_binary(content),
+       do: file_content(content, item["commitId"])
+
+  defp file_response({:ok, %{status: 200, body: content}}) when is_binary(content),
+    do: file_content(content, nil)
+
+  defp file_response({:ok, %{status: 200}}), do: {:error, :not_a_file}
+
+  defp file_response({:ok, %{status: status}}) when status in [203, 302, 401, 403],
+    do: {:error, :unauthorized}
+
+  defp file_response({:ok, %{status: 404}}), do: {:error, :not_found}
+  defp file_response(_other), do: {:error, :unavailable}
+
+  defp file_content(content, commit) do
+    cond do
+      byte_size(content) > @max_file_bytes -> {:error, :too_large}
+      not String.valid?(content) -> {:error, :not_a_file}
+      true -> {:ok, %{content: content, commit: commit}}
     end
   end
 

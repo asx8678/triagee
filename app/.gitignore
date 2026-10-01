@@ -15,3 +15,9 @@ erl_crash.dump
 # (part of `mix setup`, `mix test`, `mix precommit` and `mix ci`)
 /priv/static/assets/vendor/
 /priv/static/assets/css/tailwind.css
+
+# `mix phx.digest` output (release builds only): the manifest, compressed
+# copies and digested copies named <file>-<32 hex digits>.<ext>
+/priv/static/cache_manifest.json
+/priv/static/**/*.gz
+/priv/static/**/*-????????????????????????????????.*

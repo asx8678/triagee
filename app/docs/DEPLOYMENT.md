@@ -30,8 +30,14 @@ From `app/`, using the versions pinned in CI (Elixir 1.20.4, OTP 27.3.4.17):
 mise x -- mix deps.get --only prod
 MIX_ENV=prod mise x -- mix compile --warnings-as-errors
 MIX_ENV=prod mise x -- mix assets.setup
+MIX_ENV=prod mise x -- mix phx.digest
 MIX_ENV=prod mise x -- mix release
 ```
+
+`mix phx.digest` writes digested and gzip-compressed copies of the browser assets
+and `priv/static/cache_manifest.json`; the release then serves them compressed
+with long-lived caching. A release built without it still works and serves the
+plain files.
 
 Use immutable versioned release directories under `/opt/triage/releases/` and a
 `/opt/triage/current` symlink. Keep the previous release for rollback. Store no

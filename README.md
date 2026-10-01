@@ -6,6 +6,7 @@ configuration and quality checks.
 
 ## Documentation
 
+- [Going live with real data](app/docs/GO_LIVE.md)
 - [Local runtime and trust boundary](app/LOCAL_RUNTIME.md)
 - [Isolated database verification](app/OWNED_DB_VERIFICATION.md)
 - [Public CVE reference data](app/REAL_CVES.md)

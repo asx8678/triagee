@@ -118,10 +118,13 @@ mise x -- mix triage.import --file /trusted/approved-export.json --apply
 
 This is local-file only, dry-run by default. A real approved legacy export still
 requires compatibility validation; synthetic fixtures are not approval.
+`--complete` declares the file the full current state of every team and
+environment pair it mentions: only then are unlisted deployments retired and
+unlisted findings recorded as no longer observed. See [GO_LIVE.md](GO_LIVE.md).
 
 JSON format is `triage.snapshot`, version 1; optional root source/generated_at.
 `images[]` has digest, optional repository/tag/description, placements and findings.
-Placements have namespace/owner/environment, optional active/first_seen/last_seen.
+Placements have namespace/owner/environment, required first_seen/last_seen, optional active.
 Findings have cve/package_name/package_version, required first_seen/last_seen,
 optional severity/fix/url/description/suppressed/resolved_at, and events of
 `{event, occurred_at, note}`. Closed fields/budgets:

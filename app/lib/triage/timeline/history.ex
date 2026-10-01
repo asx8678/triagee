@@ -9,7 +9,6 @@ defmodule Triage.Timeline.History do
   @case_page_size 10
   @max_id Integer.pow(2, 63) - 1
 
-  def event_page_size, do: @event_page_size
   def case_page_size, do: @case_page_size
 
   @spec valid_cursor?(term()) :: boolean()

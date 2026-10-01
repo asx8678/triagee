@@ -9,6 +9,8 @@ defmodule TriageWeb.Api.V1.ReportingController do
   def targets(conn, params), do: respond(conn, :targets, params)
   def packages(conn, params), do: respond(conn, :packages, params)
   def options(conn, params), do: respond(conn, :options, params)
+  def statistics(conn, params), do: respond(conn, :statistics, params)
+  def statistics_cves(conn, params), do: respond(conn, :statistics_cves, params)
 
   defp respond(conn, kind, params) do
     case Reporting.fetch(kind, params, conn.assigns.reporting_access) do

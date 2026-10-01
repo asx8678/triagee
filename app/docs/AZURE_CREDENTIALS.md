@@ -9,9 +9,9 @@ must not be able to destroy your tracker's data.
 
 ## What the application does with your token
 
-The application contacts Azure DevOps for exactly one purpose: creating one
+The application uses the ticket token for exactly one purpose: creating one
 work item per explicitly confirmed ticket operation, and finding it again
-during reconciliation. The complete request surface is:
+during reconciliation. The complete request surface of the ticket token is:
 
 | Request | Purpose | When |
 |---|---|---|
@@ -29,6 +29,11 @@ so each item is traceable to the local durable operation that created it.
 
 The retained legacy guided-review adapter (`TRIAGE_AZURE_*`, not used by the
 workspace UI) also only creates work items; it has no update or delete path.
+
+One further request exists and is optional: the Whitelist overview reads a
+single file from an Azure Repos Git repository. It is a `GET`, it is off until
+configured, and it should use its own read-only token. See
+[Optional: read the repository whitelist](#optional-read-the-repository-whitelist).
 
 ## Step 1 — Create a dedicated service account
 
@@ -191,6 +196,64 @@ ADO_TEAM="Receiving team name"
 Then restart the service (`systemctl restart triage`) and confirm with the
 preview dialog in the workspace. See [DEPLOYMENT](DEPLOYMENT.md) for the
 environment file placement, file mode, and migration/restart ordering.
+
+## Optional: read the repository whitelist
+
+The Whitelist overview in Triage can compare its own whitelists with a CVE
+whitelist file kept in an Azure Repos Git repository. The request is:
+
+| Request | Purpose | When |
+|---|---|---|
+| `GET {org}/{project}/_apis/git/repositories/{repository}/items?path={path}&includeContent=true&api-version=7.1` | Read the one configured file | A user opens the Whitelist overview or presses **Read again**; at most once per ten minutes otherwise |
+
+Nothing is written to the repository: there is no push, commit, pull request
+or branch call site. The file content is parsed for CVE ids, end dates and
+reasons and is kept in memory only.
+
+**Use a second token.** The ticket token from Step 2 has only the Work Items
+scope and is refused by Git, which is what check 4.1 proves. Keep it that way
+and create a separate token for the same service account:
+
+1. **Name**: `triage-whitelist-read`. **Organization**: yours only.
+2. **Scopes**: **Custom defined**, then exactly **Code → Read** (REST
+   identifier `vso.code`). This scope cannot push, and it cannot read or write
+   work items.
+3. In the repository's security settings (Project Settings → Repositories →
+   the repository → Security) give the service account **Read: Allow** and
+   nothing else. It needs no access to any other repository.
+
+Then add to the server environment file:
+
+```sh
+ADO_WHITELIST_REPO=security-config          # repository name or id
+ADO_WHITELIST_PATH=/whitelist/cves.yaml     # path of the file in it
+ADO_WHITELIST_PAT=<the read-only token>
+# Optional:
+ADO_WHITELIST_BRANCH=main                   # the default branch when absent
+ADO_WHITELIST_PROJECT=OtherProject          # ADO_PROJECT when absent
+```
+
+`ADO_ORG_URL` is shared with ticket creation. When `ADO_WHITELIST_PAT` is not
+set the application falls back to `ADO_PAT`, which then needs Code (Read) as
+well; that widens the ticket token and is not recommended.
+
+Verify the token before relying on it:
+
+```sh
+# Expect 200: the file is readable.
+curl -s -o /dev/null -w '%{http_code}\n' -u ":$ADO_WHITELIST_PAT" \
+  "https://dev.azure.com/ORG/PROJECT/_apis/git/repositories/REPO/items?path=/whitelist/cves.yaml&api-version=7.1"
+
+# Expect a refusal (401), not 200: the token cannot touch work items.
+curl -s -o /dev/null -w '%{http_code}\n' -u ":$ADO_WHITELIST_PAT" \
+  "https://dev.azure.com/ORG/PROJECT/_apis/wit/workitems/1?api-version=7.1"
+
+# The same comparison the dialog shows, from a terminal:
+cd app && mise x -- mix triage.whitelist
+```
+
+The dialog reports a rejected token, a missing file and an unreachable server
+in plain words and never shows the token or the response body.
 
 ## Rotation and revocation
 

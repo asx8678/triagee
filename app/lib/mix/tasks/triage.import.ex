@@ -7,6 +7,8 @@ defmodule Mix.Tasks.Triage.Import do
 
       mix triage.import --file priv/snapshots/legacy-2026-09-09.json
       mix triage.import --file priv/snapshots/legacy-2026-09-09.json --apply
+      mix triage.import --file today.json --complete
+      mix triage.import --file today.json --complete --apply
 
   The default is a **dry run**: it parses and validates the document, then
   reports, per image/placement/finding/event, whether the record is `create`,
@@ -20,6 +22,14 @@ defmodule Mix.Tasks.Triage.Import do
   never updates or deletes review cases, evidence snapshots, reviews or case
   events, and it never infers resolution from a missing field.
 
+  `--complete` declares the file the full current state, as of its
+  `generated_at`, of every team and environment pair it mentions and of every
+  image it lists. Only then does absence mean something: deployments of those
+  pairs that the file does not list are retired, open findings missing from a
+  listed image are recorded as no longer observed, and findings listed again
+  are reopened. The dry run shows the counts and examples first. Use it for a
+  regular feed from one source; never for a partial export.
+
   Validation failures are reported with a JSON path per problem and exit
   non-zero without writing. This task makes no network calls; the snapshot is
   a local file you supply. The file is size-bounded (5,000,000 bytes) from
@@ -31,7 +41,7 @@ defmodule Mix.Tasks.Triage.Import do
 
   alias Triage.Import
 
-  @switches [file: :string, apply: :boolean]
+  @switches [file: :string, apply: :boolean, complete: :boolean]
 
   @impl Mix.Task
   def run(args) do
@@ -63,11 +73,12 @@ defmodule Mix.Tasks.Triage.Import do
 
     json = File.read!(path)
     mode = if opts[:apply], do: :apply, else: :dry_run
+    import_opts = [complete: opts[:complete] == true]
 
     case mode do
       :dry_run ->
         with {:ok, snapshot} <- Import.parse(json),
-             {:ok, report} <- Import.dry_run(snapshot) do
+             {:ok, report} <- Import.dry_run(snapshot, import_opts) do
           print_report(path, :dry_run, report)
         else
           {:error, errors} ->
@@ -75,7 +86,7 @@ defmodule Mix.Tasks.Triage.Import do
         end
 
       :apply ->
-        case Import.import_snapshot(json) do
+        case Import.import_snapshot(json, import_opts) do
           {:ok, report} ->
             print_report(path, :apply, report)
 
@@ -100,6 +111,8 @@ defmodule Mix.Tasks.Triage.Import do
     #{format_counts("events", report.summary.events)}
     """)
 
+    print_lifecycle(report[:lifecycle])
+
     if report.warnings == [] do
       Mix.shell().info("warnings: none")
     else
@@ -113,6 +126,28 @@ defmodule Mix.Tasks.Triage.Import do
 
       :dry_run ->
         Mix.shell().info("re-run with --apply to commit these changes.")
+    end
+  end
+
+  defp print_lifecycle(nil), do: :ok
+
+  defp print_lifecycle(lifecycle) do
+    Mix.shell().info("""
+    complete snapshot as of #{DateTime.to_iso8601(lifecycle.as_of)}:
+      deployments retired: #{lifecycle.retired_placements}
+      findings no longer observed: #{lifecycle.resolved_findings}
+      findings observed again: #{lifecycle.reopened_findings}
+    """)
+
+    for {title, key} <- [
+          {"retired", :retired},
+          {"no longer observed", :resolved},
+          {"observed again", :reopened}
+        ],
+        examples = lifecycle.examples[key],
+        examples != [] do
+      Mix.shell().info("  #{title}, first #{length(examples)}:")
+      Enum.each(examples, &Mix.shell().info("    #{&1}"))
     end
   end
 

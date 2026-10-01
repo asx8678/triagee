@@ -82,30 +82,6 @@ defmodule Triage.Attention do
   @spec in_progress?(map()) :: boolean()
   def in_progress?(target), do: band(target) == 2
 
-  @doc "True when the target has no current action need (bands 3 or 4)."
-  @spec tracked?(map()) :: boolean()
-  def tracked?(target), do: band(target) in [3, 4]
-
-  @doc """
-  SQL expression for the attention band, embedded in `Workspace.Query`.
-  Mirrors `band/1` exactly; the parity test asserts the two agree on every
-  target shape the fixtures produce. Parameters: $3 is the shared `now`
-  timestamp, `covered` and `active` come from the target_facts CTE, and
-  `d.expires_at` / `d.decision` from the effective decision lateral join.
-  """
-  def sql do
-    """
-    CASE
-      WHEN NOT t.active THEN 4
-      WHEN NOT covered THEN 0
-      WHEN d.expires_at IS NOT NULL AND d.expires_at <= ($3::timestamp + interval '#{review_lead_days()} days') THEN 1
-      WHEN covered AND d.decision = 'fixed' THEN 1
-      WHEN covered AND d.decision IN ('investigate', 'request_remediation', 'request_verification', 'create_ticket') THEN 2
-      ELSE 3
-    END
-    """
-  end
-
   defp review_due?(target, now) do
     case target.decision do
       %{expires_at: nil} ->

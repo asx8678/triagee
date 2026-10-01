@@ -12,8 +12,12 @@ defmodule Triage.Reporting.Filters do
       @common ++
         ~w(cve active whitelisted needs_decision needs_attention expires_within_days limit cursor),
     packages: ~w(cve placement_id team environment limit cursor),
-    options: ~w(q limit cursor)
+    options: ~w(q limit cursor),
+    statistics: ~w(team environment period),
+    statistics_cves: ~w(team environment period status limit cursor)
   }
+  @statistics_kinds [:statistics, :statistics_cves]
+  @default_period "90d"
   @boolean_keys ~w(active whitelisted needs_decision needs_attention)
   @field_atoms %{
     "team" => :team,
@@ -61,7 +65,9 @@ defmodule Triage.Reporting.Filters do
              ~w(none partial full not_applicable),
              "whitelist_coverage"
            ),
-         {:ok, cursor} <- cursor(params["cursor"]) do
+         {:ok, cursor} <- cursor(params["cursor"]),
+         {:ok, period} <- enum(params["period"], periods(), "period"),
+         {:ok, status} <- enum(params["status"], ~w(open handled), "status") do
       filters =
         text
         |> Map.merge(booleans)
@@ -75,10 +81,24 @@ defmodule Triage.Reporting.Filters do
           cursor: cursor
         })
         |> defaults(kind)
+        |> statistics_fields(kind, period, status)
 
       {:ok, filters}
     end
   end
+
+  # Only the statistics endpoints carry a period and a status, so every other
+  # endpoint keeps its filter shape (and its cursors) unchanged.
+  defp statistics_fields(filters, kind, period, status) when kind in @statistics_kinds,
+    do:
+      Map.merge(filters, %{
+        period: if(period == "", do: @default_period, else: period),
+        status: status
+      })
+
+  defp statistics_fields(filters, _kind, _period, _status), do: filters
+
+  defp periods, do: Map.keys(Triage.Statistics.periods())
 
   defp text_fields(params) do
     Enum.reduce_while([{"team", 120}, {"environment", 120}, {"q", 200}], {:ok, %{}}, fn {key, max},

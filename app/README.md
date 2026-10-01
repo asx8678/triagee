@@ -40,6 +40,9 @@ mise x -- mix phx.server
 # http://127.0.0.1:4005
 ```
 
+To run on your own inventory instead of the demo data, follow
+[Going live with real data](docs/GO_LIVE.md).
+
 `mix setup` fetches dependencies, creates/migrates `triage_dev`, loads the offline
 demo seed in development only, and builds assets. Test setup never seeds the demo
 implicitly. `TRIAGE_BIND` controls the loopback address and `PORT` the listener port.
@@ -99,7 +102,13 @@ The navigation has three pages, **Triage**, **Timeline** and **Statistics**:
   by default) and is confirmed in a dialog; it applies through the selected date
   and expires at the following midnight UTC. AI classification is optional and
   never blocks a manual decision; **Classify all critical with AI** appears only
-  when classification is configured.
+  when classification is configured. **Whitelist overview**, the borderless
+  button at the right of the tab row, opens a dialog that lists what is
+  whitelisted and until when. Each end date has a status bar: green with more
+  than 30 days left, orange within 30 days, red in the last 7 days or once it
+  has ended. With a repository whitelist configured (see
+  [Optional integrations](#optional-integrations)) the dialog sets that list
+  beside Triage and also lists the CVEs that need a decision and are in neither.
 - **Timeline** (`/?page=daily`): one history per CVE, ordered from detection
   through whitelisting, work actions, marked fixes, and scanner observations.
   Each CVE shows its first detection, first recorded action on any deployment,
@@ -114,7 +123,7 @@ The navigation has three pages, **Triage**, **Timeline** and **Statistics**:
   cannot end up on separate pages.
 - **Statistics** (`/?page=statistics`): for the chosen team, environment and
   period, the CVEs open now and those handled in the period, with when each was
-  first observed, the first action (Whitelisted, Marked fixed or Ticket created)
+  first observed, the first action (Whitelisted, Reported fix or Ticket created)
   and who took it, days to first action, when it was no longer observed, and how
   it was handled, including **Disappeared on its own** when the scanner stopped
   reporting it before any decision. **Download CSV** exports one row per CVE and
@@ -163,8 +172,10 @@ The backend capabilities stay available without those screens:
 - **Cases:** scoped, frozen, append-only case evidence (`lib/triage/cases.ex`).
 - **Replay:** `mix triage.replay` runs a synthetic replay without changing
   inventory. See [PR7_CLI.md](PR7_CLI.md) and [PR7_HISTORY.md](PR7_HISTORY.md).
-- **Imports:** `mix triage.import` previews an approved historical snapshot and
-  applies it only on explicit confirmation. See the
+- **Imports:** `mix triage.import` previews a snapshot file and applies it only
+  with `--apply`; `--complete` makes it a regular feed that also retires and
+  reopens. `mix triage.exposure` records which deployments are internet-facing.
+  See [Going live with real data](docs/GO_LIVE.md) and the
   [Domain/API guide](docs/DOMAIN_API.md#approved-historical-snapshot-import).
 
 ### Decision policy
@@ -183,12 +194,34 @@ Server-side configuration:
 
 | Variable | Purpose |
 |---|---|
-| `TRIAGE_AZURE_ORGANIZATION` | Azure DevOps organization |
-| `TRIAGE_AZURE_PAT` | Server-side credential; never commit it |
-| `TRIAGE_AZURE_TEAMS_JSON` | Exact team names mapped to `project` and `area_path`; optional `work_item_type` |
-| `TRIAGE_AI_EXECUTABLE` | Absolute path to an administrator-owned read-only CLI wrapper |
+| `ADO_ORG_URL` | Azure DevOps organization URL, for example `https://dev.azure.com/your-org` (HTTPS required) |
+| `ADO_PROJECT` | Project that receives **Create ticket** work items |
+| `ADO_PAT` | Server-side credential with work-item write permission; never commit it |
+| `ADO_WORK_ITEM_TYPE` | Work item type valid for the project, for example `Task` or `Bug` |
+| `ADO_AREA_PATH` | Optional area path that routes the ticket to a team's backlog |
+| `ADO_BACKLOG`, `ADO_TEAM` | Optional display labels shown in the ticket preview |
+| `ADO_WHITELIST_REPO`, `ADO_WHITELIST_PATH` | Azure Repos Git repository (name or id) and the path of the CVE whitelist file in it; both are needed for the comparison in **Whitelist overview** |
+| `ADO_WHITELIST_BRANCH`, `ADO_WHITELIST_PROJECT` | Optional branch (the default branch otherwise) and project (`ADO_PROJECT` otherwise) of that file |
+| `ADO_WHITELIST_PAT` | Optional separate token with only the Code (Read) scope for that repository; `ADO_PAT` is used when it is not set |
 | `TRIAGE_ANALYSIS_ENABLED` | AI triage is disabled by default; must be exactly `true`/`1` (or `false`/`0`) or startup fails. Never implied by any installed binary |
 | `TRIAGE_KIRO_CLI` | Absolute path to the administrator-reviewed analysis runner; required alongside `TRIAGE_ANALYSIS_ENABLED` for any AI suggestion |
+| `TRIAGE_KIRO_MODEL` | Optional model name passed to the runner |
+
+**Create ticket** needs all four of `ADO_ORG_URL`, `ADO_PROJECT`, `ADO_PAT` and
+`ADO_WORK_ITEM_TYPE`; see [review actions](docs/REVIEW_ACTIONS.md). The
+`TRIAGE_AZURE_*` and `TRIAGE_AI_EXECUTABLE` variables are read only by the
+retained guided-review backend, which no screen uses.
+
+**Whitelist overview** compares Triage with a whitelist file kept in an Azure
+Repos Git repository once `ADO_WHITELIST_REPO` and `ADO_WHITELIST_PATH` are set
+next to `ADO_ORG_URL`, a project and a token. It reads that one file when the
+dialog is opened, keeps the copy for ten minutes, and never writes to the
+repository. The file may be JSON, YAML, CSV, a Markdown table or plain lines
+such as `.trivyignore`: CVE ids, end dates and reasons are picked up, and an end
+date is read as the last day the entry applies. Without the two variables the
+dialog shows what is whitelisted in Triage only. `mix triage.whitelist` prints
+the same comparison in a terminal; `--file` compares a local copy and makes no
+network call.
 
 For connecting a least-privilege Azure DevOps token — and verifying it can create tickets but never delete them — see [Azure credentials setup and verification](docs/AZURE_CREDENTIALS.md).
 
@@ -201,11 +234,6 @@ config :triage, :exposure_policy, %{
 ```
 
 Without an entry for a source, that source's evidence can prompt investigation but can never close work. See `app/docs/experiment-requirements.md` for the acceptance ledger.
-
-The AI wrapper accepts one JSON argument and returns a JSON object containing
-`recommendation` (`whitelist`, `fix`, or `investigate`) and a nonempty `reason`
-(up to 8,000 bytes). Output is capped at 65,536 bytes with a 30-second deadline.
-It must not perform actions; recommendations do not authorize changes.
 
 Ticket confirmation binds to previewed evidence and destination, including the
 Azure organization. Successful requests are not automatically resent. An
@@ -244,6 +272,8 @@ not a substitute for database-backed verification.
 - `lib/triage/cases.ex`: public case API and transactional writes.
 - `lib/triage/cases/queue.ex`: read-only case projections and pagination.
 - `lib/triage/cases/evidence.ex`: canonical evidence payloads and stable hashes.
+- `lib/triage/repo_whitelist.ex`: the Azure Repos whitelist file set beside
+  Triage's whitelists; `repo_whitelist/parse.ex` reads the file's layout.
 - `lib/triage_web/live/`: UI state, navigation and explicit confirmations.
 - `lib/triage_web/live/workspace_live.ex`: the single workspace LiveView (routing,
   shared state, page shell). Page behaviour lives in plain modules under
@@ -258,7 +288,7 @@ not a substitute for database-backed verification.
 The pinned standalone Tailwind CLI downloads on a cold cache; subsequent builds
 use the cached binary. CSS source is `assets/css/tailwind.css`; the current root
 layout loads generated `priv/static/assets/css/tailwind.css` followed by
-`priv/static/assets/css/workspace.css`. The retained legacy `app.css` is not loaded.
+`priv/static/assets/css/workspace.css`.
 `source(none)` plus the explicit `lib/` source keeps dependency/build/evidence
 files out of Tailwind scanning; the development watcher uses the same profile.
 

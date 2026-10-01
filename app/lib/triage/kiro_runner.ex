@@ -5,8 +5,20 @@ defmodule Triage.KiroRunner do
 
   def agent_path, do: Application.app_dir(:triage, "priv/kiro/triage-classifier.json")
 
-  def agent_hash,
-    do: :crypto.hash(:sha256, File.read!(agent_path())) |> Base.encode16(case: :lower)
+  @doc "SHA-256 of the shipped agent definition, read once per VM."
+  def agent_hash do
+    key = {__MODULE__, :agent_hash}
+
+    case :persistent_term.get(key, nil) do
+      nil ->
+        hash = :crypto.hash(:sha256, File.read!(agent_path())) |> Base.encode16(case: :lower)
+        :persistent_term.put(key, hash)
+        hash
+
+      hash ->
+        hash
+    end
+  end
 
   def run(cli, prompt, options \\ []) do
     caller = self()

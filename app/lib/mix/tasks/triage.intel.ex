@@ -3,7 +3,11 @@ defmodule Mix.Tasks.Triage.Intel do
   Manual public-intelligence refresh. Writes only the intel cache and receipts;
   never touches findings, placements, cases, reviews, or any endpoint.
 
-  Requires prior approval plus, at minimum:
+  Requires prior approval plus the sources to allow, either in the environment:
+
+      TRIAGE_INTEL_SOURCES=kev mix triage.intel --kev
+
+  or in configuration:
 
       config :triage, :intel,
         enabled: true,
@@ -52,7 +56,7 @@ defmodule Mix.Tasks.Triage.Intel do
       # Reading receipts makes no request, so it stays available while disabled.
       not Intel.Config.enabled?() and not Keyword.get(opts, :receipts, false) ->
         Mix.shell().error(
-          "  intel is disabled (set :triage, :intel, enabled: true, sources: [...])"
+          "  intel is disabled (set TRIAGE_INTEL_SOURCES=kev, or :triage, :intel in config)"
         )
 
         Mix.raise("intel disabled", exit_status: 1)

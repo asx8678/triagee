@@ -25,16 +25,12 @@ defmodule Triage.Evidence do
   # Decisions that assert the target needs no further work. These must be backed
   # by current material evidence to keep covering.
   @dismissal_decisions ~w(accepted_risk fixed not_affected)
-  @work_actions ~w(request_remediation investigate request_verification create_ticket)
 
   @doc "The packet version these rules reason about."
   def packet_version, do: Packet.version()
 
   @doc "Whether this decision value claims the work is settled."
   def dismissal?(decision), do: decision in @dismissal_decisions
-
-  @doc "Whether this decision value is a request for human work."
-  def work_action?(decision), do: decision in @work_actions
 
   @doc """
   Coverage state of one decision against the current evidence.

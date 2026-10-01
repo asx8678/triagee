@@ -24,7 +24,9 @@ defmodule Triage.Import do
   Deliberate omissions:
 
     * Absent `resolved_at` stays absent. Resolution is never inferred from a
-      missing field, a disappeared package or an incomplete snapshot. The same
+      missing field, a disappeared package or an incomplete snapshot, unless the
+      operator declares the snapshot complete (see `Triage.Import.Lifecycle`
+      and `complete: true` below). The same
       rule governs writes: a snapshot that does not state `resolved_at`,
       `suppressed` or `active` preserves the recorded local value instead of
       clearing it. The preservation warning is produced by the same shared
@@ -85,6 +87,7 @@ defmodule Triage.Import do
   """
   use Triage.Import.Contract
 
+  alias Triage.Import.Lifecycle
   alias Triage.Import.Parse
   alias Triage.Import.Reconcile
   alias Triage.Import.Write
@@ -228,9 +231,12 @@ defmodule Triage.Import do
 
   Returns `{:ok, report}` with `:summary` counts, `:images` detail and
   `:warnings`. No rows are written and no schema is changed.
+
+  With `complete: true` the report also carries `:lifecycle`: the deployments a
+  complete import would retire and the findings it would close or reopen.
   """
-  @spec dry_run(term()) :: {:ok, report()} | {:error, [problem()]}
-  def dry_run(snapshot) do
+  @spec dry_run(term(), keyword()) :: {:ok, report()} | {:error, [problem()]}
+  def dry_run(snapshot, opts \\ []) do
     with {:ok, validated} <- validate(snapshot) do
       digests = Enum.map(validated.images, & &1.digest)
       images = Reconcile.load_images(digests)
@@ -243,7 +249,11 @@ defmodule Triage.Import do
         [] ->
           rows = Reconcile.reconcile(validated, images, placements, findings, events)
           warnings = Write.resolution_warnings(validated, images, findings)
-          {:ok, %{summary: Reconcile.summarize(rows), images: rows, warnings: warnings}}
+          report = %{summary: Reconcile.summarize(rows), images: rows, warnings: warnings}
+
+          if Keyword.get(opts, :complete, false),
+            do: Lifecycle.preview(validated, report),
+            else: {:ok, report}
 
         errors ->
           {:error, errors}
@@ -255,12 +265,13 @@ defmodule Triage.Import do
   Parses and applies a snapshot JSON document.
 
   Returns `{:ok, report}` from `apply/1`, or `{:error, errors}` from `parse/1`
-  without writing anything.
+  without writing anything. `complete: true` also applies the lifecycle of a
+  complete snapshot in the same transaction.
   """
-  @spec import_snapshot(term()) :: {:ok, report()} | {:error, [problem()]}
-  def import_snapshot(json) do
+  @spec import_snapshot(term(), keyword()) :: {:ok, report()} | {:error, [problem()]}
+  def import_snapshot(json, opts \\ []) do
     with {:ok, snapshot} <- parse(json) do
-      apply(snapshot)
+      run_apply(snapshot, opts)
     end
   end
 
@@ -280,9 +291,17 @@ defmodule Triage.Import do
   `:images` detail and `:warnings`.
   """
   @spec apply(term()) :: {:ok, report()} | {:error, [problem()]}
-  def apply(snapshot) do
+  def apply(snapshot), do: run_apply(snapshot, [])
+
+  defp run_apply(snapshot, opts) do
     with {:ok, validated} <- validate(snapshot) do
-      case Repo.transaction(fn -> Write.do_write!(validated) end) do
+      case Repo.transaction(fn ->
+             report = Write.do_write!(validated)
+
+             if Keyword.get(opts, :complete, false),
+               do: Lifecycle.apply!(validated, report),
+               else: report
+           end) do
         {:ok, report} ->
           {:ok, report}
 

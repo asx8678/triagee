@@ -170,11 +170,13 @@ defmodule TriageWeb.TimelineLive.Lanes do
         }
 
       decision ->
+        {label, detail, timing} = decision_status(decision)
+
         %{
-          label: if(decision.placement_id, do: "Partially whitelisted", else: "Whitelisted"),
-          detail: Triage.Decisions.label(decision.decision),
+          label: label,
+          detail: detail,
           at: decision.decided_at,
-          timing: "Time to whitelist",
+          timing: timing,
           waiting: false
         }
 
@@ -205,10 +207,29 @@ defmodule TriageWeb.TimelineLive.Lanes do
     end
   end
 
+  # Only a whitelist (an accepted risk or a not-affected claim) reads as
+  # whitelisted; a reported fix or an open ticket is named for what it is.
+  @whitelist_decisions ~w(accepted_risk not_affected)
+
+  defp decision_status(%{decision: kind, placement_id: placement_id})
+       when kind in @whitelist_decisions do
+    {if(placement_id, do: "Partially whitelisted", else: "Whitelisted"),
+     Triage.Decisions.label(kind), "Time to whitelist"}
+  end
+
+  defp decision_status(%{decision: "fixed"}),
+    do: {"Reported fix", "Not yet confirmed by a scan", "Time to reported fix"}
+
+  defp decision_status(%{decision: kind}),
+    do: {"In progress", Triage.Decisions.label(kind), "Time to first action"}
+
   defp waiting_detail(lane, history, now) do
+    expired = Enum.filter(history, &(decision_state(&1, history, now) == "Expired"))
+
     cond do
       lane.reopen_count > 0 -> "Detected again"
-      Enum.any?(history, &(decision_state(&1, history, now) == "Expired")) -> "Whitelist expired"
+      Enum.any?(expired, &(&1.decision in @whitelist_decisions)) -> "Whitelist expired"
+      expired != [] -> "Decision expired"
       true -> "Not fixed"
     end
   end

@@ -33,6 +33,8 @@ defmodule TriageWeb.Router do
     get "/targets", ReportingController, :targets
     get "/targets/:placement_id/packages", ReportingController, :packages
     get "/options", ReportingController, :options
+    get "/statistics", ReportingController, :statistics
+    get "/statistics/cves", ReportingController, :statistics_cves
   end
 
   scope "/", TriageWeb do

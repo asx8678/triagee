@@ -174,7 +174,7 @@ defmodule TriageWeb.WorkspaceLive.Review do
       # raw submitted fields: a payload that omits `action` must open the
       # confirmation dialog rather than commit the retained action directly.
       socket.assigns.draft.fields["action"] in ["accepted_risk", "create_ticket"] ->
-        {:noreply, assign(socket, confirmation: %{}, error: nil)}
+        {:noreply, open_confirmation(socket)}
 
       true ->
         {:noreply, commit(socket)}
@@ -308,6 +308,19 @@ defmodule TriageWeb.WorkspaceLive.Review do
     do: {:noreply, assign(socket, ai_assessment: nil, ai_assessment_error: nil)}
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
+
+  # A ticket that cannot be sent is refused here, so its preview never opens.
+  defp open_confirmation(%{assigns: %{draft: %{fields: %{"action" => "create_ticket"}}}} = socket) do
+    if WorkspaceComponents.ticket_ready?(),
+      do: assign(socket, confirmation: %{}, error: nil),
+      else:
+        assign(socket,
+          error:
+            "Azure DevOps is not configured on this server, so a ticket cannot be created yet. Your draft is kept."
+        )
+  end
+
+  defp open_confirmation(socket), do: assign(socket, confirmation: %{}, error: nil)
 
   defp classify_error(:analysis_disabled),
     do:

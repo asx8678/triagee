@@ -17,7 +17,6 @@ defmodule TriageWeb.StatisticsComponents do
   # A fixed order, so the bars compare across periods.
   @outcome_order [
     "Whitelisted",
-    "Marked fixed",
     "Fixed, not yet confirmed",
     "Fixed, confirmed by scan",
     "Ticket created",
@@ -122,7 +121,7 @@ defmodule TriageWeb.StatisticsComponents do
           <dd>When the scanner first recorded the CVE on a deployment, as on the Timeline.</dd>
           <dt>First action</dt>
           <dd>
-            The first decision after that: Whitelisted, Marked fixed or Ticket created, with who made it.
+            The first decision after that: Whitelisted, Reported fix or Ticket created, with who made it.
             Older records may show other decisions, such as Remediation requested.
           </dd>
           <dt>No longer observed</dt>

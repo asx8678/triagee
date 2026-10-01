@@ -328,9 +328,15 @@ defmodule Triage.Statistics do
   The Statistics page: CVEs open now, CVEs handled since the period start, and
   headline numbers for the period. Open CVEs are never filtered by period.
   """
-  def report(filters, period, now \\ DateTime.utc_now()) do
+  def report(filters, period, now \\ DateTime.utc_now()),
+    do: filters |> deployment_rows(now) |> report_from_rows(period, now)
+
+  @doc """
+  The same report over `deployment_rows/2` rows the caller has already narrowed,
+  for example to the team and environment pairs a reporting token may read.
+  """
+  def report_from_rows(rows, period, now \\ DateTime.utc_now()) do
     since = period_start(period, now)
-    rows = deployment_rows(filters, now)
     cves = cve_rows(rows, now)
 
     open =
@@ -491,7 +497,7 @@ defmodule Triage.Statistics do
   end
 
   defp action_label("accepted_risk"), do: "Whitelisted"
-  defp action_label("fixed"), do: "Marked fixed"
+  defp action_label("fixed"), do: "Reported fix"
   defp action_label("create_ticket"), do: "Ticket created"
   defp action_label(other), do: Decisions.label(other)
 
@@ -515,7 +521,7 @@ defmodule Triage.Statistics do
 
   defp current_state(%{active?: false}), do: "No longer observed"
   defp current_state(%{covered?: true, decision: %{decision: "accepted_risk"}}), do: "Whitelisted"
-  defp current_state(%{covered?: true, decision: %{decision: "fixed"}}), do: "Fix reported"
+  defp current_state(%{covered?: true, decision: %{decision: "fixed"}}), do: "Reported fix"
   defp current_state(%{covered?: true, decision: %{decision: "create_ticket"}}), do: "Ticket open"
   defp current_state(%{covered?: true, decision: %{decision: other}}), do: Decisions.label(other)
   defp current_state(_target), do: "Needs decision"

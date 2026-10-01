@@ -166,6 +166,147 @@
         }
       ],
       "options": {"cellHeight": "sm", "showHeader": true}
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "CVEs handled, last 90 days",
+      "description": "CVEs with every deployment handled in the period.",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 29},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "${DS_TRIAGE_REPORTING}"},
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/statistics?period=90d",
+          "root_selector": "data",
+          "columns": [{"selector": "handled_cves", "text": "CVEs handled, last 90 days", "type": "number"}]
+        }
+      ],
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Median days to first action",
+      "description": "From first observed to the first decision. Whole days.",
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 29},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "${DS_TRIAGE_REPORTING}"},
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/statistics?period=90d",
+          "root_selector": "data",
+          "columns": [{"selector": "median_days_to_first_action", "text": "Median days to first action", "type": "number"}]
+        }
+      ],
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Median days to handle",
+      "description": "Until every deployment was handled. Whole days.",
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 29},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "${DS_TRIAGE_REPORTING}"},
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/statistics?period=90d",
+          "root_selector": "data",
+          "columns": [{"selector": "median_days_to_handle", "text": "Median days to handle", "type": "number"}]
+        }
+      ],
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Oldest open CVE, days",
+      "description": "The CVE that has needed a decision the longest.",
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 29},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "${DS_TRIAGE_REPORTING}"},
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/statistics?period=90d",
+          "root_selector": "data",
+          "columns": [{"selector": "oldest_open_days", "text": "Oldest open CVE, days", "type": "number"}]
+        }
+      ],
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "How deployments were handled, last 90 days",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 34},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "${DS_TRIAGE_REPORTING}"},
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/statistics?period=90d",
+          "root_selector": "data.outcomes",
+          "columns": [
+            {"selector": "outcome", "text": "How it was handled", "type": "string"},
+            {"selector": "deployments", "text": "Deployments", "type": "number"},
+            {"selector": "share_percent", "text": "Share %", "type": "number"}
+          ]
+        }
+      ],
+      "options": {"cellHeight": "sm", "showHeader": true}
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Handled CVEs, last 90 days (first bounded page)",
+      "description": "Do not treat this table as a full export when pagination.next_cursor is present.",
+      "gridPos": {"h": 11, "w": 24, "x": 0, "y": 42},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "${DS_TRIAGE_REPORTING}"},
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/statistics/cves?period=90d&status=handled&limit=100",
+          "root_selector": "data",
+          "columns": [
+            {"selector": "cve", "text": "CVE", "type": "string"},
+            {"selector": "severity", "text": "Severity", "type": "string"},
+            {"selector": "packages", "text": "Packages", "type": "string"},
+            {"selector": "first_observed_at", "text": "First observed", "type": "timestamp"},
+            {"selector": "first_action", "text": "First action", "type": "string"},
+            {"selector": "first_action_by", "text": "By", "type": "string"},
+            {"selector": "days_to_first_action", "text": "Days to first action", "type": "number"},
+            {"selector": "handled_at", "text": "Handled", "type": "timestamp"},
+            {"selector": "days_to_handle", "text": "Days to handle", "type": "number"},
+            {"selector": "outcome", "text": "How it was handled", "type": "string"},
+            {"selector": "current_state", "text": "Now", "type": "string"}
+          ]
+        }
+      ],
+      "options": {"cellHeight": "sm", "showHeader": true}
     }
   ],
   "refresh": "1m",
@@ -177,6 +318,6 @@
   "timezone": "browser",
   "title": "CVE Triage — recorded state",
   "uid": "triage-reporting-v1",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

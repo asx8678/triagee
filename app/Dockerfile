@@ -27,8 +27,9 @@ COPY priv priv
 COPY assets assets
 
 # Builds the Tailwind stylesheet and copies the mix.lock-pinned Phoenix
-# browser scripts into priv/static/assets (git-ignored output).
-RUN mix assets.setup
+# browser scripts into priv/static/assets (git-ignored output), then writes
+# digested and gzip-compressed copies plus the manifest the endpoint serves from.
+RUN mix assets.setup && mix phx.digest
 
 RUN mix compile && mix release --path /app/release
 

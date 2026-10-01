@@ -33,6 +33,24 @@ reporting_api_enabled =
 
 config :triage, :reporting_api, enabled: reporting_api_enabled, rate_limit: 120
 
+# Public vulnerability intelligence stays off until an operator names the
+# sources to allow. `kev` is the CISA known-exploited catalogue; `nvd` allows
+# per-CVE NVD lookups. Naming a source permits `mix triage.intel` to fetch it;
+# nothing is fetched by browsing.
+intel_sources =
+  System.get_env("TRIAGE_INTEL_SOURCES", "")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.map(fn
+    "kev" -> :kev
+    "nvd" -> :nvd
+    other -> raise "TRIAGE_INTEL_SOURCES accepts only kev and nvd, comma separated; got: #{other}"
+  end)
+
+if intel_sources != [] do
+  config :triage, :intel, enabled: true, sources: Enum.uniq(intel_sources)
+end
+
 # Keep the application behind a local TLS reverse proxy or an SSH tunnel.
 # Authentication does not weaken this boundary: only numeric loopback binds are accepted.
 bind = System.get_env("TRIAGE_BIND", "127.0.0.1")
@@ -135,6 +153,19 @@ if config_env() == :prod and portable_args in [nil, [], ["start"], ["migrate"], 
   config :triage, TriageWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     secret_key_base: secret_key_base
+
+  # Serve digested, pre-compressed assets when the release was built with
+  # `mix phx.digest` (the Docker image and `mix burrito` do). A release built
+  # without it has no manifest and keeps serving the plain files.
+  static_manifest =
+    case :code.priv_dir(:triage) do
+      priv when is_list(priv) -> Path.join(priv, "static/cache_manifest.json")
+      _unavailable -> nil
+    end
+
+  if static_manifest && File.exists?(static_manifest) do
+    config :triage, TriageWeb.Endpoint, cache_static_manifest: "priv/static/cache_manifest.json"
+  end
 end
 
 # Optional guided-review integrations. Secrets stay server-side; no integration

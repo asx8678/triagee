@@ -9,8 +9,8 @@ defmodule TriageWeb.SessionHTML do
         <main id="main-content" class="auth-main" tabindex="-1">
           <div class="auth-brand">
             <svg aria-hidden="true" viewBox="0 0 32 32">
-              <path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3" />
-              <path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3" />
+              <path d="M16 3 29 26H3Z" fill="none" stroke="#e8763a" stroke-width="3" />
+              <path d="M16 11v7m0 3v2" stroke="#e8763a" stroke-width="3" />
             </svg>
             <span>PTV Triage</span>
           </div>

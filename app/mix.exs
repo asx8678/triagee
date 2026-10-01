@@ -125,7 +125,13 @@ defmodule Triage.MixProject do
 
     [
       setup: ["deps.get", "ecto.setup"] ++ seed_tasks ++ ["assets.setup"],
-      burrito: [&require_production/1, "assets.setup", "release triage_burrito --overwrite"],
+      burrito: [
+        &require_production/1,
+        "assets.setup",
+        "phx.digest.clean --all",
+        "phx.digest",
+        "release triage_burrito --overwrite"
+      ],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.seed": ["run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"] ++ seed_tasks,

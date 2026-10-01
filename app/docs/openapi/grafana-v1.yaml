@@ -3,7 +3,7 @@ info:
   title: Triage read-only reporting API
   version: 1.0.0
   description: >-
-    Current recorded CVE and target state for server-side Grafana datasources.
+    Current recorded CVE and target state, and handling statistics, for server-side Grafana datasources.
     Risk acceptance is not remediation, and evaluated_at is not a scan timestamp.
 servers:
   - url: https://triage.example.invalid
@@ -159,6 +159,51 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/statistics:
+    get:
+      tags: [Reporting]
+      operationId: getReportingStatistics
+      summary: Handling statistics for a period, as shown on the Statistics page
+      parameters:
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+        - $ref: '#/components/parameters/Period'
+      responses:
+        '200':
+          description: Open and handled CVE counts, median handling times and outcomes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/statistics/cves:
+    get:
+      tags: [Reporting]
+      operationId: listReportingStatisticsCves
+      summary: Page the CVEs open now or handled in the period, with their handling times
+      parameters:
+        - $ref: '#/components/parameters/Team'
+        - $ref: '#/components/parameters/Environment'
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/StatisticsStatus'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One bounded page in CVE identifier order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsCveListEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
 components:
   securitySchemes:
     reportingBearer:
@@ -232,6 +277,16 @@ components:
       name: whitelist_coverage
       in: query
       schema: { type: string, enum: [none, partial, full, not_applicable] }
+    Period:
+      name: period
+      in: query
+      description: Counts CVEs handled since the start of this period. Open CVEs are never limited by it.
+      schema: { type: string, enum: [30d, 90d, 12m, all], default: 90d }
+    StatisticsStatus:
+      name: status
+      in: query
+      description: Omit for both the CVEs open now and those handled in the period.
+      schema: { type: string, enum: [open, handled] }
     Limit:
       name: limit
       in: query
@@ -320,7 +375,7 @@ components:
         image_repository: { type: [string, 'null'] }
         image_tag: { type: [string, 'null'] }
         severity: { type: string }
-        review_priority: { type: [integer, 'null'] }
+        review_priority: { type: [string, 'null'], enum: [critical, high, medium, low, null] }
         active: { type: boolean }
         exposure: { type: string }
         exposure_state: { type: string }
@@ -368,6 +423,62 @@ components:
             by_team: { type: array, maxItems: 100, items: { type: object, additionalProperties: true } }
             by_environment: { type: array, maxItems: 100, items: { type: object, additionalProperties: true } }
         meta: { $ref: '#/components/schemas/Meta' }
+    StatisticsEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [period, open_cves, handled_cves, handled_deployments, outcomes]
+          properties:
+            period: { type: string, enum: [30d, 90d, 12m, all] }
+            since: { type: [string, 'null'], format: date-time, description: Start of the period; null for all time. }
+            open_cves: { type: integer, minimum: 0 }
+            oldest_open_days: { type: [integer, 'null'], minimum: 0 }
+            handled_cves: { type: integer, minimum: 0, description: CVEs with every deployment handled in the period. }
+            median_days_to_first_action: { type: [integer, 'null'], minimum: 0, description: Whole days, counted down. }
+            median_days_to_handle: { type: [integer, 'null'], minimum: 0, description: Whole days, counted down. }
+            handled_deployments: { type: integer, minimum: 0 }
+            outcomes:
+              type: array
+              items:
+                type: object
+                required: [outcome, deployments, share_percent]
+                properties:
+                  outcome: { type: string }
+                  deployments: { type: integer, minimum: 1 }
+                  share_percent: { type: integer, minimum: 0, maximum: 100 }
+        meta: { $ref: '#/components/schemas/Meta' }
+    StatisticsCveRow:
+      type: object
+      required: [cve, deployments, open_deployments, status, handled_in_period, outcome, current_state, detail_path]
+      properties:
+        cve: { type: string }
+        severity: { type: [string, 'null'] }
+        packages: { type: string, description: Package names and versions, comma separated. }
+        deployments: { type: integer, minimum: 1 }
+        open_deployments: { type: integer, minimum: 0 }
+        status: { type: string, enum: [open, handled, gone] }
+        handled_in_period: { type: boolean }
+        first_observed_at: { type: [string, 'null'], format: date-time }
+        first_action: { type: [string, 'null'] }
+        first_action_at: { type: [string, 'null'], format: date-time }
+        first_action_by: { type: [string, 'null'] }
+        days_to_first_action: { type: [integer, 'null'], minimum: 0 }
+        handled_at: { type: [string, 'null'], format: date-time }
+        days_to_handle: { type: [integer, 'null'], minimum: 0 }
+        no_longer_observed_at: { type: [string, 'null'], format: date-time }
+        days_open: { type: [integer, 'null'], minimum: 0 }
+        outcome: { type: string }
+        current_state: { type: string }
+        detail_path: { type: string }
+    StatisticsCveListEnvelope:
+      type: object
+      required: [data, meta, pagination]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/StatisticsCveRow' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
     CveListEnvelope:
       type: object
       required: [data, meta, pagination]

@@ -1,5 +1,8 @@
 defmodule Triage.Reporting do
-  @moduledoc "Versioned, read-only current-state projection for authorized reporting clients."
+  @moduledoc """
+  Versioned, read-only projection for authorized reporting clients: current
+  recorded state, plus the handling statistics the Statistics page shows.
+  """
 
   alias Triage.Reporting.{Cursor, Filters, Query}
 
@@ -129,6 +132,114 @@ defmodule Triage.Reporting do
        next_cursor: encode_next(:options, filters, access, next_position)
      )}
   end
+
+  # The Statistics page for the authorized scope: the same report, the same
+  # whole-day rounding and the same outcome labels, so Grafana and the page
+  # cannot disagree.
+  defp run(:statistics, filters, access, now, _position) do
+    report = statistics_report(filters, access, now)
+    summary = report.summary
+    handled_deployments = summary.outcomes |> Map.values() |> Enum.sum()
+
+    data = %{
+      "period" => filters.period,
+      "since" => datetime(report.since),
+      "open_cves" => summary.open,
+      "oldest_open_days" => summary.oldest_open_days,
+      "handled_cves" => summary.handled,
+      "median_days_to_first_action" => whole_days(summary.median_days_to_first_action),
+      "median_days_to_handle" => whole_days(summary.median_days_to_handle),
+      "handled_deployments" => handled_deployments,
+      "outcomes" =>
+        summary.outcomes
+        |> Enum.sort_by(fn {outcome, count} -> {-count, outcome} end)
+        |> Enum.map(fn {outcome, count} ->
+          %{
+            "outcome" => outcome,
+            "deployments" => count,
+            "share_percent" => round(count * 100 / handled_deployments)
+          }
+        end)
+    }
+
+    {:ok, envelope(data, filters, now)}
+  end
+
+  defp run(:statistics_cves, filters, access, now, position) do
+    report = statistics_report(filters, access, now)
+    handled = MapSet.new(report.handled, & &1.cve)
+
+    rows =
+      case filters.status do
+        "open" -> report.open
+        "handled" -> report.handled
+        _both -> Enum.uniq_by(report.open ++ report.handled, & &1.cve)
+      end
+      |> Enum.sort_by(& &1.cve)
+
+    remaining =
+      case position do
+        %{"cve" => last} -> Enum.drop_while(rows, &(&1.cve <= last))
+        _start -> rows
+      end
+
+    page(
+      Enum.take(remaining, filters.limit + 1),
+      length(rows),
+      filters,
+      access,
+      now,
+      :statistics_cves,
+      &statistics_cve_json(&1, handled, filters),
+      fn row -> %{"cve" => row.cve} end
+    )
+  end
+
+  # A token limited to team and environment pairs sees only those deployments,
+  # whatever the request filters are.
+  defp statistics_report(filters, access, now) do
+    %{"team" => filters.team, "environment" => filters.environment}
+    |> Triage.Statistics.deployment_rows(now)
+    |> Enum.filter(&granted?(access, &1))
+    |> Triage.Statistics.report_from_rows(filters.period, now)
+  end
+
+  defp granted?(%{grants: :all}, _row), do: true
+
+  defp granted?(%{grants: grants}, row) when is_list(grants),
+    do: {Triage.Workspace.team_key(row.team), row.environment} in grants
+
+  defp granted?(_access, _row), do: false
+
+  defp statistics_cve_json(row, handled, filters) do
+    action = row.first_action
+
+    %{
+      "cve" => row.cve,
+      "severity" => row.severity,
+      "packages" => Enum.join(row.packages, ", "),
+      "deployments" => row.deployments,
+      "open_deployments" => row.open_deployments,
+      "status" => Atom.to_string(row.status),
+      "handled_in_period" => MapSet.member?(handled, row.cve),
+      "first_observed_at" => datetime(row.observed_at),
+      "first_action" => action && action.label,
+      "first_action_at" => action && datetime(action.at),
+      "first_action_by" => action && action.by,
+      "days_to_first_action" => row.days_to_first_action,
+      "handled_at" => datetime(row.handled_at),
+      "days_to_handle" => row.days_to_handle,
+      "no_longer_observed_at" => datetime(row.gone_at),
+      "days_open" => row.days_open,
+      "outcome" => row.outcome,
+      "current_state" => row.current_state,
+      "detail_path" => cve_path(row.cve, filters)
+    }
+  end
+
+  # Whole days, counted down, as the Statistics page and its CSV show them.
+  defp whole_days(nil), do: nil
+  defp whole_days(days), do: trunc(days)
 
   defp page(rows, total, filters, access, now, endpoint, mapper, position) do
     {shown, has_more?} = take_page(rows, filters.limit)

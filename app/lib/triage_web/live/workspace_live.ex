@@ -51,7 +51,8 @@ defmodule TriageWeb.WorkspaceLive do
        ai_rows: %{},
        classify_all: nil,
        classification_tick: false,
-       statistics: nil
+       statistics: nil,
+       repo_whitelist: nil
      )}
   end
 
@@ -90,7 +91,8 @@ defmodule TriageWeb.WorkspaceLive do
        queue_shown:
          if(params["item"] != socket.assigns[:item], do: false, else: socket.assigns.queue_shown),
        invalid_params: invalid_params,
-       confirmation: nil
+       confirmation: nil,
+       repo_whitelist: nil
      )
      |> load()}
   end
@@ -151,8 +153,13 @@ defmodule TriageWeb.WorkspaceLive do
         nil
       end
 
+    # Only what the templates render stays in the socket: the hydrated targets
+    # are already inside `page_rows`, and the team and inspector projections
+    # belong to retired screens.
     socket
-    |> assign(Map.drop(page, [:matching]))
+    |> assign(
+      Map.take(page, [:page_rows, :total, :metrics, :options, :mode, :offset, :item, :row])
+    )
     |> assign(
       page_title: browser_title(socket.assigns.page, page.row),
       row_history: history,
@@ -213,7 +220,21 @@ defmodule TriageWeb.WorkspaceLive do
     })
   end
 
-  defp load_timeline(socket), do: socket
+  # Other pages do not render the chart: drop what the last chart view loaded.
+  defp load_timeline(%{assigns: %{timeline: nil, detail: nil}} = socket), do: socket
+
+  defp load_timeline(socket) do
+    assign(socket,
+      timeline: nil,
+      detail: nil,
+      selected_cve: nil,
+      detail_error: nil,
+      view_error: nil,
+      expanded_cases: %{},
+      kev: %{},
+      kev_status: nil
+    )
+  end
 
   defp statistics(%{page: "statistics", invalid_params: false}, params),
     do:
@@ -295,6 +316,24 @@ defmodule TriageWeb.WorkspaceLive do
   def handle_event("dismiss-action-toast", _, socket),
     do: {:noreply, assign(socket, action_toast: nil)}
 
+  # The whitelist overview reads a file from Azure DevOps, so it loads off the
+  # socket process: the dialog opens at once and fills in when the read ends.
+  def handle_event("repo-whitelist", params, socket) do
+    scope = Map.take(socket.assigns.params, ~w(team environment))
+    reload? = params["reload"] == "true"
+    shown = socket.assigns.repo_whitelist
+
+    {:noreply,
+     socket
+     |> assign(repo_whitelist: %{loading: true, failed: false, overview: shown && shown.overview})
+     |> start_async(:repo_whitelist, fn ->
+       Triage.RepoWhitelist.overview(scope, reload: reload?)
+     end)}
+  end
+
+  def handle_event("close-repo-whitelist", _, socket),
+    do: {:noreply, assign(socket, repo_whitelist: nil)}
+
   def handle_event("daily-prev", %{"before" => cursor}, socket) do
     {:noreply,
      socket
@@ -313,6 +352,22 @@ defmodule TriageWeb.WorkspaceLive do
   end
 
   defp exact_target_page(page, _params), do: page
+
+  # A result that arrives after the dialog was closed is dropped.
+  @impl true
+  def handle_async(:repo_whitelist, _result, %{assigns: %{repo_whitelist: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_async(:repo_whitelist, {:ok, overview}, socket),
+    do:
+      {:noreply,
+       assign(socket, repo_whitelist: %{loading: false, failed: false, overview: overview})}
+
+  def handle_async(:repo_whitelist, {:exit, _reason}, socket) do
+    shown = socket.assigns.repo_whitelist.overview
+
+    {:noreply, assign(socket, repo_whitelist: %{loading: false, failed: true, overview: shown})}
+  end
 
   # Ignore legacy/unbound result messages. Current notifications only trigger
   # a fresh read of the durable, evidence-bound classification.
@@ -408,8 +463,8 @@ defmodule TriageWeb.WorkspaceLive do
         <header class="topbar">
           <.link patch={nav_path(@params, "findings")} class="brand" aria-label="PTV Triage">
             <svg aria-hidden="true" viewBox="0 0 32 32">
-              <path d="M16 3 29 26H3Z" fill="none" stroke="#ff702b" stroke-width="3" />
-              <path d="M16 11v7m0 3v2" stroke="#ff702b" stroke-width="3" />
+              <path d="M16 3 29 26H3Z" fill="none" stroke="#e8763a" stroke-width="3" />
+              <path d="M16 11v7m0 3v2" stroke="#e8763a" stroke-width="3" />
             </svg>
             <span>PTV Triage</span>
           </.link>
@@ -659,6 +714,11 @@ defmodule TriageWeb.WorkspaceLive do
         error={@error}
       />
       <.settings_dialog :if={@settings} />
+      <TriageWeb.WhitelistComponents.dialog
+        :if={@repo_whitelist}
+        state={@repo_whitelist}
+        params={@params}
+      />
     </Layouts.app>
     """
   end

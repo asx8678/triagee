@@ -125,7 +125,6 @@ defmodule TriageWeb.TimelineLive do
           socket
           |> assign(:view_error, nil)
           |> assign(:timeline, timeline)
-          |> assign(:action_paths, action_paths(timeline, parsed.cve))
           |> assign(:filters, parsed)
           |> assign(:timeline_options, Timeline.filter_options())
           |> assign(:filter_form, to_form(filter_params(timeline, parsed)))
@@ -137,18 +136,6 @@ defmodule TriageWeb.TimelineLive do
           view_error(socket, parsed)
       end
     end
-  end
-
-  # Every displayed surface participates, not just the truncated lane table.
-  # Day rows and lanes are already bounded by Timeline; Query chunks this union.
-  defp action_paths(timeline, selected_cve) do
-    day_cves = Enum.flat_map(timeline.days, fn day -> Enum.map(day.rows, & &1.cve) end)
-    lane_cves = Enum.map(timeline.lanes.rows, & &1.cve)
-
-    (day_cves ++ lane_cves ++ [selected_cve])
-    |> Enum.reject(&is_nil/1)
-    |> Triage.GuidedReview.actionable_for()
-    |> Map.new(fn row -> {row.cve, ~p"/triage/#{row.cve}"} end)
   end
 
   # The form shows what is displayed: the effective window size, not the raw
@@ -425,7 +412,6 @@ defmodule TriageWeb.TimelineLive do
           :if={@detail}
           detail={@detail}
           expanded_cases={@expanded_cases}
-          action_paths={@action_paths}
           selected_cve={@selected_cve}
           filters={@filters}
         />
@@ -436,13 +422,11 @@ defmodule TriageWeb.TimelineLive do
           scale={@filters.scale || "fit"}
           chart={@timeline.chart}
           lanes={@timeline.lanes}
-          action_paths={@action_paths}
           selected_cve={@selected_cve}
           filters={@filters}
         />
 
         <Lanes.lane_table
-          action_paths={@action_paths}
           lanes={@timeline.lanes}
           filters={@filters}
           selected_cve={@selected_cve}
@@ -450,7 +434,6 @@ defmodule TriageWeb.TimelineLive do
           kev_status={@kev_status}
         />
         <Bands.waterfall
-          action_paths={@action_paths}
           days={@timeline.days}
           filters={@filters}
           selected_cve={@selected_cve}

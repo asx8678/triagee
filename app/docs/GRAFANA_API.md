@@ -29,7 +29,8 @@ Create a dedicated enabled viewer account through the existing account process. 
 ```sh
 export TRIAGE_REPORTING_USER_EMAIL='grafana@example.invalid'
 export TRIAGE_REPORTING_TOKEN_LABEL='grafana demo'
-export TRIAGE_REPORTING_TOKEN_EXPIRES_AT='2026-10-01T12:00:00Z'
+# Any future time at most 90 days ahead.
+export TRIAGE_REPORTING_TOKEN_EXPIRES_AT='2026-12-15T12:00:00Z'
 export TRIAGE_REPORTING_TOKEN_SCOPES_JSON='[{"team":"demo-payments","environment":"prod"}]'
 mise x -- mix triage.reporting.issue
 ```
@@ -40,7 +41,7 @@ Rotate atomically (the old token is revoked only when replacement issuance succe
 
 ```sh
 export TRIAGE_REPORTING_TOKEN_ID='123'
-export TRIAGE_REPORTING_TOKEN_EXPIRES_AT='2026-11-01T12:00:00Z'
+export TRIAGE_REPORTING_TOKEN_EXPIRES_AT='2027-03-01T12:00:00Z'
 mise x -- mix triage.reporting.rotate
 ```
 
@@ -55,13 +56,14 @@ Token lifetimes are mandatory and limited to 90 days.
 
 ## HTTP use
 
-Use the approved TLS URL in deployed environments. A local probe can use loopback:
+Use the approved TLS URL in deployed environments. A local probe can use loopback.
+The port is 4005 under `mix phx.server` and 4000 in a release:
 
 ```sh
 curl --fail-with-body \
   -H "Authorization: Bearer $TRIAGE_REPORTING_TOKEN" \
   -H 'Accept: application/json' \
-  'http://127.0.0.1:4000/api/v1/summary'
+  'http://127.0.0.1:4005/api/v1/summary'
 ```
 
 Available GET routes:
@@ -74,6 +76,8 @@ Available GET routes:
 | `/api/v1/targets` | Keyset-paged exact CVE × placement rows and authenticated-app drilldown links. |
 | `/api/v1/targets/:placement_id/packages?cve=...` | Bounded scanner package evidence for one exact pair. |
 | `/api/v1/options` | Keyset-paged authorized `{team, environment}` option pairs and fixed enums. |
+| `/api/v1/statistics?period=90d` | The Statistics page's numbers: CVEs open now, CVEs handled in the period, median days to first action and to handle, and how deployments were handled. `period` is `30d`, `90d`, `12m` or `all`. |
+| `/api/v1/statistics/cves?period=90d` | Keyset-paged CVEs open now or handled in the period, with first observed, first action and who took it, days to first action, handled date and outcome. `status=open` or `status=handled` narrows the list. |
 
 Default page size is 50 and maximum is 100. Follow `pagination.next_cursor` without changing the endpoint, filters, token, or grants. Cursor pages are deterministic but do not freeze one database snapshot across HTTP requests. Grafana stat panels should read `/summary`, not sum separate target pages.
 
@@ -105,6 +109,7 @@ The importable starter at `priv/grafana/triage-reporting-dashboard.json` contain
 - `not_affected` is distinct from accepted risk.
 - Retired placements and reference-only records do not enter operational totals.
 - Summary team/environment breakdowns are capped at 100 rows; `breakdown_truncated` states whether a cap was reached.
+- Statistics use the same definitions as the Statistics page ([STATISTICS.md](STATISTICS.md)): days are whole days counted down, a CVE is handled once every deployment is, and open CVEs are never limited by the period. A token limited to team and environment pairs gets statistics for those deployments only.
 
 Show API errors and `source_coverage: unknown` visibly. Never translate a `401`, `403`, `429`, or `503` into a green zero.
 

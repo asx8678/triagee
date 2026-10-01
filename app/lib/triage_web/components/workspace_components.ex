@@ -41,13 +41,22 @@ defmodule TriageWeb.WorkspaceComponents do
       assigns.hidden_targets != [] ->
         "Some ticked deployments are hidden by the team or environment filter. Clear the filter to continue."
 
-      assigns.draft.fields["action"] not in Commit.review_actions() ->
-        "Choose Create ticket, Mark as fixed or Whitelist."
-
       true ->
-        nil
+        action_blocker(assigns.draft.fields["action"], assigns.ticket_ready)
     end
   end
+
+  defp action_blocker("create_ticket", false),
+    do: "Azure DevOps is not configured on this server, so a ticket cannot be created yet."
+
+  defp action_blocker(action, _ticket_ready) do
+    if action in Commit.review_actions(),
+      do: nil,
+      else: "Choose Create ticket, Mark as fixed or Whitelist."
+  end
+
+  @doc "Whether the server can create Azure DevOps tickets right now."
+  def ticket_ready?, do: match?({:ok, _destination}, Triage.AzureDevOps.destination())
 
   defp missing_fields(%{targets: targets, fields: fields}) do
     whitelist? = fields["action"] == "accepted_risk"
@@ -93,6 +102,8 @@ defmodule TriageWeb.WorkspaceComponents do
   attr :search_form, :any, required: true
 
   def review(assigns) do
+    assigns = assign(assigns, :ticket_ready, ticket_ready?())
+
     assigns =
       assigns
       |> assign(:decision_blockers, decision_blockers(assigns))
@@ -121,6 +132,15 @@ defmodule TriageWeb.WorkspaceComponents do
           {label}<span class="list-tab-count">{count(@metrics, mode)}</span>
         </.link>
       </nav>
+      <button
+        id="whitelist-overview-open"
+        type="button"
+        class="whitelist-open"
+        phx-click="repo-whitelist"
+        title="What is whitelisted and until when, in the repository list and in Triage."
+      >
+        Whitelist overview
+      </button>
       <div :if={@ai_configured and @can_review} class="classify-all">
         <button
           id="classify-all"
@@ -293,7 +313,8 @@ defmodule TriageWeb.WorkspaceComponents do
               <label
                 :for={
                   {value, label, hint} <- [
-                    {"create_ticket", "Create ticket", "Send to Azure DevOps"},
+                    {"create_ticket", "Create ticket",
+                     if(@ticket_ready, do: "Send to Azure DevOps", else: "Azure DevOps is not set up")},
                     {"fixed", "Mark as fixed", "The fix is deployed"},
                     {"accepted_risk", "Whitelist", "Accept the risk until a date"}
                   ]
@@ -318,6 +339,7 @@ defmodule TriageWeb.WorkspaceComponents do
                 type="textarea"
                 label="Why is this safe to accept? (required)"
                 maxlength="2000"
+                phx-debounce="250"
               />
               <.input
                 field={@form[:due_on]}
@@ -325,13 +347,24 @@ defmodule TriageWeb.WorkspaceComponents do
                 type="date"
                 label="Whitelist until (UTC)"
                 aria-describedby="whitelist-expiry-help"
+                phx-debounce="250"
               />
               <p id="whitelist-expiry-help" class="form-note">
                 {expiry_note(@draft.fields["due_on"])}
               </p>
             </div>
-            <p :if={@draft.fields["action"] == "create_ticket"} class="form-note">
+            <p :if={@draft.fields["action"] == "create_ticket" and @ticket_ready} class="form-note">
               Creates an Azure DevOps ticket with the CVE and the ticked deployments.
+            </p>
+            <p
+              :if={@draft.fields["action"] == "create_ticket" and not @ticket_ready}
+              id="ticket-not-configured"
+              class="inline-notice"
+            >
+              Tickets are off until an administrator sets <code>ADO_ORG_URL</code>, <code>ADO_PROJECT</code>,
+              <code>ADO_PAT</code>
+              and <code>ADO_WORK_ITEM_TYPE</code>
+              on the server and restarts it.
             </p>
             <p :if={@decision_error} id="decision-error" role="alert" class="form-error">
               {@decision_error}
@@ -689,11 +722,17 @@ defmodule TriageWeb.WorkspaceComponents do
     targets = Enum.filter(assigns.row.scopes, &(&1.id in assigns.draft.targets))
     payload = Triage.AzureDevOps.payload(assigns.row.cve, targets, assigns.draft.operation)
 
+    destination =
+      case Triage.AzureDevOps.destination() do
+        {:ok, destination} -> destination
+        {:error, _message} -> nil
+      end
+
     assigns =
-      assign(
-        assigns,
-        :ticket_description,
-        Enum.find(payload, &(&1.path == "/fields/System.Description")).value
+      assign(assigns,
+        ticket_description: Enum.find(payload, &(&1.path == "/fields/System.Description")).value,
+        destination: destination,
+        labels: Triage.AzureDevOps.display_labels()
       )
 
     ~H"""
@@ -709,9 +748,16 @@ defmodule TriageWeb.WorkspaceComponents do
           <h2 id="ticket-title">Preview Azure DevOps ticket</h2>
         </header>
         <div class="modal-body">
-          <p>This will create a ticket in: <strong>{Triage.AzureDevOps.backlog()}</strong></p>
+          <p :if={@destination}>
+            This will create a <strong>{@destination["type"]}</strong>
+            in the Azure DevOps project <strong>{@destination["project"]}</strong>.
+          </p>
+          <p :if={is_nil(@destination)} role="alert" class="form-error">
+            Azure DevOps is not configured on this server, so this ticket cannot be created.
+          </p>
+          <p :if={@labels.backlog}>Backlog: {@labels.backlog}</p>
+          <p :if={@labels.team}>Team: {@labels.team}</p>
           <h3>{@row.cve} needs to be fixed</h3>
-          <p>Team: {Triage.AzureDevOps.team()}</p>
           <div class="ticket-preview">
             {Phoenix.HTML.raw(@ticket_description)}
           </div>

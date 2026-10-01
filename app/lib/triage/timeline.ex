@@ -411,17 +411,19 @@ defmodule Triage.Timeline do
   defp build_chart(req, events, lanes) do
     limit = chart_limit(req, lanes.total)
     by_cve = chart_days_by_cve(events)
+    placements = chart_placement_ids(Enum.map(lanes.rows, & &1.cve), req)
+
+    # Each lane's track is built once. The chart draws the first `limit`;
+    # `available_tracks` lets a selected CVE beyond that bound still be drawn.
+    available = Enum.map(lanes.rows, &chart_track(&1, by_cve, placements, req))
 
     %{
-      available_tracks: Enum.map(lanes.rows, &chart_track(&1, by_cve, req)),
+      available_tracks: available,
       lane_limit: limit,
       shown: min(lanes.total, limit),
       total: lanes.total,
       dates: Enum.map(Date.range(req.from, req.to), &chart_date(&1, req.to)),
-      tracks:
-        lanes.rows
-        |> Enum.take(limit)
-        |> Enum.map(&chart_track(&1, by_cve, req))
+      tracks: Enum.take(available, limit)
     }
   end
 
@@ -496,7 +498,7 @@ defmodule Triage.Timeline do
     |> Map.new()
   end
 
-  defp chart_track(lane, by_cve, req) do
+  defp chart_track(lane, by_cve, placements, req) do
     days = Map.get(by_cve, lane.cve, %{})
 
     points =
@@ -525,19 +527,21 @@ defmodule Triage.Timeline do
       packages: Map.get(lane, :packages, []),
       points: points,
       whitelists: whitelist_spans(lane),
-      placement_ids: chart_placement_ids(lane.cve, req),
+      placement_ids: Map.get(placements, lane.cve, []),
       recorded_before?: before_window?(lane.first_seen, req.from)
     }
   end
 
-  # Preserve all decisions so superseding actions end a whitelist interval.
-  defp chart_placement_ids(cve, req) do
+  # The placements of every lane's CVE in the display scope, read in one query.
+  defp chart_placement_ids([], _req), do: %{}
+
+  defp chart_placement_ids(cves, req) do
     query =
       from(p in ImagePlacement,
         join: f in Finding,
         on: f.image_id == p.image_id,
-        where: f.cve == ^cve,
-        select: p.id,
+        where: f.cve in ^cves,
+        select: {f.cve, p.id},
         distinct: true
       )
 
@@ -546,7 +550,9 @@ defmodule Triage.Timeline do
     query =
       if req.environment, do: where(query, [p], p.environment == ^req.environment), else: query
 
-    Repo.all(query)
+    query
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
   defp whitelist_spans(lane) do
